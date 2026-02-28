@@ -2,14 +2,54 @@ import { ref, onUnmounted } from 'vue'
 import * as fabric from 'fabric'
 import { useEditorStore } from '@/stores/editor'
 import { useSelectionStore } from '@/stores/selection'
+import { useHistoryStore } from '@/stores/history'
 import { useGridLayer } from './useGridLayer'
 
 export function useCanvas() {
   const canvasRef = ref<HTMLCanvasElement>()
   const editorStore = useEditorStore()
   const selectionStore = useSelectionStore()
+  const historyStore = useHistoryStore()
 
   let canvas: fabric.Canvas | null = null
+  let isSpacePressed = false
+
+  // 监听空格与 Ctrl 键以切换鼠标样式
+  const handleSpaceKeyDown = (e: KeyboardEvent) => {
+    if (e.code === 'Space' && !isSpacePressed) {
+      isSpacePressed = true
+      if (canvas) {
+        canvas.defaultCursor = 'grab'
+        canvas.hoverCursor = 'grab'
+        canvas.requestRenderAll()
+      }
+      const target = e.target as HTMLElement
+      if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+        e.preventDefault()
+      }
+    }
+    // 监听 Ctrl 状态
+    if (e.ctrlKey && canvas) {
+      canvas.defaultCursor = 'zoom-in'
+      canvas.requestRenderAll()
+    }
+  }
+
+  const handleSpaceKeyUp = (e: KeyboardEvent) => {
+    if (e.code === 'Space') {
+      isSpacePressed = false
+      if (canvas) {
+        canvas.defaultCursor = 'default'
+        canvas.hoverCursor = 'move'
+        canvas.requestRenderAll()
+      }
+    }
+    // 释放 Ctrl
+    if (!e.ctrlKey && canvas && !isSpacePressed) {
+      canvas.defaultCursor = 'default'
+      canvas.requestRenderAll()
+    }
+  }
 
   const initCanvas = (el: HTMLCanvasElement) => {
     if (canvas) return
@@ -23,6 +63,7 @@ export function useCanvas() {
     })
 
     editorStore.initCanvas(canvas)
+    historyStore.init(canvas)
 
     const { setupGridSystem } = useGridLayer(canvas)
     setupGridSystem()
@@ -52,10 +93,22 @@ export function useCanvas() {
       if (current.length > 0) {
         selectionStore.setSelection(current)
       }
+      historyStore.save()
     })
 
-    // 滚轮缩放
+    // 捕获添减对象动作挂载历史
+    cvs.on('object:added', () => {
+      if (!historyStore.isExecuting) historyStore.save()
+    })
+
+    cvs.on('object:removed', () => {
+      if (!historyStore.isExecuting) historyStore.save()
+    })
+
+    // 滚轮缩放：仅在按住 Ctrl 时触发
     cvs.on('mouse:wheel', function (opt: any) {
+      if (!opt.e.ctrlKey) return // 没按 Ctrl 时走原生滚动(如果有的话)
+
       const delta = opt.e.deltaY
       let zoom = cvs.getZoom()
       zoom *= 0.999 ** delta
@@ -67,18 +120,22 @@ export function useCanvas() {
       opt.e.stopPropagation()
     })
 
-    // 拖拽平移 (支持中键或 Pan 模式)
     let isDragging = false
     let lastPosX = 0
     let lastPosY = 0
 
+    window.addEventListener('keydown', handleSpaceKeyDown)
+    window.addEventListener('keyup', handleSpaceKeyUp)
+
     cvs.on('mouse:down', function (opt: any) {
       const e = opt.e
       const isPanMode = editorStore.mode === 'pan'
-      // 鼠标中键 (button === 1) 或 alt 键 或 pan 操作模式
-      if (e.button === 1 || e.altKey === true || isPanMode) {
+      // 鼠标中键 (button === 1) 或 alt 键 或 pan 操作模式 或 空格键按住
+      if (e.button === 1 || e.altKey === true || isPanMode || isSpacePressed) {
         isDragging = true
         cvs.selection = false // 拖拽时禁用多选框
+        cvs.defaultCursor = 'grabbing'
+        cvs.requestRenderAll()
         lastPosX = e.clientX
         lastPosY = e.clientY
 
@@ -110,11 +167,20 @@ export function useCanvas() {
       }
     })
 
-    cvs.on('mouse:up', function () {
+    cvs.on('mouse:up', function (opt: any) {
       if (!cvs.viewportTransform) return
       cvs.setViewportTransform(cvs.viewportTransform)
       isDragging = false
       cvs.selection = true
+      // 抬起后恢复 grab 或依据 Ctrl 状态恢复 zoom-in 或 default
+      if (isSpacePressed) {
+        cvs.defaultCursor = 'grab'
+      } else if (opt.e && opt.e.ctrlKey) {
+        cvs.defaultCursor = 'zoom-in'
+      } else {
+        cvs.defaultCursor = 'default'
+      }
+      cvs.requestRenderAll()
     })
   }
 
@@ -134,6 +200,8 @@ export function useCanvas() {
 
     onUnmounted(() => {
       window.removeEventListener('resize', handleResize)
+      window.removeEventListener('keydown', handleSpaceKeyDown)
+      window.removeEventListener('keyup', handleSpaceKeyUp)
       if (canvas) {
         canvas.dispose()
       }

@@ -4,6 +4,7 @@ import { useCanvas } from '@/composables/useCanvas'
 import { useDragDrop } from '@/composables/useDragDrop'
 import { useRuler } from '@/composables/useRuler'
 import { useEditorStore } from '@/stores/editor'
+import { useKeyboard } from '@/composables/useKeyboard'
 
 const wrapperRef = ref<HTMLElement>()
 const hRulerRefLocal = ref<HTMLCanvasElement>()
@@ -13,6 +14,7 @@ const editorStore = useEditorStore()
 
 let cleanupDragDrop: (() => void) | undefined
 let cleanupRuler: (() => void) | undefined
+let cleanupKeyboard: (() => void) | undefined
 
 onMounted(() => {
   if (canvasRef.value) {
@@ -24,6 +26,10 @@ onMounted(() => {
       const { setupDragDrop } = useDragDrop(canvasInstance)
       cleanupDragDrop = setupDragDrop(wrapperRef.value)
     }
+
+    // 初始化键盘快捷键
+    const { setupKeyboard } = useKeyboard()
+    cleanupKeyboard = setupKeyboard()
 
     // 初始化标尺
     if (hRulerRefLocal.value && vRulerRefLocal.value) {
@@ -45,6 +51,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (cleanupDragDrop) cleanupDragDrop()
   if (cleanupRuler) cleanupRuler()
+  if (cleanupKeyboard) cleanupKeyboard()
 })
 </script>
 

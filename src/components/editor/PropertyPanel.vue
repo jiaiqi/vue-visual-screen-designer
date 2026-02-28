@@ -23,7 +23,9 @@ const objectProps = computed({
       height: Math.round((activeObject.value.height || 0) * (activeObject.value.scaleY || 1)),
       angle: Math.round(activeObject.value.angle || 0),
       fill: activeObject.value.fill?.toString() || '#000000',
-      type: activeObject.value.get('workshopType') || activeObject.value.type // 自定义类型
+      type: activeObject.value.get('workshopType') || activeObject.value.type, // 自定义类型
+      text: (activeObject.value as any).text || '',
+      fontSize: (activeObject.value as any).fontSize || 20
     }
   },
   set: () => {
@@ -60,6 +62,12 @@ function handleValChange(prop: string, e: Event) {
       break
     case 'fill':
       activeObject.value.set('fill', rawValue)
+      break
+    case 'text':
+      activeObject.value.set('text', rawValue)
+      break
+    case 'fontSize':
+      activeObject.value.set('fontSize', numVal)
       break
   }
 
@@ -171,6 +179,35 @@ function handleValChange(prop: string, e: Event) {
               />
               <span class="text-sm font-mono flex-1 uppercase">{{ objectProps.fill }}</span>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 文字专有属性区 -->
+      <section v-if="objectProps.type === 'i-text' || objectProps.type === 'text'" class="flex flex-col gap-4">
+        <label class="text-xs text-muted-foreground uppercase">文本设置</label>
+
+        <div class="flex flex-col gap-1.5">
+          <span class="text-xs text-muted-foreground">文本内容</span>
+          <textarea
+            class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y min-h-[60px]"
+            :value="objectProps.text"
+            @input="(e) => handleValChange('text', e)"
+            placeholder="输入说明文字..."
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mt-1">
+          <div class="flex flex-col gap-1.5">
+            <span class="text-xs text-muted-foreground">字号 (px)</span>
+            <input
+              type="number"
+              class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              :value="objectProps.fontSize"
+              @change="(e) => handleValChange('fontSize', e)"
+              min="12"
+              step="2"
+            />
           </div>
         </div>
       </section>
