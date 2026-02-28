@@ -8,7 +8,6 @@ import {
   MousePointer2,
   Hand,
   Combine,
-  AlignLeft,
   LayoutGrid
 } from 'lucide-vue-next'
 
@@ -51,14 +50,24 @@ function handleDragStart(event: DragEvent, type: string) {
 
     <!-- 绘制与创建组 -->
     <div class="group flex flex-col gap-2">
-      <!-- 拖拽创建的预置机器 -->
+      <!-- 拖拽创建：CNC 数控机床 -->
       <div
         draggable="true"
-        @dragstart="handleDragStart($event, 'machine')"
+        @dragstart="handleDragStart($event, 'composite:cnc-machine')"
         class="w-10 h-10 rounded flex items-center justify-center border border-dashed border-primary cursor-grab active:cursor-grabbing hover:bg-accent text-foreground transition-colors"
-        title="拖拽创建设备"
+        title="拖动放置：CNC 数控机床"
       >
-        <Combine class="w-5 h-5" />
+        <Combine class="w-5 h-5 text-slate-500" />
+      </div>
+
+      <!-- 拖拽创建：装配作业台 -->
+      <div
+        draggable="true"
+        @dragstart="handleDragStart($event, 'composite:assembly-station')"
+        class="w-10 h-10 rounded flex items-center justify-center border border-dashed border-primary cursor-grab active:cursor-grabbing hover:bg-accent text-foreground transition-colors"
+        title="拖动放置：双工位装配台"
+      >
+        <Combine class="w-5 h-5 text-blue-500" />
       </div>
 
       <!-- 拖拽创建区域 -->

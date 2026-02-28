@@ -2,7 +2,7 @@
 import CanvasEditor from './components/editor/CanvasEditor.vue'
 import Toolbar from './components/editor/Toolbar.vue'
 import PropertyPanel from './components/editor/PropertyPanel.vue'
-import { provide } from 'vue'
+import LayerPanel from './components/editor/LayerPanel.vue'
 
 // 未来可以在这里 provide 核心依赖
 </script>
@@ -26,8 +26,15 @@ import { provide } from 'vue'
         <CanvasEditor />
       </div>
 
-      <!-- 右侧属性面板 -->
-      <PropertyPanel />
+      <!-- 右侧悬浮面板区 -->
+      <aside class="w-[300px] border-l bg-card flex flex-col shrink-0 h-full relative border-collapse">
+        <div class="flex-[2] overflow-hidden border-b shadow-sm z-10">
+          <LayerPanel />
+        </div>
+        <div class="flex-[3] overflow-hidden bg-background">
+          <PropertyPanel />
+        </div>
+      </aside>
     </main>
   </div>
 </template>

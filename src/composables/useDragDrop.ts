@@ -1,5 +1,6 @@
 import * as fabric from 'fabric'
 import { WorkshopObjectType } from '@/types/editor'
+import { MachineLibrary } from '@/config/machines'
 
 export function useDragDrop(canvas: fabric.Canvas | null) {
 
@@ -26,7 +27,41 @@ export function useDragDrop(canvas: fabric.Canvas | null) {
     // 经由画布视区矩阵转换后的世界坐标
     const pointer = canvas.getScenePoint(e)
 
-    createShape(type as WorkshopObjectType, { x: pointer.x, y: pointer.y })
+    if (type.startsWith('composite:')) {
+      const machineId = type.split(':')[1]
+      if (machineId) {
+        createCompositeMachine(machineId, { x: pointer.x, y: pointer.y })
+      }
+    } else {
+      createShape(type as WorkshopObjectType, { x: pointer.x, y: pointer.y })
+    }
+  }
+
+  function createCompositeMachine(machineId: string, position: { x: number; y: number }) {
+    if (!canvas) return
+    const factory = MachineLibrary[machineId]
+    if (!factory) return
+
+    const spec = factory()
+    const group = new fabric.Group(spec.objects, {
+      left: position.x,
+      top: position.y,
+      originX: 'center',
+      originY: 'center',
+      subTargetCheck: true, // 允许事件穿透选择子元素
+    })
+
+    // 设置特有指代字段供属性面板解析
+    group.set('workshopType', 'composite')
+    group.set('machineId', spec.id)
+    group.set('machineName', spec.name)
+
+    canvas.add(group)
+    canvas.setActiveObject(group)
+    canvas.requestRenderAll()
+
+    // 派发创建事件让外界（如履历）能监听到
+    canvas.fire('object:added', { target: group })
   }
 
   function createShape(type: WorkshopObjectType, position: { x: number; y: number }) {
@@ -81,6 +116,7 @@ export function useDragDrop(canvas: fabric.Canvas | null) {
     canvas.add(shape)
     canvas.setActiveObject(shape)
     canvas.requestRenderAll()
+    canvas.fire('object:added', { target: shape })
   }
 
   function setupDragDrop(wrapperElement: HTMLElement) {

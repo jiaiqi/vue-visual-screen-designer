@@ -73,7 +73,7 @@ function handleValChange(prop: string, e: Event) {
 </script>
 
 <template>
-  <aside class="w-[300px] bg-card border-l flex flex-col shrink-0 h-full overflow-y-auto">
+  <div class="flex flex-col shrink-0 h-full overflow-y-auto">
     <!-- Header -->
     <div class="p-4 border-b">
       <h2 class="text-sm font-semibold">属性设置</h2>
@@ -176,5 +176,5 @@ function handleValChange(prop: string, e: Event) {
       </section>
 
     </div>
-  </aside>
+  </div>
 </template>
