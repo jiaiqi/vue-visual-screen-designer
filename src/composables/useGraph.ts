@@ -80,10 +80,11 @@ export function useGraph() {
       .use(new Selection({
         enabled: true,
         multiple: true,
-        rubberband: true,
+        rubberband: true, // 允许直接拖扯出框选区
+        strict: false, // 只要相交/划过即可选中，无需完全包围
         showNodeSelectionBox: true,
         showEdgeSelectionBox: true, // 允许边界点选高亮显示
-        modifiers: ['shift']
+        modifiers: ['shift', 'ctrl', 'meta'], // 允许使用 Shift/Ctrl/Command 键进行多选追加
       }))
       .use(new Keyboard())
       .use(new History({ enabled: true }))
