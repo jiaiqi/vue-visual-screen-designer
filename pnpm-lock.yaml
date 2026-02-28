@@ -29,6 +29,9 @@ importers:
       '@antv/x6-plugin-clipboard':
         specifier: ^2.1.6
         version: 2.1.6(@antv/x6@2.18.1)
+      '@antv/x6-plugin-dnd':
+        specifier: ^2.1.1
+        version: 2.1.1(@antv/x6@2.18.1)
       '@antv/x6-plugin-export':
         specifier: ^2.1.6
         version: 2.1.6(@antv/x6@2.18.1)
@@ -44,9 +47,6 @@ importers:
       '@antv/x6-plugin-snapline':
         specifier: ^2.1.7
         version: 2.1.7(@antv/x6@2.18.1)
-      '@antv/x6-plugin-stencil':
-        specifier: ^2.1.5
-        version: 2.1.5(@antv/x6@2.18.1)
       '@antv/x6-plugin-transform':
         specifier: ^2.1.8
         version: 2.1.8(@antv/x6@2.18.1)
@@ -237,11 +237,6 @@ packages:
 
   '@antv/x6-plugin-snapline@2.1.7':
     resolution: {integrity: sha512-AsysoCb9vES0U2USNhEpYuO/W8I0aYfkhlbee5Kt4NYiMfQfZKQyqW/YjDVaS2pm38C1NKu1LdPVk/BBr4CasA==}
-    peerDependencies:
-      '@antv/x6': ^2.x
-
-  '@antv/x6-plugin-stencil@2.1.5':
-    resolution: {integrity: sha512-q7wx7XRMFkUKPv3WsHkvZda6O1GW+6q6H/+c1lcrwlQoEKOFv1Djc4Hu2J4SGhV2z98P2JLfVJiT5m7YoOoCHw==}
     peerDependencies:
       '@antv/x6': ^2.x
 
@@ -4183,11 +4178,6 @@ snapshots:
   '@antv/x6-plugin-snapline@2.1.7(@antv/x6@2.18.1)':
     dependencies:
       '@antv/x6': 2.18.1
-
-  '@antv/x6-plugin-stencil@2.1.5(@antv/x6@2.18.1)':
-    dependencies:
-      '@antv/x6': 2.18.1
-      '@antv/x6-plugin-dnd': 2.1.1(@antv/x6@2.18.1)
 
   '@antv/x6-plugin-transform@2.1.8(@antv/x6@2.18.1)':
     dependencies:

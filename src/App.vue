@@ -2,7 +2,6 @@
 import CanvasEditor from './components/editor/CanvasEditor.vue'
 import Toolbar from './components/editor/Toolbar.vue'
 import PropertyPanel from './components/editor/PropertyPanel.vue'
-import LayerPanel from './components/editor/LayerPanel.vue'
 import ContextMenu from './components/editor/ContextMenu.vue'
 
 import { ref, onMounted, onUnmounted } from 'vue'
@@ -83,13 +82,23 @@ onMounted(() => {
 
       // X6 右键事件绑定
       graph.on('blank:contextmenu', ({ e }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (contextMenuRef.value) contextMenuRef.value.open(e as any, 'blank')
+        const selected = graph.getSelectedCells().filter(c => c.isNode())
+        if (contextMenuRef.value) {
+          if (selected.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            contextMenuRef.value.open(e as any, 'node') // 从空白处右键但有选中图元时，作为针对图元操作弹窗
+          } else {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            contextMenuRef.value.open(e as any, 'blank')
+          }
+        }
       })
       graph.on('node:contextmenu', ({ e, node }) => {
-        // 右键节点时也进行图元选中
-        graph.cleanSelection()
-        graph.select(node)
+        // 如果当前右击点并非已经选中的多节点之一，才重置选中
+        if (!graph.isSelected(node)) {
+          graph.cleanSelection()
+          graph.select(node)
+        }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (contextMenuRef.value) contextMenuRef.value.open(e as any, 'node', node)
       })

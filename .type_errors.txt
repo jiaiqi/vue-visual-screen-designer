@@ -1,0 +1,4 @@
+
+> vue-fabric-editor@0.0.0 type-check E:\bx-gitee\vue-fabric-editor
+> vue-tsc --build
+

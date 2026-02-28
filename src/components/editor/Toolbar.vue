@@ -1,181 +1,125 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
-import { Stencil } from '@antv/x6-plugin-stencil'
+import { ref, watch } from 'vue'
+import { Dnd } from '@antv/x6-plugin-dnd'
 import { useEditorStore } from '@/stores/editor'
+import { CircleDot, Blocks, Box, ArrowLeftRight, Home, Type } from 'lucide-vue-next'
 
-const stencilContainer = ref<HTMLElement>()
+const dndContainer = ref<HTMLElement>()
 const editorStore = useEditorStore()
-let stencil: Stencil | null = null
+const dndRef = ref<Dnd>()
 
-// 监听 graph 实例就绪，因为 CanvasEditor 是在一个单独组件初始化的
+// 端口通用配置
+const commonPorts = {
+  groups: {
+    top: { position: 'top', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
+    right: { position: 'right', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
+    bottom: { position: 'bottom', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
+    left: { position: 'left', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
+  },
+  items: [
+    { id: 'port_top', group: 'top' },
+    { id: 'port_right', group: 'right' },
+    { id: 'port_bottom', group: 'bottom' },
+    { id: 'port_left', group: 'left' },
+  ],
+}
+
+// 定义基础图元组件映射表
+const shapeTypes = [
+  { type: 'machine', label: '设备区', icon: CircleDot, w: 100, h: 100, stroke: '#f43f5e', rx: 0 },
+  { type: 'zone', label: '功能区', icon: Blocks, w: 140, h: 100, stroke: '#10b981', rx: 0 },
+  { type: 'storage', label: '仓储区', icon: Box, w: 120, h: 90, stroke: '#3b82f6', rx: 0 },
+  { type: 'passage', label: '通道', icon: ArrowLeftRight, w: 60, h: 60, stroke: '#8b5cf6', rx: 4 },
+  { type: 'room', label: '房间', icon: Home, w: 150, h: 120, stroke: '#fbbf24', rx: 0 },
+  { type: 'text', label: '文字', icon: Type, w: 100, h: 40, stroke: 'transparent', rx: 0 },
+]
+
+// 初始化 Dnd
 watch(() => editorStore.graph, (graph) => {
-  if (graph && stencilContainer.value && !stencil) {
-    // 实例化官方拖拽面板组件
-    stencil = new Stencil({
-      title: '组件库',
+  if (graph && dndContainer.value && !dndRef.value) {
+    dndRef.value = new Dnd({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      target: graph as any, // 绑定到目标画布
-      search(cell, keyword) {
-        return cell.shape.indexOf(keyword) !== -1 || (cell.attr('text/text') as string)?.indexOf(keyword) !== -1
-      },
-      placeholder: '搜索组件...',
-      notFoundText: '未找到匹配组件',
-      collapsable: true,
-      stencilGraphWidth: 260,
-      stencilGraphHeight: 0, // 自适应高度
-      groups: [
-        {
-          name: 'basic',
-          title: '基础图形 (Base Shapes)',
-          collapsable: true,
-        },
-        {
-          name: 'advanced',
-          title: '工业设备 (Industrial)',
-          collapsable: true,
-        },
-      ],
-      layoutOptions: {
-        columns: 2,
-        columnWidth: 125,
-        rowHeight: 180, // 加大网格行高，避免高度为 160 的元件发生重叠
-      },
+      target: graph as any,
+      scaled: false,
+      dndContainer: dndContainer.value,
     })
+  }
+}, { immediate: true })
 
-    stencilContainer.value.appendChild(stencil.container)
+// 拖拽挂载
+const startDrag = (e: MouseEvent, item: typeof shapeTypes[0]) => {
+  const graph = editorStore.graph
+  if (!graph || !dndRef.value) return
 
-    const commonPorts = {
-      groups: {
-        top: { position: 'top', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
-        right: { position: 'right', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
-        bottom: { position: 'bottom', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
-        left: { position: 'left', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
-      },
-      items: [
-        { id: 'port_top', group: 'top' },
-        { id: 'port_right', group: 'right' },
-        { id: 'port_bottom', group: 'bottom' },
-        { id: 'port_left', group: 'left' },
-      ],
-    }
+  let node
 
-    // --- Floor Plan 场景适配业务组件 (暗黑工业风) ---
-    const createFloorNode = (label: string, w: number, h: number, stroke: string, rx: number = 0) => {
-      return graph.createNode({
-        shape: 'rect',
-        width: w,
-        height: h,
-        ports: commonPorts,
-        attrs: {
-          body: {
-            fill: '#1e293b',    // Slate 800 基底
-            stroke: stroke,     // 高辨识度外发光边框颜色
-            strokeWidth: 2,
-            rx: rx,
-            ry: rx,
-            filter: { name: 'dropShadow', args: { dx: 0, dy: 4, blur: 15, color: stroke.replace(')', ',0.2)').replace('rgb', 'rgba') } } // 简单阴影回落
-          },
-          text: { text: label, fill: '#e2e8f0', fontSize: 13, fontWeight: 'bold' }
-        }
-      })
-    }
-
-    const mArea = createFloorNode('设备区', 100, 100, '#f43f5e') // Rose
-    const zArea = createFloorNode('功能区', 140, 100, '#10b981') // Emerald
-    const sArea = createFloorNode('仓储区', 120, 90, '#3b82f6')  // Blue
-    const pArea = createFloorNode('通道', 60, 60, '#8b5cf6', 4)  // Purple, rounded
-    const rArea = createFloorNode('房间', 150, 120, '#fbbf24')   // Amber
-    const tArea = graph.createNode({
+  if (item.type === 'text') {
+    node = graph.createNode({
       shape: 'text',
-      width: 100,
-      height: 40,
+      width: item.w,
+      height: item.h,
       ports: commonPorts,
       attrs: {
         body: { fill: 'transparent', stroke: 'transparent' },
         text: { text: '文本标签', fill: '#94a3b8', fontSize: 16 }
       }
     })
-
-    // 加载至左侧面板
-    stencil.load([mArea, zArea, sArea, pArea, rArea, tArea], 'basic')
-
-    // 渲染高级 Vue 设备图元
-    const fan = graph.createNode({
-      shape: 'cooling-fan',
-      width: 100,
-      height: 100,
+  } else {
+    node = graph.createNode({
+      shape: 'rect',
+      width: item.w,
+      height: item.h,
       ports: commonPorts,
       attrs: {
-        body: { fill: 'transparent', stroke: 'transparent' } // Vue 内部接管渲染
+        body: {
+          fill: '#1e293b',    // Slate 800 基底
+          stroke: item.stroke,
+          strokeWidth: 2,
+          rx: item.rx,
+          ry: item.rx,
+          filter: { name: 'dropShadow', args: { dx: 0, dy: 4, blur: 15, color: item.stroke.replace(')', ',0.2)').replace('rgb', 'rgba') } }
+        },
+        text: { text: item.label, fill: '#e2e8f0', fontSize: 13, fontWeight: 'bold' }
       }
     })
-
-    const tank = graph.createNode({
-      shape: 'storage-tank',
-      width: 120,
-      height: 160,
-      ports: commonPorts,
-    })
-
-    stencil.load([fan, tank], 'advanced')
   }
-}, { immediate: true })
 
-onUnmounted(() => {
-  // 注意释放内存，避免热更新溢出
-})
+  // 开始将其挂载至原生外层 Drag
+  dndRef.value.start(node, e)
+}
 </script>
 
 <template>
   <div
-    class="w-[280px] h-full bg-slate-950 border-r border-slate-800 flex flex-col shrink-0 stencil-dark-theme z-20 shadow-xl">
-    <div ref="stencilContainer" class="flex-1 w-full h-full relative"></div>
+    class="w-[280px] h-full bg-[#141824] border-r border-[#2a3045] flex flex-col shrink-0 z-20 shadow-xl overflow-hidden"
+    ref="dndContainer">
+    <!-- Vue 原生面板头部 -->
+    <div class="px-4 py-3 text-sm font-semibold text-slate-400 uppercase tracking-widest border-b border-[#2a3045]">
+      规划图元库
+    </div>
+
+    <!-- 面板内容滚动区 -->
+    <div class="flex-1 overflow-y-auto p-3">
+      <div class="grid grid-cols-2 gap-3">
+        <template v-for="item in shapeTypes" :key="item.type">
+          <div
+            class="flex flex-col items-center justify-center p-4 rounded-lg bg-[#1a1f2e] border border-[#2a3045] cursor-grab hover:-translate-y-0.5 hover:border-sky-500 hover:bg-[#1e2640] transition-all"
+            @mousedown="startDrag($event, item)">
+            <component :is="item.icon" class="w-6 h-6 mb-2"
+              :style="{ color: item.stroke !== 'transparent' ? item.stroke : '#94a3b8' }" />
+            <span class="text-xs text-slate-300 font-medium">{{ item.label }}</span>
+          </div>
+        </template>
+      </div>
+
+      <div class="mt-6 px-1">
+        <div class="text-[11px] text-slate-500 mb-3 uppercase tracking-wider font-semibold">复杂设备及管线</div>
+        <!-- 以后其他高级图元也可继续使用 v-for / dnd 追加在这里 -->
+        <div class="text-xs text-slate-600 bg-slate-900/50 rounded p-3 border border-slate-800/50">
+          更多高阶工业组件构建中...
+        </div>
+      </div>
+    </div>
   </div>
 </template>
-
-<style>
-/* 深度修改 Stencil 内置系统样式以绝配 Dark 工业风（X6自身样式挂在 document body 且没有暗黑预设） */
-.stencil-dark-theme .x6-widget-stencil {
-  background-color: transparent !important;
-}
-
-.stencil-dark-theme .x6-widget-stencil-title {
-  background-color: #0f172a !important;
-  color: #f1f5f9 !important;
-  border-bottom: 1px solid #1e293b !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.1em !important;
-  text-transform: uppercase !important;
-}
-
-.stencil-dark-theme .x6-widget-stencil-group-title {
-  background-color: #0f172a !important;
-  color: #94a3b8 !important;
-  border-bottom: 1px solid #1e293b !important;
-  font-weight: 600 !important;
-}
-
-/* 搜索框强行魔改 */
-.stencil-dark-theme .x6-widget-stencil .x6-widget-stencil-search {
-  background-color: #0f172a !important;
-  padding: 12px 16px !important;
-}
-
-.stencil-dark-theme .x6-widget-stencil .x6-widget-stencil-search-input {
-  background-color: #1e293b !important;
-  border: 1px solid #334155 !important;
-  color: #f1f5f9 !important;
-  border-radius: 6px !important;
-  padding-left: 12px !important;
-}
-
-.stencil-dark-theme .x6-widget-stencil .x6-widget-stencil-search-input:focus {
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
-}
-
-.stencil-dark-theme .x6-widget-stencil-group.collapsed .x6-widget-stencil-group-title {
-  border-bottom: none !important;
-}
-</style>
