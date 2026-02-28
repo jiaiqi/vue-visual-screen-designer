@@ -1,11 +1,13 @@
 import { ref, onUnmounted } from 'vue'
 import * as fabric from 'fabric'
 import { useEditorStore } from '@/stores/editor'
+import { useSelectionStore } from '@/stores/selection'
 import { useGridLayer } from './useGridLayer'
 
 export function useCanvas() {
   const canvasRef = ref<HTMLCanvasElement>()
   const editorStore = useEditorStore()
+  const selectionStore = useSelectionStore()
 
   let canvas: fabric.Canvas | null = null
 
@@ -30,6 +32,28 @@ export function useCanvas() {
   }
 
   const setupCanvasEvents = (cvs: fabric.Canvas) => {
+    // 注册全局选择事件投递到 Store 包裹一层 markRaw
+    cvs.on('selection:created', (opt: any) => {
+      selectionStore.setSelection(opt.selected || [])
+    })
+
+    cvs.on('selection:updated', (opt: any) => {
+      selectionStore.setSelection(opt.selected || [])
+    })
+
+    cvs.on('selection:cleared', () => {
+      selectionStore.clearSelection()
+    })
+
+    // 同步对象级属性变化，供外部响应 (比如被拖拽后要在右侧即时刷新坐标)
+    cvs.on('object:modified', () => {
+      // 触发一次虚拟的选择刷新，让使用 selectedObjects 的计算属性或侦听器工作
+      const current = cvs.getActiveObjects()
+      if (current.length > 0) {
+        selectionStore.setSelection(current)
+      }
+    })
+
     // 滚轮缩放
     cvs.on('mouse:wheel', function (opt: any) {
       const delta = opt.e.deltaY

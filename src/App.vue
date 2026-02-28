@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import CanvasEditor from './components/editor/CanvasEditor.vue'
 import Toolbar from './components/editor/Toolbar.vue'
+import PropertyPanel from './components/editor/PropertyPanel.vue'
 import { provide } from 'vue'
 
 // 未来可以在这里 provide 核心依赖
@@ -25,11 +26,8 @@ import { provide } from 'vue'
         <CanvasEditor />
       </div>
 
-      <!-- 右侧属性面板 Placeholder -->
-      <aside class="w-72 border-l bg-card flex flex-col shrink-0">
-        <div class="p-3 border-b font-medium text-sm">属性设置</div>
-        <div class="p-4 text-muted-foreground text-sm">选择对象以查看属性</div>
-      </aside>
+      <!-- 右侧属性面板 -->
+      <PropertyPanel />
     </main>
   </div>
 </template>

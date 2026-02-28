@@ -14,6 +14,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     Button: typeof import('./src/components/ui/button/Button.vue')['default']
     CanvasEditor: typeof import('./src/components/editor/CanvasEditor.vue')['default']
+    PropertyPanel: typeof import('./src/components/editor/PropertyPanel.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Toolbar: typeof import('./src/components/editor/Toolbar.vue')['default']
@@ -24,6 +25,7 @@ declare module 'vue' {
 declare global {
   const Button: typeof import('./src/components/ui/button/Button.vue')['default']
   const CanvasEditor: typeof import('./src/components/editor/CanvasEditor.vue')['default']
+  const PropertyPanel: typeof import('./src/components/editor/PropertyPanel.vue')['default']
   const RouterLink: typeof import('vue-router')['RouterLink']
   const RouterView: typeof import('vue-router')['RouterView']
   const Toolbar: typeof import('./src/components/editor/Toolbar.vue')['default']
