@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
 import { markRaw } from 'vue'
-import * as fabric from 'fabric'
+import type { Graph } from '@antv/x6'
 
 interface EditorState {
   mode: 'select' | 'draw' | 'pan' | 'edit'
   currentTool: string
-  canvas: fabric.Canvas | null
+  // 使用 X6 的 Graph 实例替代原来的 fabric.Canvas
+  graph: Graph | null
   config: {
     gridSize: number
     showGrid: boolean
@@ -18,7 +19,7 @@ export const useEditorStore = defineStore('editor', {
   state: (): EditorState => ({
     mode: 'select',
     currentTool: 'select',
-    canvas: null,
+    graph: null,
     config: {
       gridSize: 20,
       showGrid: true,
@@ -27,9 +28,9 @@ export const useEditorStore = defineStore('editor', {
     }
   }),
   actions: {
-    initCanvas(canvasInstance: fabric.Canvas) {
-      // 关键优化：使用 markRaw 强制剥离响应式，防止大型实体导致性能灾难
-      this.canvas = markRaw(canvasInstance)
+    initGraph(graphInstance: Graph) {
+      // 使用 markRaw 绕过 Vue Proxy 监控，提高图形界面性能
+      this.graph = markRaw(graphInstance)
     },
     setMode(mode: EditorState['mode']) {
       this.mode = mode
@@ -44,6 +45,16 @@ export const useEditorStore = defineStore('editor', {
     },
     updateConfig(partialConfig: Partial<EditorState['config']>) {
       this.config = { ...this.config, ...partialConfig }
+
+      // 同步给 X6
+      if (this.graph) {
+        if (partialConfig.showGrid !== undefined) {
+          partialConfig.showGrid ? this.graph.showGrid() : this.graph.hideGrid()
+        }
+        if (partialConfig.gridSize !== undefined) {
+          this.graph.setGridSize(partialConfig.gridSize)
+        }
+      }
     }
   }
 })

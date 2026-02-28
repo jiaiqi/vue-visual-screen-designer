@@ -1,184 +1,252 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { Copy, Trash2, ArrowUpFromLine, ArrowDownToLine, MousePointerSquareDashed, ClipboardPaste, Layers } from 'lucide-vue-next'
 import { useEditorStore } from '@/stores/editor'
-import { useSelectionStore } from '@/stores/selection'
-import {
-  ArrowUp,
-  ArrowDown,
-  ChevronsUp,
-  ChevronsDown,
-  Trash2,
-  Lock,
-  Unlock,
-  Layers
-} from 'lucide-vue-next'
+// @ts-expect-error: polybooljs 没有提供 typescript types
+import PolyBool from 'polybooljs'
 
 const editorStore = useEditorStore()
-const selectionStore = useSelectionStore()
 
-const visible = ref(false)
-const top = ref(0)
-const left = ref(0)
+const isVisible = ref(false)
+const position = ref({ x: 0, y: 0 })
+const contextType = ref<'node' | 'blank'>('blank')
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const targetNode = ref<any>(null)
 
-const activeObject = computed(() => selectionStore.selectedObjects[0])
-const isLocked = computed(() => (activeObject.value as any)?.locked)
-
-function show(e: MouseEvent) {
+// 暴露给父组件调用
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const open = (e: MouseEvent, type: 'node' | 'blank', node?: any) => {
   e.preventDefault()
-  visible.value = true
-  top.value = e.clientY
-  left.value = e.clientX
+  contextType.value = type
+  targetNode.value = node || null
+  position.value = { x: e.clientX, y: e.clientY }
+  isVisible.value = true
 }
 
-function hide() {
-  visible.value = false
+const close = () => {
+  isVisible.value = false
 }
 
-// 核心操作函数 - 适配 Fabric 6.x
-function bringToFront() {
-  const obj = activeObject.value
-  const canvas = editorStore.canvas as any
-  if (obj && canvas) {
-    canvas.bringObjectToFront(obj)
-    canvas.requestRenderAll()
-  }
-  hide()
-}
+// 供模板依据进行多选状态研判
+const isMultiSelection = computed(() => {
+  return (editorStore.graph?.getSelectedCells().filter(c => c.isNode()).length || 0) > 1
+})
 
-function sendToBack() {
-  const obj = activeObject.value
-  const canvas = editorStore.canvas as any
-  if (obj && canvas) {
-    canvas.sendObjectToBack(obj)
-    canvas.requestRenderAll()
-  }
-  hide()
-}
-
-function bringForward() {
-  const obj = activeObject.value
-  const canvas = editorStore.canvas as any
-  if (obj && canvas) {
-    canvas.bringObjectForward(obj)
-    canvas.requestRenderAll()
-  }
-  hide()
-}
-
-function sendBackwards() {
-  const obj = activeObject.value
-  const canvas = editorStore.canvas as any
-  if (obj && canvas) {
-    canvas.sendObjectBackwards(obj)
-    canvas.requestRenderAll()
-  }
-  hide()
-}
-
-function deleteObject() {
-  const canvas = editorStore.canvas
-  if (!canvas) return
-  const activeObjects = canvas.getActiveObjects()
-  activeObjects.forEach(obj => canvas.remove(obj))
-  canvas.discardActiveObject()
-  canvas.requestRenderAll()
-  hide()
-}
-
-function toggleLock() {
-  const obj = activeObject.value as any
-  if (!obj || !editorStore.canvas) return
-
-  const locked = !obj.locked
-  obj.set({
-    locked: locked,
-    selectable: !locked,
-    hasControls: !locked,
-    evented: true,
-    lockMovementX: locked,
-    lockMovementY: locked,
-    lockRotation: locked,
-    lockScalingX: locked,
-    lockScalingY: locked
-  } as any)
-
-  if (locked) {
-    editorStore.canvas.discardActiveObject()
-  }
-  editorStore.canvas.requestRenderAll()
-  editorStore.canvas.fire('after:render')
-  hide()
-}
-
+// 全局点击自动关闭菜单
 onMounted(() => {
-  window.addEventListener('click', hide)
+  window.addEventListener('click', close)
+  window.addEventListener('contextmenu', (e) => {
+    // 防止默认右键菜单弹出
+    if (isVisible.value) {
+      e.preventDefault()
+    }
+  })
 })
 
 onUnmounted(() => {
-  window.removeEventListener('click', hide)
+  window.removeEventListener('click', close)
 })
 
-defineExpose({ show, hide })
+// 菜单基础操作动作
+const action = (type: string) => {
+  const graph = editorStore.graph
+  if (!graph) return
+
+  switch (type) {
+    case 'copy':
+      if (contextType.value === 'node' && targetNode.value) {
+        graph.copy([targetNode.value])
+      }
+      break
+    case 'paste':
+      if (!graph.isClipboardEmpty()) {
+        const cells = graph.paste({ offset: 32 })
+        graph.cleanSelection()
+        graph.select(cells)
+      }
+      break
+    case 'union':
+      {
+        const selectedNodes = graph.getSelectedCells().filter(cell => cell.isNode())
+        if (selectedNodes.length < 2) {
+          alert('请至少选择两个重叠相交的图元进行合并。')
+          break
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let resultRegion: any = null
+
+        try {
+          selectedNodes.forEach((node) => {
+            const poly = { regions: [] as number[][][], inverted: false }
+            const pos = node.position()
+            const size = node.size()
+            const shape = node.shape
+
+            if (shape === 'rect' || shape === 'image') {
+              const rx = pos.x
+              const ry = pos.y
+              const rw = size.width
+              const rh = size.height
+              poly.regions = [[[rx, ry], [rx + rw, ry], [rx + rw, ry + rh], [rx, ry + rh]]]
+            } else if (shape === 'polygon') {
+              const points = node.attr('body/refPoints') || node.prop('points')
+              let ptsArray: number[][] = []
+              if (typeof points === 'string') {
+                ptsArray = points.split(' ').map(p => {
+                  const parts = p.split(',').map(Number)
+                  const px = parts[0] || 0
+                  const py = parts[1] || 0
+                  return [px + pos.x, py + pos.y]
+                })
+              } else if (Array.isArray(points)) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ptsArray = points.map((p: any) => [p.x + pos.x, p.y + pos.y])
+              }
+              if (ptsArray.length > 0) {
+                poly.regions = [ptsArray]
+              }
+            }
+
+            if (poly.regions.length > 0) {
+              if (!resultRegion) {
+                resultRegion = poly
+              } else {
+                resultRegion = PolyBool.union(resultRegion, poly)
+              }
+            }
+          })
+
+          if (resultRegion && resultRegion.regions.length > 0) {
+            const region = resultRegion.regions[0] as [number, number][]
+            const xs = region.map(p => p[0])
+            const ys = region.map(p => p[1])
+            const minX = Math.min(...xs)
+            const minY = Math.min(...ys)
+            const maxX = Math.max(...xs)
+            const maxY = Math.max(...ys)
+
+            const relativePoints = region.map(p => ({ x: p[0] - minX, y: p[1] - minY }))
+
+            const newNode = graph.createNode({
+              shape: 'polygon',
+              x: minX,
+              y: minY,
+              width: maxX - minX,
+              height: maxY - minY,
+              points: relativePoints,
+              attrs: {
+                body: {
+                  fill: selectedNodes[0]?.attr('body/fill') || '#1e293b',
+                  stroke: selectedNodes[0]?.attr('body/stroke') || '#f59e0b',
+                  strokeWidth: 2,
+                  filter: selectedNodes[0]?.attr('body/filter')
+                },
+                text: {
+                  text: '组合多边形',
+                  fill: '#e2e8f0',
+                  fontSize: 13
+                }
+              }
+            })
+
+            graph.addNode(newNode)
+            graph.removeCells(selectedNodes)
+            graph.cleanSelection()
+            graph.select(newNode)
+          }
+        } catch (err) {
+          console.error('合并运算失败:', err)
+          alert('多边形运算失败。')
+        }
+      }
+      break
+    case 'delete':
+      if (contextType.value === 'node' && targetNode.value) {
+        graph.removeCell(targetNode.value)
+      } else {
+        const cells = graph.getSelectedCells()
+        graph.removeCells(cells)
+      }
+      break
+    case 'toFront':
+      if (contextType.value === 'node' && targetNode.value) {
+        targetNode.value.toFront()
+      }
+      break
+    case 'toBack':
+      if (contextType.value === 'node' && targetNode.value) {
+        targetNode.value.toBack()
+      }
+      break
+    case 'selectAll':
+      graph.select(graph.getCells())
+      break
+    case 'clearCanvas':
+      if (confirm('确定清空整个画布吗？该操作不可逆转！')) {
+        graph.clearCells()
+      }
+      break
+  }
+  close()
+}
+
+defineExpose({
+  open,
+  close
+})
 </script>
 
 <template>
   <Transition enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0"
     enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-in"
     leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
-    <div v-if="visible"
-      class="fixed z-[9999] min-w-[180px] bg-white/90 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl p-2 py-2 flex flex-col gap-0.5"
-      :style="{ top: top + 'px', left: left + 'px' }" @click.stop @contextmenu.prevent>
-      <!-- 层级管理组 -->
-      <div
-        class="px-3 py-1.5 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-        <Layers class="w-2.5 h-2.5" />
-        层级排序
-      </div>
+    <div v-if="isVisible"
+      class="fixed z-[9999] min-w-[160px] bg-slate-900 border border-slate-700 rounded-lg shadow-xl shadow-black/50 py-1.5 focus:outline-none"
+      :style="{ left: `${position.x}px`, top: `${position.y}px` }" @click.stop @contextmenu.prevent>
 
-      <button @click="bringToFront" class="menu-item group" :disabled="!activeObject">
-        <ChevronsUp class="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-        <span>置于顶层</span>
-      </button>
+      <!-- 操作 Nodes 时 -->
+      <template v-if="contextType === 'node'">
+        <button @click="action('copy')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition-colors">
+          <Copy class="w-3.5 h-3.5" /> 复制节点
+        </button>
+        <div class="h-[1px] bg-slate-800 my-1 mx-2"></div>
+        <button v-if="isMultiSelection" @click="action('union')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-emerald-400 hover:bg-slate-800 hover:text-emerald-300 transition-colors">
+          <Layers class="w-3.5 h-3.5" /> 合并为多边形
+        </button>
+        <button v-else @click="action('toFront')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition-colors">
+          <ArrowUpFromLine class="w-3.5 h-3.5" /> 置于顶层
+        </button>
+        <button @click="action('toBack')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition-colors">
+          <ArrowDownToLine class="w-3.5 h-3.5" /> 置于底层
+        </button>
+        <div class="h-[1px] bg-slate-800 my-1 mx-2"></div>
+        <button @click="action('delete')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors">
+          <Trash2 class="w-3.5 h-3.5" /> 删除图元
+        </button>
+      </template>
 
-      <button @click="bringForward" class="menu-item group" :disabled="!activeObject">
-        <ArrowUp class="w-4 h-4 text-blue-500 group-hover:-translate-y-0.5 transition-transform" />
-        <span>上移一层</span>
-      </button>
-
-      <button @click="sendBackwards" class="menu-item group" :disabled="!activeObject">
-        <ArrowDown class="w-4 h-4 text-orange-500 group-hover:translate-y-0.5 transition-transform" />
-        <span>下移一层</span>
-      </button>
-
-      <button @click="sendToBack" class="menu-item group" :disabled="!activeObject">
-        <ChevronsDown class="w-4 h-4 text-slate-400 group-hover:scale-90 transition-transform" />
-        <span>置于底层</span>
-      </button>
-
-      <div class="my-1.5 h-[1px] bg-slate-100/80 mx-2"></div>
-
-      <!-- 状态管理组 -->
-      <button @click="toggleLock" class="menu-item group" :disabled="!activeObject"
-        :class="{ 'text-amber-600 bg-amber-50/50 hover:bg-amber-100/50': isLocked }">
-        <component :is="isLocked ? Unlock : Lock" class="w-4 h-4"
-          :class="isLocked ? 'text-amber-500' : 'text-slate-400'" />
-        <span>{{ isLocked ? '解锁对象' : '锁定对象' }}</span>
-      </button>
-
-      <div class="my-1.5 h-[1px] bg-slate-100/80 mx-2"></div>
-
-      <!-- 危险组 -->
-      <button @click="deleteObject" class="menu-item group hover:bg-red-50 hover:text-red-600 transition-colors"
-        :disabled="!activeObject">
-        <Trash2 class="w-4 h-4 text-slate-300 group-hover:text-red-500" />
-        <span>删除选中</span>
-      </button>
+      <!-- 操作空白画布时 -->
+      <template v-else>
+        <button @click="action('paste')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition-colors">
+          <ClipboardPaste class="w-3.5 h-3.5" /> 粘贴结构
+        </button>
+        <div class="h-[1px] bg-slate-800 my-1 mx-2"></div>
+        <button @click="action('selectAll')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition-colors">
+          <MousePointerSquareDashed class="w-3.5 h-3.5" /> 全选画布
+        </button>
+        <button @click="action('clearCanvas')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-slate-800 hover:text-red-400 transition-colors">
+          <Trash2 class="w-3.5 h-3.5" /> 清空画布
+        </button>
+      </template>
     </div>
   </Transition>
 </template>
-
-<style scoped>
-.menu-item {
-  @apply flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition-all active:scale-[0.98] text-left disabled:opacity-30 disabled:pointer-events-none;
-}
-</style>

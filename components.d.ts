@@ -15,10 +15,12 @@ declare module 'vue' {
     Button: typeof import('./src/components/ui/button/Button.vue')['default']
     CanvasEditor: typeof import('./src/components/editor/CanvasEditor.vue')['default']
     ContextMenu: typeof import('./src/components/editor/ContextMenu.vue')['default']
+    CoolingFan: typeof import('./src/components/editor/nodes/CoolingFan.vue')['default']
     LayerPanel: typeof import('./src/components/editor/LayerPanel.vue')['default']
     PropertyPanel: typeof import('./src/components/editor/PropertyPanel.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    StorageTank: typeof import('./src/components/editor/nodes/StorageTank.vue')['default']
     Toolbar: typeof import('./src/components/editor/Toolbar.vue')['default']
   }
 }
@@ -28,9 +30,11 @@ declare global {
   const Button: typeof import('./src/components/ui/button/Button.vue')['default']
   const CanvasEditor: typeof import('./src/components/editor/CanvasEditor.vue')['default']
   const ContextMenu: typeof import('./src/components/editor/ContextMenu.vue')['default']
+  const CoolingFan: typeof import('./src/components/editor/nodes/CoolingFan.vue')['default']
   const LayerPanel: typeof import('./src/components/editor/LayerPanel.vue')['default']
   const PropertyPanel: typeof import('./src/components/editor/PropertyPanel.vue')['default']
   const RouterLink: typeof import('vue-router')['RouterLink']
   const RouterView: typeof import('vue-router')['RouterView']
+  const StorageTank: typeof import('./src/components/editor/nodes/StorageTank.vue')['default']
   const Toolbar: typeof import('./src/components/editor/Toolbar.vue')['default']
 }
