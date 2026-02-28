@@ -39,18 +39,20 @@ export function useGridLayer(canvas: fabric.Canvas | null) {
     for (let i = start; i <= limit; i += gridSize) {
       lines.push(
         new fabric.Line([i, start, i, limit], {
-          stroke: i === 0 ? '#ccc' : '#e0e0e0',
-          strokeWidth: i === 0 ? 1.5 : 1,
+          stroke: i === 0 ? '#bbb' : '#e5e5e5',
+          strokeWidth: i === 0 ? 1 : 0.5,
           selectable: false,
-          evented: false
+          evented: false,
+          strokeUniform: true // 缩放时保持线条粗细一致，避免视觉模糊
         })
       )
       lines.push(
         new fabric.Line([start, i, limit, i], {
-          stroke: i === 0 ? '#ccc' : '#e0e0e0',
-          strokeWidth: i === 0 ? 1.5 : 1,
+          stroke: i === 0 ? '#bbb' : '#e5e5e5',
+          strokeWidth: i === 0 ? 1 : 0.5,
           selectable: false,
-          evented: false
+          evented: false,
+          strokeUniform: true
         })
       )
     }

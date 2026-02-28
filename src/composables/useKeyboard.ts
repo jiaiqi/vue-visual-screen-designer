@@ -51,7 +51,41 @@ export function useKeyboard() {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
       moveSelectedObjects(key, shiftKey)
       e.preventDefault()
+      e.preventDefault()
       return
+    }
+
+    // [5] 锁定 (Ctrl + L)
+    if (isCtrl && key.toLowerCase() === 'l') {
+      toggleLockSelectedObjects()
+      e.preventDefault()
+      return
+    }
+  }
+
+  function toggleLockSelectedObjects() {
+    const canvas = editorStore.canvas
+    if (!canvas) return
+
+    const activeObjects = canvas.getActiveObjects()
+    if (activeObjects.length > 0) {
+      activeObjects.forEach(obj => {
+        const isLocked = !(obj as any).locked
+        obj.set({
+          locked: isLocked,
+          selectable: !isLocked,
+          evented: true,
+          hasControls: !isLocked,
+          lockMovementX: isLocked,
+          lockMovementY: isLocked,
+          lockRotation: isLocked,
+          lockScalingX: isLocked,
+          lockScalingY: isLocked
+        } as any)
+      })
+      canvas.discardActiveObject()
+      canvas.requestRenderAll()
+      canvas.fire('after:render')
     }
   }
 

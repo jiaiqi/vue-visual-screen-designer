@@ -1,7 +1,9 @@
 import * as fabric from 'fabric'
 import { WorkshopObjectType } from '@/types/editor'
+import { usePipes } from './usePipes'
 
 export function useDragDrop(canvas: fabric.Canvas | null) {
+  const { createPipe, startFluidAnimation } = usePipes(canvas)
 
   function handleDragOver(e: DragEvent) {
     if (!canvas) return
@@ -164,6 +166,16 @@ export function useDragDrop(canvas: fabric.Canvas | null) {
           originX: 'center',
           originY: 'center'
         })
+        break
+
+      case 'pipe' as any:
+        shape = createPipe({
+          pipeColor: '#64748b',
+          fluidColor: '#0ea5e9',
+          width: 24,
+          speed: 2
+        }) as any
+        startFluidAnimation()
         break
 
       case 'rectangle' as WorkshopObjectType:

@@ -4,6 +4,7 @@ import { useEditorStore } from '@/stores/editor'
 import { useSelectionStore } from '@/stores/selection'
 import { useHistoryStore } from '@/stores/history'
 import { useGridLayer } from './useGridLayer'
+import { useAlignmentGuides } from './useAlignmentGuides'
 
 export function useCanvas() {
   const canvasRef = ref<HTMLCanvasElement>()
@@ -59,7 +60,10 @@ export function useCanvas() {
       height: window.innerHeight - 48, // 头部高度
       preserveObjectStacking: true, // 确保选中时层级不会错乱
       selection: true,
-      backgroundColor: '#f5f5f5' // 暂定底色
+      backgroundColor: '#f5f5f5', // 暂定底色
+      enableRetinaCanvas: true, // 开启 Retina 高清适配
+      renderOnAddRemove: true,
+      imageSmoothingEnabled: true // 开启图像平滑
     })
 
     editorStore.initCanvas(canvas)
@@ -67,6 +71,9 @@ export function useCanvas() {
 
     const { setupGridSystem } = useGridLayer(canvas)
     setupGridSystem()
+
+    const { setup: setupAlignment } = useAlignmentGuides(canvas)
+    setupAlignment()
 
     setupGlobalEvents()
     setupCanvasEvents(canvas)
@@ -86,7 +93,20 @@ export function useCanvas() {
       selectionStore.clearSelection()
     })
 
-    // 同步对象级属性变化，供外部响应 (比如被拖拽后要在右侧即时刷新坐标)
+    // 同步对象级属性变化，供外部响应
+    cvs.on('object:moving', (opt: any) => {
+      // 网格强吸附逻辑 (可选开启，目前默认对齐到 gridSize)
+      const gridSize = editorStore.config.gridSize || 10
+      const target = opt.target
+
+      // 只有在没有触发智能参考线吸附（或作为补充）时，可以进行网格取整
+      // 注意：如果 useAlignmentGuides 已经 set 了位置，这里会基于那个位置再微调
+      target.set({
+        left: Math.round(target.left / gridSize) * gridSize,
+        top: Math.round(target.top / gridSize) * gridSize
+      })
+    })
+
     cvs.on('object:modified', () => {
       // 触发一次虚拟的选择刷新，让使用 selectedObjects 的计算属性或侦听器工作
       const current = cvs.getActiveObjects()
