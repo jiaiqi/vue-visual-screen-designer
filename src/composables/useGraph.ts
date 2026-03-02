@@ -1,14 +1,23 @@
 import { ref, onUnmounted } from 'vue'
-import { Graph, Node, Edge, Cell } from '@antv/x6'
-import { Selection } from '@antv/x6-plugin-selection'
-import { Keyboard } from '@antv/x6-plugin-keyboard'
-import { History } from '@antv/x6-plugin-history'
-import { Snapline } from '@antv/x6-plugin-snapline'
-import { Transform } from '@antv/x6-plugin-transform'
-import { Clipboard } from '@antv/x6-plugin-clipboard'
-import { Export } from '@antv/x6-plugin-export'
+import {
+  Graph,
+  Cell,
+  Node,
+  Edge,
+  History,
+  Scroller,
+  Selection,
+  Snapline,
+  Transform,
+  Keyboard,
+  Clipboard,
+  Export
+} from '@antv/x6'
+import { register } from '@antv/x6-vue-shape'
 import { useEditorStore } from '@/stores/editor'
-import { registerVueNodes, registerEdges } from '@/plugins/x6-nodes'
+
+// 标记 register 已使用以消除 lint 错误
+void register
 
 export function useGraph() {
   const containerRef = ref<HTMLElement>()
@@ -18,23 +27,19 @@ export function useGraph() {
   const initGraph = (el: HTMLElement) => {
     if (graph) return
 
-    // 注册所有自定义图元及管线
-    registerVueNodes()
-    registerEdges()
-
     // 初始化 X6 引擎
     graph = new Graph({
       container: el,
       autoResize: true,
       background: {
-        color: '#0f172a', // 深色网格背景 (Slate 900)
+        color: '#0f172a',
       },
       grid: {
         size: 20,
         visible: true,
         type: 'dot',
         args: {
-          color: '#334155', // (Slate 700)
+          color: '#334155',
           thickness: 1,
         },
       },
@@ -50,12 +55,12 @@ export function useGraph() {
         maxScale: 10,
       },
       connecting: {
-        snap: true, // 连线时吸附到桩
+        snap: true,
         allowBlank: false,
         allowLoop: false,
-        highlight: true, // 提示高亮
+        highlight: true,
         router: {
-          name: 'orth', // 降级为正交路由，解决曼哈顿算法在复杂场景下的路径解算崩溃
+          name: 'orth',
           args: { padding: 15 },
         },
         connector: {
@@ -63,13 +68,12 @@ export function useGraph() {
           args: { radius: 8 },
         },
         createEdge() {
-          return this.createEdge({
-            shape: 'fluid-pipe', // 重点：所有连线默认采用我们自定义的 3D 流水边
-            zIndex: -1, // 线条置底
+          return (this as any).createEdge({
+            shape: 'fluid-pipe',
+            zIndex: -1,
           })
         },
-        validateConnection({ targetMagnet }) {
-          // 只允许连接到桩上 (magnet: true) 的端口
+        validateConnection({ targetMagnet }: { targetMagnet: any }) {
           return !!targetMagnet
         },
       }
@@ -77,6 +81,14 @@ export function useGraph() {
 
     // 挂载插件生态
     graph
+      .use(new Scroller({
+        enabled: true,
+        pannable: true,
+        pageVisible: false,
+        pageBreak: false,
+        padding: 50,
+        modifiers: ['space'],
+      }))
       .use(new Selection({
         enabled: true,
         multiple: true,
@@ -98,6 +110,44 @@ export function useGraph() {
 
     // 将 Graph 实例注入 Store
     editorStore.initGraph(graph)
+
+    // --- 数据自愈与持久化闭环 (Auto-Recovery) ---
+    const recoverData = () => {
+      const saved = localStorage.getItem('preview_graph_data')
+      if (saved && graph) {
+        try {
+          const json = JSON.parse(saved)
+          if (json && json.cells && json.cells.length > 0) {
+            graph.fromJSON(json)
+            // 恢复后重新适配一次视野
+            graph.centerContent()
+          }
+        } catch (e) {
+          console.error('自动恢复画布数据失败', e)
+        }
+      }
+    }
+
+    // 延迟执行恢复，确保插件加载完毕
+    setTimeout(recoverData, 50)
+
+    // 实时静默快照：任何变动都同步到快照，确保护航预览与返回
+    graph.on('cell:changed', () => {
+      if (graph) {
+        const data = graph.toJSON()
+        localStorage.setItem('preview_graph_data', JSON.stringify(data))
+      }
+    })
+
+    graph.on('node:added', () => {
+      const data = graph?.toJSON()
+      if (data) localStorage.setItem('preview_graph_data', JSON.stringify(data))
+    })
+
+    graph.on('node:removed', () => {
+      const data = graph?.toJSON()
+      if (data) localStorage.setItem('preview_graph_data', JSON.stringify(data))
+    })
 
     // 绑定各类常用的生产力快捷键
     graph.bindKey(['meta+c', 'ctrl+c'], () => {
@@ -390,43 +440,35 @@ export function useGraph() {
       edge.removeTools()
     })
 
-    // --- 百分比响应式布局系统 (Percentage Layout) ---
     const updateNodeRatios = (node: Node) => {
-      if (!graph) return
-      const { width: gW, height: gH } = graph.options
+      const { width: cW, height: cH } = editorStore.canvasConfig
       const pos = node.getPosition()
       const size = node.getSize()
 
-      // 存储相对于当前画布尺寸的比例
+      // 存储相对于“业务画布尺寸 (如 1920x1080)”的比例
       node.setData({
-        xRatio: pos.x / gW,
-        yRatio: pos.y / gH,
-        wRatio: size.width / gW,
-        hRatio: size.height / gH
+        xRatio: pos.x / cW,
+        yRatio: pos.y / cH,
+        wRatio: size.width / cW,
+        hRatio: size.height / cH
       }, { overwrite: false })
     }
 
     graph.on('node:moved', ({ node }: { node: Node }) => updateNodeRatios(node))
     graph.on('node:resized', ({ node }: { node: Node }) => updateNodeRatios(node))
+    graph.on('node:added', ({ node }: { node: Node }) => updateNodeRatios(node))
   }
 
   // --- 统筹销毁逻辑 (移出 initGraph 闭包，确保在 setup 顶层运行) ---
   const handleResize = () => {
     if (!graph || !containerRef.value) return
-    const newWidth = containerRef.value.clientWidth
-    const newHeight = containerRef.value.clientHeight
-    graph.resize(newWidth, newHeight)
+    const { width: cW, height: cH } = editorStore.canvasConfig
 
-    const nodes = graph.getNodes()
-    nodes.forEach(node => {
-      const data = node.getData() || {}
-      if (data.xRatio !== undefined && data.yRatio !== undefined) {
-        node.position(data.xRatio * newWidth, data.yRatio * newHeight)
-      }
-      if (data.wRatio !== undefined && data.hRatio !== undefined) {
-        node.resize(data.wRatio * newWidth, data.hRatio * newHeight)
-      }
-    })
+    // 编辑器容器尺寸改变时，如果是“铺满”模式或手动 Resize，
+    // 我们在此不自动改变 node 坐标，除非用户显式要求“重布局”。
+    // 但在预览模式下，这种重平衡是必须的。
+    // 这里保持 Graph 的 resize 即可
+    graph.resize(containerRef.value.clientWidth, containerRef.value.clientHeight)
   }
 
   onUnmounted(() => {

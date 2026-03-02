@@ -1,7 +1,7 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { Dnd } from '@antv/x6-plugin-dnd'
+import { Dnd } from '@antv/x6'
 import { useEditorStore } from '@/stores/editor'
 import { Type, ArrowRight, MoveHorizontal, Image as ImageIcon, Square, Circle, Triangle, Minus, Database, Server, Cpu, Cloud, Monitor, HardDrive, Wifi, Activity, Terminal, Shield, AlignLeft, Hash, Search, ChevronDown } from 'lucide-vue-next'
 

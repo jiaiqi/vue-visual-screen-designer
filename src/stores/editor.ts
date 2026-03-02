@@ -5,13 +5,25 @@ import type { Graph } from '@antv/x6'
 interface EditorState {
   mode: 'select' | 'draw' | 'pan' | 'edit'
   currentTool: string
-  // 使用 X6 的 Graph 实例替代原来的 fabric.Canvas
   graph: Graph | null
-  config: {
-    gridSize: number
+  // 画布全局业务属性
+  canvasConfig: {
+    name: string
+    category: string
+    width: number
+    height: number
+    backgroundColor: string
+    backgroundImage: string
     showGrid: boolean
+    gridSize: number
+    gridColor: string
     snapToGrid: boolean
-    showRuler: boolean
+    theme: 'light' | 'dark'
+    // 预览设置
+    previewScale: 'auto' | 'width' | 'height' | 'none'
+    showScrollbar: boolean
+    lockMove: boolean
+    lockZoom: boolean
   }
 }
 
@@ -20,17 +32,32 @@ export const useEditorStore = defineStore('editor', {
     mode: 'select',
     currentTool: 'select',
     graph: null,
-    config: {
-      gridSize: 20,
+    canvasConfig: {
+      name: '暖通',
+      category: '智慧物联',
+      width: 1920,
+      height: 1080,
+      backgroundColor: 'rgba(255, 255, 255, 0)', // 默认透明背景
+      backgroundImage: '',
       showGrid: true,
+      gridSize: 20,
+      gridColor: '#1e293b',
       snapToGrid: true,
-      showRuler: true
+      theme: 'dark',
+      previewScale: 'auto',
+      showScrollbar: false,
+      lockMove: false,
+      lockZoom: false
     }
   }),
   actions: {
     initGraph(graphInstance: Graph | null) {
-      // 使用 markRaw 绕过 Vue Proxy 监控，提高图形界面性能
       this.graph = graphInstance ? markRaw(graphInstance) : null
+
+      // 初始化配置同步
+      if (this.graph) {
+        this.applyCanvasConfig()
+      }
     },
     setMode(mode: EditorState['mode']) {
       this.mode = mode
@@ -43,19 +70,39 @@ export const useEditorStore = defineStore('editor', {
         this.setMode('draw')
       }
     },
-    updateConfig(partialConfig: Partial<EditorState['config']>) {
-      this.config = { ...this.config, ...partialConfig }
+    // 应用画布配置到底层 X6 实例
+    applyCanvasConfig() {
+      if (!this.graph) return
 
-      // 同步给 X6
-      if (this.graph) {
-        if (partialConfig.showGrid !== undefined) {
-          if (partialConfig.showGrid) this.graph.showGrid()
-          else this.graph.hideGrid()
-        }
-        if (partialConfig.gridSize !== undefined) {
-          this.graph.setGridSize(partialConfig.gridSize)
-        }
+      const { width, height, backgroundColor, showGrid, gridSize, gridColor } = this.canvasConfig
+
+      // 尺寸
+      this.graph.resize(width, height)
+
+      // 背景
+      this.graph.drawBackground({
+        color: backgroundColor,
+      })
+
+      // 网格
+      if (showGrid) {
+        this.graph.showGrid()
+        this.graph.setGridSize(gridSize)
+        this.graph.drawGrid({
+          type: 'dot',
+          args: {
+            color: gridColor,
+            thickness: 1,
+          },
+        })
+      } else {
+        this.graph.hideGrid()
       }
+    },
+    // 更新画布配置
+    updateCanvasConfig(partial: Partial<EditorState['canvasConfig']>) {
+      this.canvasConfig = { ...this.canvasConfig, ...partial }
+      this.applyCanvasConfig()
     }
   }
 })

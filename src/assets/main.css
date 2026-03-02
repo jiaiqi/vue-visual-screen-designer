@@ -85,3 +85,23 @@
 .x6-graph-connecting .x6-port-body {
   opacity: 1;
 }
+
+/* X6 Scroller 滚动条美化 (Slate 风格) */
+.x6-widget-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.x6-widget-scroller::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.8); /* Slate 900 */
+}
+.x6-widget-scroller::-webkit-scrollbar-thumb {
+  background: #334155; /* Slate 700 */
+  border-radius: 10px;
+  border: 2px solid rgba(15, 23, 42, 0.8);
+}
+.x6-widget-scroller::-webkit-scrollbar-thumb:hover {
+  background: #475569; /* Slate 600 */
+}
+.x6-widget-scroller::-webkit-scrollbar-corner {
+  background: transparent;
+}

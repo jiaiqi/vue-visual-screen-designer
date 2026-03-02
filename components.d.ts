@@ -12,8 +12,10 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AppHeader: typeof import('./src/components/layout/AppHeader.vue')['default']
     Button: typeof import('./src/components/ui/button/Button.vue')['default']
     CanvasEditor: typeof import('./src/components/editor/CanvasEditor.vue')['default']
+    CanvasProperties: typeof import('./src/components/editor/properties/CanvasProperties.vue')['default']
     ContextMenu: typeof import('./src/components/editor/ContextMenu.vue')['default']
     CoolingFan: typeof import('./src/components/editor/nodes/CoolingFan.vue')['default']
     DigitalNode: typeof import('./src/components/editor/nodes/DigitalNode.vue')['default']
@@ -21,6 +23,7 @@ declare module 'vue' {
     IconPickerDialog: typeof import('./src/components/editor/IconPickerDialog.vue')['default']
     JsonEditorModal: typeof import('./src/components/editor/JsonEditorModal.vue')['default']
     LayerPanel: typeof import('./src/components/editor/LayerPanel.vue')['default']
+    NodeProperties: typeof import('./src/components/editor/properties/NodeProperties.vue')['default']
     ProgressBarNode: typeof import('./src/components/editor/nodes/ProgressBarNode.vue')['default']
     PropertyPanel: typeof import('./src/components/editor/PropertyPanel.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
@@ -32,8 +35,10 @@ declare module 'vue' {
 
 // For TSX support
 declare global {
+  const AppHeader: typeof import('./src/components/layout/AppHeader.vue')['default']
   const Button: typeof import('./src/components/ui/button/Button.vue')['default']
   const CanvasEditor: typeof import('./src/components/editor/CanvasEditor.vue')['default']
+  const CanvasProperties: typeof import('./src/components/editor/properties/CanvasProperties.vue')['default']
   const ContextMenu: typeof import('./src/components/editor/ContextMenu.vue')['default']
   const CoolingFan: typeof import('./src/components/editor/nodes/CoolingFan.vue')['default']
   const DigitalNode: typeof import('./src/components/editor/nodes/DigitalNode.vue')['default']
@@ -41,6 +46,7 @@ declare global {
   const IconPickerDialog: typeof import('./src/components/editor/IconPickerDialog.vue')['default']
   const JsonEditorModal: typeof import('./src/components/editor/JsonEditorModal.vue')['default']
   const LayerPanel: typeof import('./src/components/editor/LayerPanel.vue')['default']
+  const NodeProperties: typeof import('./src/components/editor/properties/NodeProperties.vue')['default']
   const ProgressBarNode: typeof import('./src/components/editor/nodes/ProgressBarNode.vue')['default']
   const PropertyPanel: typeof import('./src/components/editor/PropertyPanel.vue')['default']
   const RouterLink: typeof import('vue-router')['RouterLink']
