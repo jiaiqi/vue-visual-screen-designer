@@ -126,10 +126,10 @@ onUnmounted(() => {
           class="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center mr-1 shadow-[0_0_15px_rgba(14,165,233,0.3)]">
           <LayoutGrid class="w-5 h-5 text-slate-950" />
         </div>
-        <h1 class="font-extrabold text-xl tracking-tight text-slate-100 select-none">车间平面规划器</h1>
-        <span
+        <h1 class="font-extrabold text-xl tracking-tight text-slate-100 select-none">平面图设计</h1>
+        <!-- <span
           class="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-sky-400 border border-slate-700 uppercase tracking-widest">v1.2
-          Pro</span>
+          Pro</span> -->
       </div>
 
       <div class="actions flex items-center gap-4">
@@ -176,7 +176,7 @@ onUnmounted(() => {
             <ZoomOut class="w-4 h-4" />
           </button>
           <span class="text-xs font-mono font-bold text-slate-300 min-w-[3.5rem] text-center select-none">{{ zoomRatio
-            }}%</span>
+          }}%</span>
           <button @click="handleZoom(0.1)"
             class="p-1.5 rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors" title="放大">
             <ZoomIn class="w-4 h-4" />

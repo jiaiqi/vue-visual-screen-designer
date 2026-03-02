@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Copy, Trash2, ArrowUpFromLine, ArrowDownToLine, MousePointerSquareDashed, ClipboardPaste, Layers } from 'lucide-vue-next'
+import { Copy, Trash2, ArrowUpFromLine, ArrowDownToLine, MousePointerSquareDashed, ClipboardPaste, Layers, Unlink } from 'lucide-vue-next'
 import { useEditorStore } from '@/stores/editor'
 // @ts-expect-error: polybooljs 没有提供 typescript types
 import PolyBool from 'polybooljs'
@@ -30,6 +30,11 @@ const close = () => {
 // 供模板依据进行多选状态研判
 const isMultiSelection = computed(() => {
   return (editorStore.graph?.getSelectedCells().filter(c => c.isNode()).length || 0) > 1
+})
+
+// 研判当前节点是否为曾经被合并过的联合体
+const isUnionNode = computed(() => {
+  return contextType.value === 'node' && targetNode.value && targetNode.value.data?.isUnionShape
 })
 
 // 全局点击自动关闭菜单
@@ -84,27 +89,47 @@ const action = (type: string) => {
             const shape = node.shape
 
             if (shape === 'rect' || shape === 'image') {
-              const rx = pos.x
-              const ry = pos.y
-              const rw = size.width
-              const rh = size.height
+              const rx = Math.round(pos.x)
+              const ry = Math.round(pos.y)
+              const rw = Math.round(size.width)
+              const rh = Math.round(size.height)
               poly.regions = [[[rx, ry], [rx + rw, ry], [rx + rw, ry + rh], [rx, ry + rh]]]
             } else if (shape === 'polygon') {
               const points = node.attr('body/refPoints') || node.prop('points')
               let ptsArray: number[][] = []
               if (typeof points === 'string') {
-                ptsArray = points.split(' ').map(p => {
+                ptsArray = points.split(' ').map((p: string) => {
                   const parts = p.split(',').map(Number)
                   const px = parts[0] || 0
                   const py = parts[1] || 0
-                  return [px + pos.x, py + pos.y]
+                  return [Math.round(px + pos.x), Math.round(py + pos.y)]
                 })
               } else if (Array.isArray(points)) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                ptsArray = points.map((p: any) => [p.x + pos.x, p.y + pos.y])
+                ptsArray = points.map((p: any) => [Math.round(p.x + pos.x), Math.round(p.y + pos.y)])
               }
               if (ptsArray.length > 0) {
                 poly.regions = [ptsArray]
+              }
+            } else if (shape === 'path') {
+              const pathData = node.prop('path') || node.attr('body/refD')
+              if (typeof pathData === 'string') {
+                const subpaths = pathData.split('Z').map(s => s.trim()).filter(s => s.length > 0)
+                subpaths.forEach(sub => {
+                  const tokens = sub.split(' ').filter(s => s.trim().length > 0)
+                  const currentRegion: number[][] = []
+                  for (let i = 0; i < tokens.length; i++) {
+                    if (tokens[i] === 'M' || tokens[i] === 'L') {
+                      const px = Math.round(Number(tokens[i + 1]) + pos.x)
+                      const py = Math.round(Number(tokens[i + 2]) + pos.y)
+                      currentRegion.push([px, py])
+                      i += 2
+                    }
+                  }
+                  if (currentRegion.length > 0) {
+                    poly.regions.push(currentRegion)
+                  }
+                })
               }
             }
 
@@ -118,23 +143,40 @@ const action = (type: string) => {
           })
 
           if (resultRegion && resultRegion.regions.length > 0) {
-            const region = resultRegion.regions[0] as [number, number][]
-            const xs = region.map(p => p[0])
-            const ys = region.map(p => p[1])
-            const minX = Math.min(...xs)
-            const minY = Math.min(...ys)
-            const maxX = Math.max(...xs)
-            const maxY = Math.max(...ys)
+            let minX = Infinity
+            let minY = Infinity
+            let maxX = -Infinity
+            let maxY = -Infinity
 
-            const relativePoints = region.map(p => ({ x: p[0] - minX, y: p[1] - minY }))
+            resultRegion.regions.forEach((region: number[][]) => {
+              region.forEach(p => {
+                minX = Math.min(minX, p[0] ?? 0)
+                minY = Math.min(minY, p[1] ?? 0)
+                maxX = Math.max(maxX, p[0] ?? 0)
+                maxY = Math.max(maxY, p[1] ?? 0)
+              })
+            })
+
+            let pathData = ''
+            resultRegion.regions.forEach((region: number[][]) => {
+              const relativePoints = region.map(p => ({ x: (p[0] ?? 0) - minX, y: (p[1] ?? 0) - minY }))
+              relativePoints.forEach((p, idx) => {
+                if (idx === 0) {
+                  pathData += `M ${p.x} ${p.y} `
+                } else {
+                  pathData += `L ${p.x} ${p.y} `
+                }
+              })
+              pathData += 'Z '
+            })
 
             const newNode = graph.createNode({
-              shape: 'polygon',
+              shape: 'path',
               x: minX,
               y: minY,
               width: maxX - minX,
               height: maxY - minY,
-              points: relativePoints,
+              path: pathData.trim(),
               attrs: {
                 body: {
                   fill: selectedNodes[0]?.attr('body/fill') || '#1e293b',
@@ -142,11 +184,15 @@ const action = (type: string) => {
                   strokeWidth: 2,
                   filter: selectedNodes[0]?.attr('body/filter')
                 },
-                text: {
+                label: {
                   text: '组合多边形',
                   fill: '#e2e8f0',
                   fontSize: 13
                 }
+              },
+              data: {
+                isUnionShape: true,
+                originalNodes: selectedNodes.map(n => n.toJSON())
               }
             })
 
@@ -158,6 +204,19 @@ const action = (type: string) => {
         } catch (err) {
           console.error('合并运算失败:', err)
           alert('多边形运算失败。')
+        }
+      }
+      break
+    case 'split':
+      if (contextType.value === 'node' && targetNode.value) {
+        const originals = targetNode.value.data?.originalNodes
+        if (Array.isArray(originals)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const newCells = originals.map((json: any) => graph.createNode(json))
+          graph.addCell(newCells)
+          graph.removeCell(targetNode.value)
+          graph.cleanSelection()
+          graph.select(newCells)
         }
       }
       break
@@ -215,6 +274,10 @@ defineExpose({
         <button v-if="isMultiSelection" @click="action('union')"
           class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-emerald-400 hover:bg-slate-800 hover:text-emerald-300 transition-colors">
           <Layers class="w-3.5 h-3.5" /> 合并为多边形
+        </button>
+        <button v-else-if="isUnionNode" @click="action('split')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-orange-400 hover:bg-slate-800 hover:text-orange-300 transition-colors">
+          <Unlink class="w-3.5 h-3.5" /> 拆分为原图元
         </button>
         <button v-else @click="action('toFront')"
           class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition-colors">

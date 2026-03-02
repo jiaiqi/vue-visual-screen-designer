@@ -96,7 +96,7 @@ const startDrag = (e: MouseEvent, item: typeof shapeTypes[0]) => {
     ref="dndContainer">
     <!-- Vue 原生面板头部 -->
     <div class="px-4 py-3 text-sm font-semibold text-slate-400 uppercase tracking-widest border-b border-[#2a3045]">
-      规划图元库
+      基础图元
     </div>
 
     <!-- 面板内容滚动区 -->
@@ -117,7 +117,7 @@ const startDrag = (e: MouseEvent, item: typeof shapeTypes[0]) => {
         <div class="text-[11px] text-slate-500 mb-3 uppercase tracking-wider font-semibold">复杂设备及管线</div>
         <!-- 以后其他高级图元也可继续使用 v-for / dnd 追加在这里 -->
         <div class="text-xs text-slate-600 bg-slate-900/50 rounded p-3 border border-slate-800/50">
-          更多高阶工业组件构建中...
+          更多高阶工业组件开发中...
         </div>
       </div>
     </div>
