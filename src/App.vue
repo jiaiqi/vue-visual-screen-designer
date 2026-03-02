@@ -8,7 +8,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useEditorStore } from '@/stores/editor'
 import { useHistoryStore } from '@/stores/history'
 import { useExport } from '@/composables/useExport'
-import { Undo2, Redo2, Download, HardDriveDownload, HardDriveUpload, LayoutGrid, ZoomIn, ZoomOut, Maximize, Trash2, MousePointerSquareDashed } from 'lucide-vue-next'
+import { Undo2, Redo2, Download, HardDriveDownload, HardDriveUpload, LayoutGrid, ZoomIn, ZoomOut, Maximize, Trash2, MousePointerSquareDashed, Keyboard, X } from 'lucide-vue-next'
 
 const editorStore = useEditorStore()
 const historyStore = useHistoryStore()
@@ -72,6 +72,9 @@ function handleClearCanvas() {
 // 右键菜单引用
 const contextMenuRef = ref<InstanceType<typeof ContextMenu>>()
 
+// 快捷键帮助弹窗状态
+const isHelpModalOpen = ref(false)
+
 onMounted(() => {
   // 延迟监听 graph 的相关环境与事件
   setTimeout(() => {
@@ -133,6 +136,16 @@ onUnmounted(() => {
       </div>
 
       <div class="actions flex items-center gap-4">
+        <!-- 帮助组 -->
+        <button @click="isHelpModalOpen = true"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-700/50 bg-slate-800/30 text-slate-300 hover:bg-slate-800 hover:border-slate-600 hover:text-sky-400 transition-all active:scale-95"
+          title="查看快捷键指南">
+          <Keyboard class="w-4 h-4" />
+          <span>快捷键指南</span>
+        </button>
+
+        <div class="h-6 w-[1px] bg-slate-800"></div>
+
         <!-- 核心操作组：撤销还原 -->
         <div class="flex items-center bg-slate-900/80 rounded-lg p-1 border border-slate-800">
           <button @click="historyStore.undo()" :disabled="!historyStore.canUndo"
@@ -176,7 +189,7 @@ onUnmounted(() => {
             <ZoomOut class="w-4 h-4" />
           </button>
           <span class="text-xs font-mono font-bold text-slate-300 min-w-[3.5rem] text-center select-none">{{ zoomRatio
-          }}%</span>
+            }}%</span>
           <button @click="handleZoom(0.1)"
             class="p-1.5 rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors" title="放大">
             <ZoomIn class="w-4 h-4" />
@@ -240,6 +253,90 @@ onUnmounted(() => {
 
     <!-- 全局右键菜单 -->
     <ContextMenu ref="contextMenuRef" />
+
+    <!-- 快捷键指南弹窗 -->
+    <Transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 scale-95"
+      enter-to-class="opacity-100 scale-100" leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
+      <div v-if="isHelpModalOpen" class="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+        <!-- 背景遮罩 -->
+        <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" @click="isHelpModalOpen = false"></div>
+
+        <!-- 弹窗内容 -->
+        <div
+          class="relative w-full max-w-[500px] bg-slate-900 border border-slate-700 rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-900/80">
+            <h2 class="text-base font-bold text-slate-100 flex items-center gap-2">
+              <Keyboard class="w-4.5 h-4.5 text-sky-400" />
+              快捷键操作指南
+            </h2>
+            <button @click="isHelpModalOpen = false"
+              class="text-slate-400 hover:text-white p-1.5 rounded-md hover:bg-slate-800 transition-colors">
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+
+          <div class="p-6 overflow-y-auto">
+            <div class="grid grid-cols-2 gap-x-12 gap-y-5 text-sm">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">撤销当前操作</span>
+                <kbd
+                  class="px-2 py-1 bg-slate-950 border border-slate-700/80 rounded text-slate-300 font-mono text-xs shadow-inner">Ctrl
+                  + Z</kbd>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">重做上一步</span>
+                <kbd
+                  class="px-2 py-1 bg-slate-950 border border-slate-700/80 rounded text-slate-300 font-mono text-xs shadow-inner">Ctrl
+                  + Y</kbd>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">复制图元</span>
+                <kbd
+                  class="px-2 py-1 bg-slate-950 border border-slate-700/80 rounded text-slate-300 font-mono text-xs shadow-inner">Ctrl
+                  + C</kbd>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">粘贴至画布</span>
+                <kbd
+                  class="px-2 py-1 bg-slate-950 border border-slate-700/80 rounded text-slate-300 font-mono text-xs shadow-inner">Ctrl
+                  + V</kbd>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">全选图元</span>
+                <kbd
+                  class="px-2 py-1 bg-slate-950 border border-slate-700/80 rounded text-slate-300 font-mono text-xs shadow-inner">Ctrl
+                  + A</kbd>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">删除选中项</span>
+                <kbd
+                  class="px-2 py-1 bg-slate-950 border border-slate-700/80 rounded text-slate-300 font-mono text-xs shadow-inner">Delete</kbd>
+              </div>
+              <div class="flex flex-col gap-2 col-span-2 mt-2 pt-5 border-t border-slate-800 border-dashed">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400">追加多选/点选</span>
+                  <span class="text-slate-300 text-xs text-right">按住 <kbd
+                      class="px-1.5 py-0.5 bg-slate-950 border border-slate-700/80 rounded font-mono shadow-inner mx-0.5">Ctrl</kbd>
+                    或 <kbd
+                      class="px-1.5 py-0.5 bg-slate-950 border border-slate-700/80 rounded font-mono shadow-inner mx-0.5">Shift</kbd>
+                    并点击图元</span>
+                </div>
+                <div class="flex items-center justify-between mt-1">
+                  <span class="text-slate-400">平移拖拽视口</span>
+                  <span class="text-slate-300 text-xs text-right">按住 <kbd
+                      class="px-1.5 py-0.5 bg-slate-950 border border-slate-700/80 rounded font-mono shadow-inner mx-0.5">Space空格</kbd>
+                    并自由拖移</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="px-5 py-3 border-t border-slate-800 bg-slate-900/30 text-xs text-slate-500 text-center">
+            Mac 用户请将 Ctrl 替换为 Command (⌘) 键使用
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 

@@ -143,6 +143,11 @@ const action = (type: string) => {
           })
 
           if (resultRegion && resultRegion.regions.length > 0) {
+            if (resultRegion.regions.length > 1) {
+              alert('部分图元未发生重叠相交，或组合后将产生内部孔洞。当前仅支持合并为单一连续的实心图形。')
+              return
+            }
+
             let minX = Infinity
             let minY = Infinity
             let maxX = -Infinity

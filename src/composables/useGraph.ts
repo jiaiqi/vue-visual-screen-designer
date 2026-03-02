@@ -99,6 +99,52 @@ export function useGraph() {
     // 将 Graph 实例注入 Store
     editorStore.initGraph(graph)
 
+    // 绑定各类常用的生产力快捷键
+    graph.bindKey(['meta+c', 'ctrl+c'], () => {
+      const g = editorStore.graph
+      if (!g) return false
+      const cells = g.getSelectedCells()
+      if (cells.length > 0) g.copy(cells)
+      return false
+    })
+
+    graph.bindKey(['meta+v', 'ctrl+v'], () => {
+      const g = editorStore.graph
+      if (!g) return false
+      if (!g.isClipboardEmpty()) {
+        const cells = g.paste({ offset: 32 })
+        g.cleanSelection()
+        g.select(cells)
+      }
+      return false
+    })
+
+    graph.bindKey(['meta+z', 'ctrl+z'], () => {
+      const g = editorStore.graph
+      if (g?.canUndo()) g.undo()
+      return false
+    })
+
+    graph.bindKey(['meta+shift+z', 'ctrl+shift+z', 'meta+y', 'ctrl+y'], () => {
+      const g = editorStore.graph
+      if (g?.canRedo()) g.redo()
+      return false
+    })
+
+    graph.bindKey(['backspace', 'delete'], () => {
+      const g = editorStore.graph
+      if (!g) return false
+      const cells = g.getSelectedCells()
+      if (cells.length > 0) g.removeCells(cells)
+      return false
+    })
+
+    graph.bindKey(['meta+a', 'ctrl+a'], () => {
+      const g = editorStore.graph
+      if (g) g.select(g.getCells())
+      return false
+    })
+
     setupGlobalEvents()
   }
 
