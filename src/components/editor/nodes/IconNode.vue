@@ -15,7 +15,8 @@ const CurrentIcon = shallowRef<Component | null>(null)
 // 动态解析图标组件
 const updateIcon = () => {
   const name = iconName.value
-  const icons = LucideIcons as Record<string, Component>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const icons = LucideIcons as any
   const iconComp = icons[name]
   if (iconComp) {
     CurrentIcon.value = iconComp
@@ -45,7 +46,7 @@ onMounted(() => {
   node.on('change:attrs', () => {
     const stroke = node.attr('body/stroke')
     if (stroke && stroke !== color.value) {
-      color.value = stroke
+      color.value = stroke as string
     }
   })
 })

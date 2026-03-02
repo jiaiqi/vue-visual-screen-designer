@@ -29,10 +29,10 @@ onMounted(() => {
     const stroke = node.attr('body/stroke')
     const fill = node.attr('body/fill')
     if (stroke && stroke !== progressColor.value) {
-      progressColor.value = stroke
+      progressColor.value = stroke as string
     }
     if (fill && fill !== progressBgColor.value) {
-      progressBgColor.value = fill
+      progressBgColor.value = fill as string
     }
   })
 })
