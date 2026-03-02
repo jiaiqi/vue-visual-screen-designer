@@ -384,4 +384,107 @@ canvas {
 * {
   box-sizing: border-box;
 }
+
+/* 组态图元进阶核心动画库 */
+.node-anim-trigger {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes anim-breath {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes anim-blink {
+
+  0%,
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 2px transparent);
+  }
+
+  50% {
+    opacity: 0.85;
+    filter: drop-shadow(0 0 15px rgba(220, 38, 38, 0.9));
+  }
+}
+
+@keyframes anim-move {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(12px);
+  }
+}
+
+@keyframes anim-shake {
+
+  0%,
+  100% {
+    transform: translateX(0) rotate(0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-4px) rotate(-2deg);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(4px) rotate(2deg);
+  }
+}
+
+@keyframes anim-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes anim-fade {
+
+  0%,
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
+  }
+
+  50% {
+    opacity: 0.15;
+    filter: drop-shadow(0 0 0px transparent);
+  }
+}
+
+@keyframes anim-float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
 </style>

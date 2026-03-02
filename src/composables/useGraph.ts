@@ -185,6 +185,37 @@ export function useGraph() {
       }
     })
 
+    // --- 图元高级动画底层系统 (解析与挂载) ---
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const applyNodeAnimation = (node: any) => {
+      const data = node.getData() || {}
+      const animType = data.animationType || 'none'
+
+      if (animType !== 'none') {
+        const duration = parseFloat(data.animationDuration) || 1
+        // 注意：因为 SVG 的缩放原点问题，需要挂载我们定制的 class
+        node.attr('body/class', 'node-anim-trigger')
+        node.attr('body/style/animation', `anim-${animType} ${duration}s ease-in-out infinite`)
+      } else {
+        node.attr('body/class', '')
+        node.attr('body/style/animation', 'none')
+      }
+    }
+
+    // 监听节点数据在 PropertyPanel 里被修改时的实时反馈
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    graph.on('node:change:data', ({ cell }: any) => {
+      if (cell.isNode()) {
+        applyNodeAnimation(cell)
+      }
+    })
+
+    // 监听从托盘生成或 JSON 恢复装载的新节点的自启动画
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    graph.on('node:added', ({ node }: any) => {
+      applyNodeAnimation(node)
+    })
+
     setupGlobalEvents()
   }
 
