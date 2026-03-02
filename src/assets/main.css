@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%; /* 深沉的深蓝黑色 */
-    --foreground: 210 40% 98%; /* 亮白反色文字 */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
 
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
@@ -34,6 +34,49 @@
 
     --radius: 0.5rem;
   }
+}
+
+:root {
+  --color-bg-primary: #020617;
+  --color-bg-secondary: #0f172a;
+  --color-bg-tertiary: #1e293b;
+  --color-bg-quaternary: #334155;
+  
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #e2e8f0;
+  --color-text-tertiary: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  
+  --color-border-primary: #334155;
+  --color-border-secondary: #475569;
+  
+  --color-accent-sky: #0ea5e9;
+  --color-accent-emerald: #10b981;
+  --color-accent-indigo: #6366f1;
+  --color-accent-rose: #f43f5e;
+  
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: #334155;
+  --scrollbar-thumb-hover: #475569;
+}
+
+[data-theme="light"] {
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8fafc;
+  --color-bg-tertiary: #f1f5f9;
+  --color-bg-quaternary: #e2e8f0;
+  
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #1e293b;
+  --color-text-tertiary: #334155;
+  --color-text-muted: #64748b;
+  
+  --color-border-primary: #e2e8f0;
+  --color-border-secondary: #cbd5e1;
+  
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
 }
 
 @layer base {
@@ -104,4 +147,19 @@
 }
 .x6-widget-scroller::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* X6 Snapline 对齐辅助线样式 */
+.my-snapline {
+  stroke: #f97316 !important;
+  stroke-width: 1px !important;
+  stroke-dasharray: 4px 2px !important;
+}
+
+.my-snapline.x6-snapline-horizontal {
+  stroke: #f97316 !important;
+}
+
+.my-snapline.x6-snapline-vertical {
+  stroke: #f97316 !important;
 }

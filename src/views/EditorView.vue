@@ -4,29 +4,47 @@ import Toolbar from '../components/editor/Toolbar.vue'
 import PropertyPanel from '../components/editor/PropertyPanel.vue'
 import ContextMenu from '../components/editor/ContextMenu.vue'
 import JsonEditorModal from '../components/editor/JsonEditorModal.vue'
+import TemplateLibrary from '../components/editor/TemplateLibrary.vue'
+import GuideTour from '../components/editor/GuideTour.vue'
+import Ruler from '../components/editor/Ruler.vue'
+import Minimap from '../components/editor/Minimap.vue'
 import AppHeader from '../components/layout/AppHeader.vue'
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useEditorStore } from '@/stores/editor'
 import { Keyboard, X } from 'lucide-vue-next'
 
 const editorStore = useEditorStore()
 
-// JSON 编辑器弹窗状态
+const showGuide = ref(false)
+
+const showRuler = computed(() => editorStore.canvasConfig.showRuler)
+const isToolbarCollapsed = computed(() => editorStore.isToolbarCollapsed)
+const isPropertyPanelCollapsed = computed(() => editorStore.isPropertyPanelCollapsed)
+
+const toolbarWidth = computed(() => isToolbarCollapsed.value ? '60px' : '280px')
+const propertyPanelWidth = computed(() => isPropertyPanelCollapsed.value ? '24px' : '300px')
+
 const showJsonEditor = ref(false)
 
-// 右键菜单引用
+const showTemplateLibrary = ref(false)
+
 const contextMenuRef = ref<InstanceType<typeof ContextMenu>>()
 
-// 快捷键帮助弹窗状态
 const isHelpModalOpen = ref(false)
 
+function handleOpenGuide() {
+  showGuide.value = true
+}
+
+function handleGuideComplete() {
+  editorStore.completeGuide()
+}
+
 onMounted(() => {
-  // 延迟监听 graph 的相关环境与事件
   setTimeout(() => {
     const graph = editorStore.graph
     if (graph) {
-      // X6 右键事件绑定
       graph.on('blank:contextmenu', ({ e }) => {
         const selected = graph.getSelectedCells().filter(c => c.isNode())
         if (contextMenuRef.value) {
@@ -49,57 +67,74 @@ onMounted(() => {
       })
     }
   }, 500)
+
+  if (!editorStore.hasSeenGuide) {
+    setTimeout(() => {
+      showGuide.value = true
+    }, 800)
+  }
 })
 </script>
 
 <template>
-  <div class="editor-view flex-1 flex flex-col overflow-hidden bg-slate-950 text-slate-100">
-    <!-- 全局右键菜单 -->
+  <div class="editor-view flex-1 flex flex-col overflow-hidden">
     <ContextMenu ref="contextMenuRef" />
 
-    <!-- 抽离出的顶部导航栏 -->
-    <AppHeader @open-json-editor="showJsonEditor = true" @open-help-modal="isHelpModalOpen = true" />
+    <AppHeader
+      @open-json-editor="showJsonEditor = true"
+      @open-help-modal="isHelpModalOpen = true"
+      @open-guide="handleOpenGuide"
+      @open-template-library="showTemplateLibrary = true"
+    />
 
-    <!-- 工作台主体 -->
     <main class="flex-1 flex overflow-hidden relative">
-      <!-- 左侧图元栏 -->
-      <Toolbar />
-
-      <!-- 中央绘图区域 (增加 min-width: 0 防止被挤压) -->
-      <div class="flex-1 relative flex flex-col bg-slate-900 shadow-inner min-width-0" style="min-width: 0">
-        <CanvasEditor />
+      <div 
+        data-guide="toolbar"
+        class="h-full shrink-0 transition-all duration-300 ease-in-out overflow-hidden"
+        :style="{ width: toolbarWidth }">
+        <Toolbar />
       </div>
 
-      <!-- 右侧设定栏 (确保 shrink-0 且强制宽度) -->
+      <div
+        data-guide="canvas"
+        class="flex-1 relative flex flex-col shadow-inner min-width-0"
+        style="background-color: var(--color-bg-secondary); min-width: 0"
+      >
+        <Ruler />
+        <CanvasEditor :class="{ 'ruler-active': showRuler }" />
+      </div>
+
       <aside
-        class="w-[300px] border-l border-slate-800 bg-slate-950 flex flex-col shrink-0 h-full relative shadow-2xl z-20">
-        <div class="flex-1 overflow-hidden">
-          <PropertyPanel />
-        </div>
+        data-guide="property-panel"
+        class="h-full shrink-0 relative shadow-2xl z-20 transition-all duration-300 ease-in-out overflow-hidden"
+        :style="{ width: propertyPanelWidth, backgroundColor: 'var(--color-bg-primary)', borderLeft: '1px solid var(--color-border-primary)' }">
+        <PropertyPanel />
       </aside>
     </main>
 
     <JsonEditorModal v-if="showJsonEditor" @close="showJsonEditor = false" />
 
-    <!-- 快捷键指南弹窗 -->
+    <TemplateLibrary v-if="showTemplateLibrary" @close="showTemplateLibrary = false" />
+
     <Transition name="fade">
       <div v-if="isHelpModalOpen" class="fixed inset-0 z-[99999] flex items-center justify-center p-4">
-        <!-- 背景遮罩 -->
-        <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" @click="isHelpModalOpen = false"></div>
+        <div class="absolute inset-0 backdrop-blur-sm" style="background-color: rgba(2, 6, 23, 0.7);" @click="isHelpModalOpen = false"></div>
 
-        <!-- 弹窗内容 -->
         <div
-          class="relative w-full max-w-[520px] bg-slate-900 border border-slate-700/50 rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col text-white">
+          class="relative w-full max-w-[520px] rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col"
+          style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border-primary);">
           <div
-            class="flex items-center justify-between px-6 py-5 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md">
-            <h2 class="text-lg font-bold text-slate-100 flex items-center gap-3">
-              <div class="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center">
-                <Keyboard class="w-5 h-5 text-sky-400" />
+            class="flex items-center justify-between px-6 py-5 backdrop-blur-md"
+            style="background-color: var(--color-bg-secondary); border-bottom: 1px solid var(--color-border-primary);">
+            <h2 class="text-lg font-bold flex items-center gap-3" style="color: var(--color-text-primary);">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: rgba(14, 165, 233, 0.2);">
+                <Keyboard class="w-5 h-5" style="color: var(--color-accent-sky);" />
               </div>
               快捷键操作指南
             </h2>
             <button @click="isHelpModalOpen = false"
-              class="text-slate-500 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-all active:scale-90">
+              class="p-2 rounded-xl transition-all active:scale-90"
+              style="color: var(--color-text-muted);">
               <X class="w-5 h-5" />
             </button>
           </div>
@@ -107,45 +142,55 @@ onMounted(() => {
           <div class="p-8 overflow-y-auto max-h-[70vh]">
             <div class="grid grid-cols-2 gap-x-12 gap-y-6 text-sm">
               <div class="flex items-center justify-between group">
-                <span class="text-slate-400 group-hover:text-slate-200 transition-colors">撤销当前操作</span>
+                <span class="transition-colors" style="color: var(--color-text-muted);">撤销当前操作</span>
                 <kbd
-                  class="px-2.5 py-1.5 bg-slate-950 border border-slate-700/80 rounded-lg text-slate-300 font-mono text-xs shadow-inner">Ctrl
+                  class="px-2.5 py-1.5 rounded-lg font-mono text-xs shadow-inner"
+                  style="background-color: var(--color-bg-primary); border: 1px solid var(--color-border-primary); color: var(--color-text-tertiary);">Ctrl
                   + Z</kbd>
               </div>
               <div class="flex items-center justify-between group">
-                <span class="text-slate-400 group-hover:text-slate-200 transition-colors">重做上一步</span>
+                <span class="transition-colors" style="color: var(--color-text-muted);">重做上一步</span>
                 <kbd
-                  class="px-2.5 py-1.5 bg-slate-950 border border-slate-700/80 rounded-lg text-slate-300 font-mono text-xs shadow-inner">Ctrl
+                  class="px-2.5 py-1.5 rounded-lg font-mono text-xs shadow-inner"
+                  style="background-color: var(--color-bg-primary); border: 1px solid var(--color-border-primary); color: var(--color-text-tertiary);">Ctrl
                   + Y</kbd>
               </div>
               <div class="flex items-center justify-between group">
-                <span class="text-slate-400 group-hover:text-slate-200 transition-colors">复制图元</span>
+                <span class="transition-colors" style="color: var(--color-text-muted);">复制图元</span>
                 <kbd
-                  class="px-2.5 py-1.5 bg-slate-950 border border-slate-700/80 rounded-lg text-slate-300 font-mono text-xs shadow-inner">Ctrl
+                  class="px-2.5 py-1.5 rounded-lg font-mono text-xs shadow-inner"
+                  style="background-color: var(--color-bg-primary); border: 1px solid var(--color-border-primary); color: var(--color-text-tertiary);">Ctrl
                   + C</kbd>
               </div>
               <div class="flex items-center justify-between group">
-                <span class="text-slate-400 group-hover:text-slate-200 transition-colors">粘贴至画布</span>
+                <span class="transition-colors" style="color: var(--color-text-muted);">粘贴至画布</span>
                 <kbd
-                  class="px-2.5 py-1.5 bg-slate-950 border border-slate-700/80 rounded-lg text-slate-300 font-mono text-xs shadow-inner">Ctrl
+                  class="px-2.5 py-1.5 rounded-lg font-mono text-xs shadow-inner"
+                  style="background-color: var(--color-bg-primary); border: 1px solid var(--color-border-primary); color: var(--color-text-tertiary);">Ctrl
                   + V</kbd>
               </div>
               <div class="flex items-center justify-between group">
-                <span class="text-slate-400 group-hover:text-slate-200 transition-colors">全选图元</span>
+                <span class="transition-colors" style="color: var(--color-text-muted);">全选图元</span>
                 <kbd
-                  class="px-2.5 py-1.5 bg-slate-950 border border-slate-700/80 rounded-lg text-slate-300 font-mono text-xs shadow-inner">Ctrl
+                  class="px-2.5 py-1.5 rounded-lg font-mono text-xs shadow-inner"
+                  style="background-color: var(--color-bg-primary); border: 1px solid var(--color-border-primary); color: var(--color-text-tertiary);">Ctrl
                   + A</kbd>
               </div>
               <div class="flex items-center justify-between group">
-                <span class="text-slate-400 group-hover:text-slate-200 transition-colors text-rose-400/80">删除选中项</span>
+                <span style="color: var(--color-accent-rose);">删除选中项</span>
                 <kbd
-                  class="px-2.5 py-1.5 bg-slate-950 border border-rose-900/30 rounded-lg text-rose-400/80 font-mono text-xs shadow-inner">Delete</kbd>
+                  class="px-2.5 py-1.5 rounded-lg font-mono text-xs shadow-inner"
+                  style="background-color: var(--color-bg-primary); border: 1px solid rgba(244, 63, 94, 0.3); color: var(--color-accent-rose);">Delete</kbd>
               </div>
             </div>
           </div>
         </div>
       </div>
     </Transition>
+
+    <GuideTour v-model="showGuide" @complete="handleGuideComplete" />
+
+    <Minimap />
   </div>
 </template>
 
@@ -164,5 +209,10 @@ onMounted(() => {
 .fade-leave-to {
   opacity: 0;
   transform: scale(0.98);
+}
+
+.ruler-active {
+  margin-top: 20px;
+  margin-left: 20px;
 }
 </style>

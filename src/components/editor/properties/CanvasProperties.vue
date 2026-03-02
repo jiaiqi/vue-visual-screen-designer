@@ -5,16 +5,16 @@ import {
   NForm, NFormItem, NInput, NSelect, NInputNumber,
   NColorPicker, NCheckbox, NText, NDivider,
   NRadioGroup, NRadio, NUpload, NIcon, NCollapse, NCollapseItem,
-  NButton
+  NButton, NSlider, NSwitch
 } from 'naive-ui'
 import { Upload } from 'lucide-vue-next'
 
 const editorStore = useEditorStore()
 
-// 图标图标加固：使用 markRaw 且避免直接在模板中使用标签，改用 component 属性
 const UploadIcon = markRaw(Upload)
 
 const config = computed(() => editorStore.canvasConfig)
+const snaplineConfig = computed(() => editorStore.snaplineConfig)
 
 const categoryOptions = [
   { label: '基础底图', value: '基础底图' },
@@ -28,15 +28,29 @@ const themeOptions = [
   { label: '明亮', value: 'light' },
 ]
 
-function handleUpdate(partial: any) {
+const snaplineColorOptions = [
+  { label: '橙色', value: '#f97316' },
+  { label: '红色', value: '#ef4444' },
+  { label: '青色', value: '#06b6d4' },
+  { label: '紫色', value: '#a855f7' },
+  { label: '绿色', value: '#22c55e' },
+]
+
+function handleUpdate(partial: Record<string, unknown>) {
   if (editorStore) {
     editorStore.updateCanvasConfig(partial)
   }
 }
 
-function handleImageUpload(options: { file: { file: File } }) {
-  const file = options.file.file
-  if (!file) return false
+function handleSnaplineUpdate(partial: Record<string, unknown>) {
+  if (editorStore) {
+    editorStore.updateSnaplineConfig(partial)
+  }
+}
+
+function handleImageUpload({ file }: { file: { file: File | null } }) {
+  const fileObj = file.file
+  if (!fileObj) return false
 
   const reader = new FileReader()
   reader.onload = (e) => {
@@ -45,7 +59,7 @@ function handleImageUpload(options: { file: { file: File } }) {
       handleUpdate({ backgroundImage: dataUrl })
     }
   }
-  reader.readAsDataURL(file)
+  reader.readAsDataURL(fileObj)
   return false
 }
 </script>
@@ -53,12 +67,10 @@ function handleImageUpload(options: { file: { file: File } }) {
 <template>
   <div v-if="config" class="canvas-properties p-4 select-none">
     <n-form label-placement="left" label-width="80" size="small">
-      <!-- 画布页签标题 -->
-      <div class="flex items-center gap-2 mb-6 border-b border-sky-500/30 pb-2">
-        <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">画布</span>
+      <div class="flex items-center gap-2 mb-6 pb-2" style="border-bottom: 1px solid rgba(14, 165, 233, 0.3);">
+        <span class="text-xs font-bold uppercase tracking-widest" style="color: var(--color-accent-sky);">画布</span>
       </div>
 
-      <!-- 基础信息 -->
       <n-form-item label="文件名">
         <n-input :value="config.name" @update:value="v => handleUpdate({ name: v })" placeholder="输入图纸名称" />
       </n-form-item>
@@ -70,44 +82,43 @@ function handleImageUpload(options: { file: { file: File } }) {
 
       <n-divider style="margin: 16px 0" />
 
-      <!-- 画布尺寸 -->
       <div class="flex items-center gap-4 mb-4">
         <n-text depth="3" class="text-[11px] shrink-0 w-[80px]">画布尺寸</n-text>
         <div class="flex items-center gap-2 flex-1">
           <div class="flex items-center gap-1 flex-1">
-            <n-text depth="3" class="text-[10px] uppercase font-bold text-slate-500">W</n-text>
+            <n-text depth="3" class="text-[10px] uppercase font-bold" style="color: var(--color-text-muted);">W</n-text>
             <n-input-number :value="config.width" :min="400" :max="5000" :step="10" :show-button="false" class="w-full"
               @update:value="v => handleUpdate({ width: v || 1920 })" />
           </div>
           <div class="flex items-center gap-1 flex-1">
-            <n-text depth="3" class="text-[10px] uppercase font-bold text-slate-500">H</n-text>
+            <n-text depth="3" class="text-[10px] uppercase font-bold" style="color: var(--color-text-muted);">H</n-text>
             <n-input-number :value="config.height" :min="300" :max="4000" :step="10" :show-button="false" class="w-full"
               @update:value="v => handleUpdate({ height: v || 1080 })" />
           </div>
         </div>
       </div>
 
-      <!-- 背景颜色 -->
       <n-form-item label="背景颜色">
         <n-color-picker :value="config.backgroundColor" :show-alpha="true"
           @update:value="v => handleUpdate({ backgroundColor: v })" />
       </n-form-item>
 
-      <!-- 背景图片 -->
       <n-form-item label="背景图片">
         <div class="w-full">
           <n-upload accept="image/*" :show-file-list="false" @before-upload="handleImageUpload">
             <div
-              class="upload-area border-2 border-dashed border-slate-700 hover:border-sky-500/50 rounded-lg h-32 flex flex-col items-center justify-center bg-slate-800/10 transition-all cursor-pointer overflow-hidden group">
+              class="upload-area border-2 border-dashed rounded-lg h-32 flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden group"
+              style="border-color: var(--color-border-primary); background-color: rgba(30, 41, 59, 0.1);">
               <template v-if="config.backgroundImage">
                 <img :src="config.backgroundImage" class="w-full h-full object-contain p-2" />
                 <div
-                  class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  class="absolute inset-0 flex items-center justify-center transition-opacity"
+                  style="background-color: rgba(0, 0, 0, 0.4);">
                   <n-text class="text-white text-[10px]">点击更换图片</n-text>
                 </div>
               </template>
               <template v-else>
-                <div class="flex flex-col items-center opacity-40 group-hover:opacity-100 transition-opacity">
+                <div class="flex flex-col items-center transition-opacity" style="opacity: 0.4;">
                   <n-icon size="24" :component="UploadIcon" />
                   <n-text class="mt-2 text-[10px]">点击上传图片</n-text>
                 </div>
@@ -121,7 +132,6 @@ function handleImageUpload(options: { file: { file: File } }) {
         </div>
       </n-form-item>
 
-      <!-- 背景网格 -->
       <n-form-item label="背景网格">
         <div class="flex items-center gap-2 w-full">
           <n-checkbox :checked="config.showGrid" @update:checked="v => handleUpdate({ showGrid: v })" />
@@ -132,16 +142,14 @@ function handleImageUpload(options: { file: { file: File } }) {
         </div>
       </n-form-item>
 
-      <!-- 主题 -->
       <n-form-item label="主题">
         <n-select :value="config.theme" :options="themeOptions" @update:value="v => handleUpdate({ theme: v })" />
       </n-form-item>
 
-      <!-- 预览设置 -->
       <n-collapse :default-expanded-names="['preview']" style="margin-top: 24px">
         <n-collapse-item title="预览设置" name="preview">
           <div class="preview-settings px-1">
-            <div class="label text-[11px] text-slate-500 mb-3 tracking-wide">缩放方式</div>
+            <div class="label text-[11px] mb-3 tracking-wide" style="color: var(--color-text-muted);">缩放方式</div>
             <n-radio-group :value="config.previewScale" @update:value="v => handleUpdate({ previewScale: v })"
               name="preview-scale">
               <div class="flex flex-col gap-3">
@@ -154,16 +162,58 @@ function handleImageUpload(options: { file: { file: File } }) {
             <div class="flex flex-col gap-4 mt-8">
               <div class="flex items-center gap-3">
                 <n-checkbox :checked="config.showScrollbar" @update:checked="v => handleUpdate({ showScrollbar: v })" />
-                <n-text class="text-xs text-slate-300">显示滚动条</n-text>
+                <n-text class="text-xs" style="color: var(--color-text-tertiary);">显示滚动条</n-text>
               </div>
               <div class="flex items-center gap-3">
                 <n-checkbox :checked="config.lockMove" @update:checked="v => handleUpdate({ lockMove: v })" />
-                <n-text class="text-xs text-slate-300">禁止移动</n-text>
+                <n-text class="text-xs" style="color: var(--color-text-tertiary);">禁止移动</n-text>
               </div>
               <div class="flex items-center gap-3">
                 <n-checkbox :checked="config.lockZoom" @update:checked="v => handleUpdate({ lockZoom: v })" />
-                <n-text class="text-xs text-slate-300">禁止缩放</n-text>
+                <n-text class="text-xs" style="color: var(--color-text-tertiary);">禁止缩放</n-text>
               </div>
+            </div>
+          </div>
+        </n-collapse-item>
+
+        <n-collapse-item title="对齐辅助" name="snapline">
+          <div class="snapline-settings px-1">
+            <div class="flex items-center justify-between mb-4">
+              <n-text class="text-xs" style="color: var(--color-text-tertiary);">启用对齐线</n-text>
+              <n-switch :value="snaplineConfig.enabled" @update:value="v => handleSnaplineUpdate({ enabled: v })" />
+            </div>
+
+            <div class="flex items-center justify-between mb-4">
+              <n-text class="text-xs" style="color: var(--color-text-tertiary);">显示间距提示</n-text>
+              <n-switch :value="snaplineConfig.showSpacing" @update:value="v => handleSnaplineUpdate({ showSpacing: v })" />
+            </div>
+
+            <div class="flex items-center justify-between mb-4">
+              <n-text class="text-xs" style="color: var(--color-text-tertiary);">精确对齐模式</n-text>
+              <n-switch :value="snaplineConfig.sharp" @update:value="v => handleSnaplineUpdate({ sharp: v })" />
+            </div>
+
+            <div class="mb-4">
+              <div class="flex items-center justify-between mb-2">
+                <n-text class="text-xs" style="color: var(--color-text-tertiary);">对齐灵敏度</n-text>
+                <n-text class="text-xs" style="color: var(--color-accent-sky);">{{ snaplineConfig.tolerance }}px</n-text>
+              </div>
+              <n-slider
+                :value="snaplineConfig.tolerance"
+                :min="5"
+                :max="30"
+                :step="1"
+                @update:value="v => handleSnaplineUpdate({ tolerance: v })"
+              />
+            </div>
+
+            <div class="mb-2">
+              <n-text class="text-xs block mb-2" style="color: var(--color-text-tertiary);">对齐线颜色</n-text>
+              <n-select
+                :value="snaplineConfig.color"
+                :options="snaplineColorOptions"
+                @update:value="v => handleSnaplineUpdate({ color: v })"
+              />
             </div>
           </div>
         </n-collapse-item>

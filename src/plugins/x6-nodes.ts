@@ -5,6 +5,7 @@ import StorageTank from '@/components/editor/nodes/StorageTank.vue'
 import IconNode from '@/components/editor/nodes/IconNode.vue'
 import ProgressBarNode from '@/components/editor/nodes/ProgressBarNode.vue'
 import DigitalNode from '@/components/editor/nodes/DigitalNode.vue'
+import ChartNode from '@/components/editor/nodes/ChartNode.vue'
 
 export function registerEdges() {
   // 1. 电力线 (模拟高压/电流)
@@ -117,5 +118,12 @@ export function registerVueNodes() {
     width: 120,
     height: 48,
     component: DigitalNode,
+  })
+
+  register({
+    shape: 'chart-node',
+    width: 400,
+    height: 300,
+    component: ChartNode,
   })
 }

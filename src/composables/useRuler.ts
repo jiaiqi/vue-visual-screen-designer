@@ -1,21 +1,34 @@
-import { onMounted, onUnmounted, ref, watch } from 'vue'
-import * as fabric from 'fabric'
+import { ref, onUnmounted, watch, type Ref } from 'vue'
+import type { Graph } from '@antv/x6'
 import { useEditorStore } from '@/stores/editor'
 
-export function useRuler(canvas: fabric.Canvas | null) {
+export interface RulerConfig {
+  thickness: number
+  bgColor: string
+  markerColor: string
+  textColor: string
+  fontSize: number
+}
+
+const DEFAULT_CONFIG: RulerConfig = {
+  thickness: 20,
+  bgColor: 'rgba(15, 23, 42, 0.95)',
+  markerColor: '#475569',
+  textColor: '#94a3b8',
+  fontSize: 9
+}
+
+export function useRuler(graphRef: Ref<Graph | null>) {
   const editorStore = useEditorStore()
 
   const hRulerRef = ref<HTMLCanvasElement>()
   const vRulerRef = ref<HTMLCanvasElement>()
 
-  const RULER_THICKNESS = 20
-  const MARKER_COLOR = '#888'
-  const TEXT_COLOR = '#666'
-  const BG_COLOR = '#f8f8f8'
-  const FONT = '10px sans-serif'
+  const config = { ...DEFAULT_CONFIG }
 
   let hCtx: CanvasRenderingContext2D | null = null
   let vCtx: CanvasRenderingContext2D | null = null
+  let cleanupFns: (() => void)[] = []
 
   function initRuler(hCanvas: HTMLCanvasElement, vCanvas: HTMLCanvasElement) {
     hRulerRef.value = hCanvas
@@ -26,167 +39,224 @@ export function useRuler(canvas: fabric.Canvas | null) {
 
     resizeRulers()
     renderRulers()
+    bindEvents()
   }
 
   function resizeRulers() {
-    if (!hRulerRef.value || !vRulerRef.value || !canvas) return
-    const width = canvas.getWidth()
-    const height = canvas.getHeight()
+    if (!hRulerRef.value || !vRulerRef.value || !graphRef.value) return
 
-    // 处理高分屏模糊问题
+    const graph = graphRef.value
+    const container = graph.container
+    if (!container) return
+
+    const width = container.clientWidth
+    const height = container.clientHeight
     const dpr = window.devicePixelRatio || 1
 
     hRulerRef.value.width = width * dpr
-    hRulerRef.value.height = RULER_THICKNESS * dpr
+    hRulerRef.value.height = config.thickness * dpr
     hRulerRef.value.style.width = width + 'px'
-    hRulerRef.value.style.height = RULER_THICKNESS + 'px'
+    hRulerRef.value.style.height = config.thickness + 'px'
 
-    vRulerRef.value.width = RULER_THICKNESS * dpr
+    vRulerRef.value.width = config.thickness * dpr
     vRulerRef.value.height = height * dpr
-    vRulerRef.value.style.width = RULER_THICKNESS + 'px'
+    vRulerRef.value.style.width = config.thickness + 'px'
     vRulerRef.value.style.height = height + 'px'
 
-    if (hCtx) hCtx.scale(dpr, dpr)
-    if (vCtx) vCtx.scale(dpr, dpr)
+    if (hCtx) {
+      hCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
+    if (vCtx) {
+      vCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
   }
 
   function renderRulers() {
-    if (!hCtx || !vCtx || !canvas || !editorStore.config.showRuler) return
+    if (!hCtx || !vCtx || !graphRef.value || !editorStore.canvasConfig.showRuler) return
 
-    const vpt = canvas.viewportTransform
-    if (!vpt) return
+    const graph = graphRef.value
+    const container = graph.container
+    if (!container) return
 
-    const zoom = canvas.getZoom()
-    const panX = vpt[4]
-    const panY = vpt[5]
+    const width = container.clientWidth
+    const height = container.clientHeight
 
-    const width = canvas.getWidth()
-    const height = canvas.getHeight()
+    const zoom = graph.zoom()
+    const translate = graph.translate()
+    const tx = translate.tx
+    const ty = translate.ty
 
-    // 基础清理
-    hCtx.clearRect(0, 0, width, RULER_THICKNESS)
-    hCtx.fillStyle = BG_COLOR
-    hCtx.fillRect(0, 0, width, RULER_THICKNESS)
+    hCtx.clearRect(0, 0, width, config.thickness)
+    hCtx.fillStyle = config.bgColor
+    hCtx.fillRect(0, 0, width, config.thickness)
 
-    vCtx.clearRect(0, 0, RULER_THICKNESS, height)
-    vCtx.fillStyle = BG_COLOR
-    vCtx.fillRect(0, 0, RULER_THICKNESS, height)
+    vCtx.clearRect(0, 0, config.thickness, height)
+    vCtx.fillStyle = config.bgColor
+    vCtx.fillRect(0, 0, config.thickness, height)
 
-    hCtx.fillStyle = TEXT_COLOR
-    hCtx.strokeStyle = MARKER_COLOR
-    hCtx.font = FONT
+    hCtx.fillStyle = config.textColor
+    hCtx.strokeStyle = config.markerColor
+    hCtx.font = `${config.fontSize}px sans-serif`
     hCtx.textAlign = 'left'
     hCtx.textBaseline = 'top'
     hCtx.lineWidth = 1
 
-    vCtx.fillStyle = TEXT_COLOR
-    vCtx.strokeStyle = MARKER_COLOR
-    vCtx.font = FONT
+    vCtx.fillStyle = config.textColor
+    vCtx.strokeStyle = config.markerColor
+    vCtx.font = `${config.fontSize}px sans-serif`
     vCtx.textAlign = 'center'
     vCtx.textBaseline = 'middle'
     vCtx.lineWidth = 1
 
-    // 确定刻度的跨度，根据缩放级别自适应
-    let step = 100 // 默认世界坐标 100
+    let step = 100
     if (zoom > 5) step = 10
     else if (zoom > 2) step = 20
+    else if (zoom > 1) step = 50
     else if (zoom < 0.2) step = 500
     else if (zoom < 0.5) step = 200
 
-    // 绘制水平横向标尺
-    const startX = -panX / zoom
+    const startX = -tx / zoom
     const endX = startX + width / zoom
-
-    // 对齐到最近的整 step 点
     const drawStartX = Math.floor(startX / step) * step
 
     hCtx.beginPath()
     for (let x = drawStartX; x <= endX; x += step) {
-      const screenX = x * zoom + panX
-      // 画主刻度和文字
-      hCtx.moveTo(screenX, RULER_THICKNESS - 15)
-      hCtx.lineTo(screenX, RULER_THICKNESS)
-      hCtx.fillText(String(x), screenX + 2, 2)
+      const screenX = x * zoom + tx
 
-      // 画小刻度 (十等分)
+      if (screenX >= 0 && screenX <= width) {
+        hCtx.moveTo(screenX, config.thickness - 12)
+        hCtx.lineTo(screenX, config.thickness)
+
+        const label = formatNumber(x)
+        hCtx.fillText(label, screenX + 3, 3)
+      }
+
       const subStep = step / 10
       for (let j = 1; j < 10; j++) {
-        const subScreenX = (x + j * subStep) * zoom + panX
-        const markerH = j === 5 ? 8 : 4
-        hCtx.moveTo(subScreenX, RULER_THICKNESS - markerH)
-        hCtx.lineTo(subScreenX, RULER_THICKNESS)
+        const subScreenX = (x + j * subStep) * zoom + tx
+        if (subScreenX >= 0 && subScreenX <= width) {
+          const markerH = j === 5 ? 7 : 4
+          hCtx.moveTo(subScreenX, config.thickness - markerH)
+          hCtx.lineTo(subScreenX, config.thickness)
+        }
       }
     }
     hCtx.stroke()
 
-    // 绘制垂直纵向标尺
-    const startY = -panY / zoom
+    const startY = -ty / zoom
     const endY = startY + height / zoom
     const drawStartY = Math.floor(startY / step) * step
 
     vCtx.beginPath()
     for (let y = drawStartY; y <= endY; y += step) {
-      const screenY = y * zoom + panY
+      const screenY = y * zoom + ty
 
-      vCtx.moveTo(RULER_THICKNESS - 15, screenY)
-      vCtx.lineTo(RULER_THICKNESS, screenY)
+      if (screenY >= 0 && screenY <= height) {
+        vCtx.moveTo(config.thickness - 12, screenY)
+        vCtx.lineTo(config.thickness, screenY)
 
-      // 垂直文字绘制需要旋转坐标系
-      vCtx.save()
-      vCtx.translate(8, screenY + 2)
-      vCtx.rotate(-Math.PI / 2)
-      vCtx.fillText(String(y), 0, 0)
-      vCtx.restore()
+        const label = formatNumber(y)
+        vCtx.save()
+        vCtx.translate(10, screenY + 3)
+        vCtx.rotate(-Math.PI / 2)
+        vCtx.fillText(label, 0, 0)
+        vCtx.restore()
+      }
 
       const subStep = step / 10
       for (let j = 1; j < 10; j++) {
-        const subScreenY = (y + j * subStep) * zoom + panY
-        const markerW = j === 5 ? 8 : 4
-        vCtx.moveTo(RULER_THICKNESS - markerW, subScreenY)
-        vCtx.lineTo(RULER_THICKNESS, subScreenY)
+        const subScreenY = (y + j * subStep) * zoom + ty
+        if (subScreenY >= 0 && subScreenY <= height) {
+          const markerW = j === 5 ? 7 : 4
+          vCtx.moveTo(config.thickness - markerW, subScreenY)
+          vCtx.lineTo(config.thickness, subScreenY)
+        }
       }
     }
     vCtx.stroke()
 
-    // 加个边框
-    hCtx.strokeStyle = '#e2e8f0'
+    hCtx.strokeStyle = '#334155'
     hCtx.beginPath()
-    hCtx.moveTo(0, RULER_THICKNESS)
-    hCtx.lineTo(width, RULER_THICKNESS)
+    hCtx.moveTo(0, config.thickness - 0.5)
+    hCtx.lineTo(width, config.thickness - 0.5)
     hCtx.stroke()
 
-    vCtx.strokeStyle = '#e2e8f0'
+    vCtx.strokeStyle = '#334155'
     vCtx.beginPath()
-    vCtx.moveTo(RULER_THICKNESS, 0)
-    vCtx.lineTo(RULER_THICKNESS, height)
+    vCtx.moveTo(config.thickness - 0.5, 0)
+    vCtx.lineTo(config.thickness - 0.5, height)
     vCtx.stroke()
   }
 
-  function mountRulerEvents() {
-    if (!canvas) return
-    canvas.on('mouse:move', renderRulers) // 其实只需要在缩放和平移时重绘
-    canvas.on('mouse:wheel', renderRulers)
-    canvas.on('mouse:up', renderRulers)
+  function formatNumber(num: number): string {
+    if (Math.abs(num) >= 1000) {
+      return (num / 1000).toFixed(1) + 'k'
+    }
+    return String(num)
+  }
 
-    const handleResize = () => {
+  function bindEvents() {
+    if (!graphRef.value) return
+
+    const graph = graphRef.value
+
+    const onScale = () => {
+      renderRulers()
+    }
+
+    const onTranslate = () => {
+      renderRulers()
+    }
+
+    const onResize = () => {
       resizeRulers()
       renderRulers()
     }
-    window.addEventListener('resize', handleResize)
 
-    return () => {
-      canvas?.off('mouse:move', renderRulers)
-      canvas?.off('mouse:wheel', renderRulers)
-      canvas?.off('mouse:up', renderRulers)
-      window.removeEventListener('resize', handleResize)
-    }
+    graph.on('scale', onScale)
+    graph.on('translate', onTranslate)
+    window.addEventListener('resize', onResize)
+
+    cleanupFns = [
+      () => graph.off('scale', onScale),
+      () => graph.off('translate', onTranslate),
+      () => window.removeEventListener('resize', onResize)
+    ]
   }
+
+  function destroy() {
+    cleanupFns.forEach(fn => fn())
+    cleanupFns = []
+  }
+
+  watch(() => editorStore.canvasConfig.showRuler, (show) => {
+    if (show) {
+      resizeRulers()
+      renderRulers()
+    }
+  })
+
+  watch(graphRef, (newGraph, oldGraph) => {
+    if (oldGraph) {
+      destroy()
+    }
+    if (newGraph && hRulerRef.value && vRulerRef.value) {
+      resizeRulers()
+      renderRulers()
+      bindEvents()
+    }
+  })
+
+  onUnmounted(() => {
+    destroy()
+  })
 
   return {
     hRulerRef,
     vRulerRef,
     initRuler,
     renderRulers,
-    mountRulerEvents
+    resizeRulers,
+    config
   }
 }

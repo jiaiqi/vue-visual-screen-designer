@@ -16,8 +16,17 @@ import {
 import { register } from '@antv/x6-vue-shape'
 import { useEditorStore } from '@/stores/editor'
 
-// 标记 register 已使用以消除 lint 错误
 void register
+
+export interface GroupInfo {
+  isGroup: boolean
+  groupChildren?: string[]
+  groupId?: string
+}
+
+export interface LockInfo {
+  isLocked: boolean
+}
 
 export function useGraph() {
   const containerRef = ref<HTMLElement>()
@@ -68,12 +77,12 @@ export function useGraph() {
           args: { radius: 8 },
         },
         createEdge() {
-          return (this as any).createEdge({
+          return (this as Graph).createEdge({
             shape: 'fluid-pipe',
             zIndex: -1,
           })
         },
-        validateConnection({ targetMagnet }: { targetMagnet: any }) {
+        validateConnection({ targetMagnet }) {
           return !!targetMagnet
         },
       }
@@ -92,15 +101,20 @@ export function useGraph() {
       .use(new Selection({
         enabled: true,
         multiple: true,
-        rubberband: true, // 允许直接拖扯出框选区
-        strict: false, // 只要相交/划过即可选中，无需完全包围
+        rubberband: true,
+        strict: false,
         showNodeSelectionBox: true,
-        showEdgeSelectionBox: true, // 允许边界点选高亮显示
-        modifiers: ['shift', 'ctrl', 'meta'], // 允许使用 Shift/Ctrl/Command 键进行多选追加
+        showEdgeSelectionBox: true,
+        modifiers: ['shift', 'ctrl', 'meta'],
       }))
       .use(new Keyboard())
       .use(new History({ enabled: true }))
-      .use(new Snapline({ enabled: true, sharp: true }))
+      .use(new Snapline({
+        enabled: editorStore.snaplineConfig.enabled,
+        sharp: editorStore.snaplineConfig.sharp,
+        tolerance: editorStore.snaplineConfig.tolerance,
+        className: 'my-snapline',
+      }))
       .use(new Transform({
         resizing: { enabled: true },
         rotating: { enabled: true },
@@ -395,7 +409,7 @@ export function useGraph() {
 
     graph.on('edge:removed', ({ edge }: { edge: Edge }) => {
       // 停止所有标签相关的过渡
-      edge.stopTransition('labels')
+      // X6 v3 移除了 stopTransition API
       edge.off('transition:finish')
     })
 
@@ -457,14 +471,210 @@ export function useGraph() {
     graph.on('node:moved', ({ node }: { node: Node }) => updateNodeRatios(node))
     graph.on('node:resized', ({ node }: { node: Node }) => updateNodeRatios(node))
     graph.on('node:added', ({ node }: { node: Node }) => updateNodeRatios(node))
+
+    // --- 间距提示系统 (Spacing Hints) ---
+    let spacingOverlay: HTMLDivElement | null = null
+
+    const createSpacingOverlay = () => {
+      if (spacingOverlay) return spacingOverlay
+      const overlay = document.createElement('div')
+      overlay.id = 'spacing-overlay'
+      overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        z-index: 9999;
+        font-size: 11px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      `
+      el.appendChild(overlay)
+      spacingOverlay = overlay
+      return overlay
+    }
+
+    const removeSpacingOverlay = () => {
+      if (spacingOverlay) {
+        spacingOverlay.innerHTML = ''
+      }
+    }
+
+    const calculateSpacingHints = (movingNode: Node) => {
+      if (!editorStore.snaplineConfig.showSpacing) return []
+      const allNodes = graph?.getNodes().filter(n => n.id !== movingNode.id && !n.getData()?.isGroup) || []
+      if (allNodes.length === 0) return []
+
+      const movingBBox = {
+        x: movingNode.getPosition().x,
+        y: movingNode.getPosition().y,
+        width: movingNode.getSize().width,
+        height: movingNode.getSize().height,
+        right: movingNode.getPosition().x + movingNode.getSize().width,
+        bottom: movingNode.getPosition().y + movingNode.getSize().height,
+        centerX: movingNode.getPosition().x + movingNode.getSize().width / 2,
+        centerY: movingNode.getPosition().y + movingNode.getSize().height / 2,
+      }
+
+      const hints: Array<{
+        type: 'horizontal' | 'vertical'
+        distance: number
+        x: number
+        y: number
+        node: Node
+        equalHighlight: boolean
+      }> = []
+
+      const horizontalDistances: Array<{ distance: number, node: Node }> = []
+      const verticalDistances: Array<{ distance: number, node: Node }> = []
+
+      allNodes.forEach(node => {
+        const nodeBBox = {
+          x: node.getPosition().x,
+          y: node.getPosition().y,
+          width: node.getSize().width,
+          height: node.getSize().height,
+          right: node.getPosition().x + node.getSize().width,
+          bottom: node.getPosition().y + node.getSize().height,
+          centerX: node.getPosition().x + node.getSize().width / 2,
+          centerY: node.getPosition().y + node.getSize().height / 2,
+        }
+
+        const leftSpacing = movingBBox.x - nodeBBox.right
+        if (leftSpacing > 0 && leftSpacing < 200) {
+          hints.push({
+            type: 'horizontal',
+            distance: Math.round(leftSpacing),
+            x: nodeBBox.right,
+            y: Math.max(movingBBox.y, nodeBBox.y),
+            node,
+            equalHighlight: false,
+          })
+          horizontalDistances.push({ distance: Math.round(leftSpacing), node })
+        }
+
+        const rightSpacing = nodeBBox.x - movingBBox.right
+        if (rightSpacing > 0 && rightSpacing < 200) {
+          hints.push({
+            type: 'horizontal',
+            distance: Math.round(rightSpacing),
+            x: movingBBox.right,
+            y: Math.max(movingBBox.y, nodeBBox.y),
+            node,
+            equalHighlight: false,
+          })
+          horizontalDistances.push({ distance: Math.round(rightSpacing), node })
+        }
+
+        const topSpacing = movingBBox.y - nodeBBox.bottom
+        if (topSpacing > 0 && topSpacing < 200) {
+          hints.push({
+            type: 'vertical',
+            distance: Math.round(topSpacing),
+            x: Math.max(movingBBox.x, nodeBBox.x),
+            y: nodeBBox.bottom,
+            node,
+            equalHighlight: false,
+          })
+          verticalDistances.push({ distance: Math.round(topSpacing), node })
+        }
+
+        const bottomSpacing = nodeBBox.y - movingBBox.bottom
+        if (bottomSpacing > 0 && bottomSpacing < 200) {
+          hints.push({
+            type: 'vertical',
+            distance: Math.round(bottomSpacing),
+            x: Math.max(movingBBox.x, nodeBBox.x),
+            y: movingBBox.bottom,
+            node,
+            equalHighlight: false,
+          })
+          verticalDistances.push({ distance: Math.round(bottomSpacing), node })
+        }
+      })
+
+      const findEqualDistances = (distances: Array<{ distance: number, node: Node }>) => {
+        const distanceGroups = new Map<number, Array<{ node: Node }>>()
+        distances.forEach(d => {
+          const group = distanceGroups.get(d.distance) || []
+          group.push(d)
+          distanceGroups.set(d.distance, group)
+        })
+        distanceGroups.forEach((group, distance) => {
+          if (group.length > 1) {
+            hints.forEach(hint => {
+              if (hint.distance === distance && group.some(g => g.node.id === hint.node.id)) {
+                hint.equalHighlight = true
+              }
+            })
+          }
+        })
+      }
+
+      findEqualDistances(horizontalDistances)
+      findEqualDistances(verticalDistances)
+
+      return hints
+    }
+
+    const renderSpacingHints = (hints: Array<{
+      type: 'horizontal' | 'vertical'
+      distance: number
+      x: number
+      y: number
+      node: Node
+      equalHighlight: boolean
+    }>) => {
+      const overlay = createSpacingOverlay()
+      overlay.innerHTML = ''
+
+      const containerEl = graph?.container
+      const containerRect = containerEl?.getBoundingClientRect()
+      const graphPos = { x: containerRect?.left || 0, y: containerRect?.top || 0 }
+      const zoom = graph?.zoom() || 1
+
+      hints.forEach(hint => {
+        const label = document.createElement('div')
+        const screenX = hint.x * zoom + graphPos.x
+        const screenY = hint.y * zoom + graphPos.y
+
+        label.style.cssText = `
+          position: absolute;
+          left: ${screenX}px;
+          top: ${screenY}px;
+          background: ${hint.equalHighlight ? '#22c55e' : 'rgba(249, 115, 22, 0.95)'};
+          color: white;
+          padding: 2px 6px;
+          border-radius: 3px;
+          font-size: 10px;
+          font-weight: 600;
+          white-space: nowrap;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          transform: translate(-50%, -50%);
+        `
+        label.textContent = `${hint.distance}px`
+        overlay.appendChild(label)
+      })
+    }
+
+    graph.on('node:moving', ({ node }: { node: Node }) => {
+      if (!editorStore.snaplineConfig.showSpacing) {
+        removeSpacingOverlay()
+        return
+      }
+      const hints = calculateSpacingHints(node)
+      renderSpacingHints(hints)
+    })
+
+    graph.on('node:moved', () => {
+      removeSpacingOverlay()
+    })
   }
 
   // --- 统筹销毁逻辑 (移出 initGraph 闭包，确保在 setup 顶层运行) ---
   const handleResize = () => {
     if (!graph || !containerRef.value) return
-    const { width: cW, height: cH } = editorStore.canvasConfig
 
-    // 编辑器容器尺寸改变时，如果是“铺满”模式或手动 Resize，
+    // 编辑器容器尺寸改变时，如果是"铺满"模式或手动 Resize，
     // 我们在此不自动改变 node 坐标，除非用户显式要求“重布局”。
     // 但在预览模式下，这种重平衡是必须的。
     // 这里保持 Graph 的 resize 即可
@@ -479,9 +689,191 @@ export function useGraph() {
     }
   })
 
+  const groupCells = (cells: Cell[]) => {
+    if (!graph || cells.length < 2) return null
+
+    const nodes = cells.filter(c => c.isNode()) as Node[]
+    if (nodes.length < 2) return null
+
+    let minX = Infinity, minY = Infinity
+    let maxX = -Infinity, maxY = -Infinity
+
+    nodes.forEach(node => {
+      const pos = node.getPosition()
+      const size = node.getSize()
+      minX = Math.min(minX, pos.x)
+      minY = Math.min(minY, pos.y)
+      maxX = Math.max(maxX, pos.x + size.width)
+      maxY = Math.max(maxY, pos.y + size.height)
+    })
+
+    const padding = 10
+    const groupWidth = maxX - minX + padding * 2
+    const groupHeight = maxY - minY + padding * 2
+
+    const groupNode = graph.createNode({
+      shape: 'rect',
+      x: minX - padding,
+      y: minY - padding,
+      width: groupWidth,
+      height: groupHeight,
+      attrs: {
+        body: {
+          fill: 'rgba(59, 130, 246, 0.05)',
+          stroke: '#3b82f6',
+          strokeWidth: 2,
+          strokeDasharray: '5,5',
+          rx: 4,
+          ry: 4,
+        },
+        label: {
+          text: '组合',
+          fill: '#3b82f6',
+          fontSize: 10,
+          refX: '100%',
+          refY: 0,
+          textAnchor: 'end',
+          textVerticalAnchor: 'top',
+          refX2: -4,
+          refY2: 4,
+        }
+      },
+      data: {
+        isGroup: true,
+        groupChildren: nodes.map(n => n.id),
+      },
+      zIndex: -1,
+    })
+
+    nodes.forEach(node => {
+      const currentData = node.getData() || {}
+      node.setData({
+        ...currentData,
+        groupId: groupNode.id,
+      }, { overwrite: false })
+    })
+
+    graph.addCell(groupNode)
+    graph.cleanSelection()
+    graph.select([groupNode, ...nodes])
+
+    return groupNode
+  }
+
+  const ungroupCells = (groupNode: Node) => {
+    if (!graph) return []
+
+    const groupData = groupNode.getData() || {}
+    if (!groupData.isGroup) return []
+
+    const childIds: string[] = groupData.groupChildren || []
+    const children: Node[] = []
+
+    childIds.forEach(id => {
+      const node = graph!.getCellById(id) as Node
+      if (node && node.isNode()) {
+        const currentData = node.getData() || {}
+        delete currentData.groupId
+        node.setData(currentData, { overwrite: true })
+        children.push(node)
+      }
+    })
+
+    graph.removeCell(groupNode)
+    graph.cleanSelection()
+    graph.select(children)
+
+    return children
+  }
+
+  const lockNode = (node: Node) => {
+    if (!node || !node.isNode()) return
+
+    node.setData({
+      isLocked: true,
+    }, { overwrite: false })
+
+    node.attr('body/style/pointer-events', 'none')
+    node.attr('body/strokeDasharray', '3,3')
+    node.addTools([
+      {
+        name: 'button',
+        args: {
+          x: '100%',
+          y: 0,
+          offset: { x: -8, y: 8 },
+          markup: [
+            {
+              tagName: 'circle',
+              selector: 'bg',
+              attrs: {
+                r: 8,
+                fill: '#1e293b',
+                stroke: '#f59e0b',
+                strokeWidth: 1,
+              },
+            },
+            {
+              tagName: 'text',
+              selector: 'icon',
+              textContent: '🔒',
+              attrs: {
+                'font-size': 10,
+                'text-anchor': 'middle',
+                'dominant-baseline': 'central',
+              },
+            },
+          ],
+        },
+      },
+    ])
+  }
+
+  const unlockNode = (node: Node) => {
+    if (!node || !node.isNode()) return
+
+    const currentData = node.getData() || {}
+    delete currentData.isLocked
+    node.setData(currentData, { overwrite: true })
+
+    node.attr('body/style/pointer-events', 'auto')
+    node.attr('body/strokeDasharray', null)
+    node.removeTools()
+  }
+
+  const isNodeLocked = (node: Node): boolean => {
+    if (!node) return false
+    const data = node.getData() || {}
+    return !!data.isLocked
+  }
+
+  const isGroupNode = (node: Node): boolean => {
+    if (!node) return false
+    const data = node.getData() || {}
+    return !!data.isGroup
+  }
+
+  const getGroupChildren = (groupNode: Node): Node[] => {
+    if (!graph || !groupNode) return []
+    const data = groupNode.getData() || {}
+    if (!data.isGroup || !data.groupChildren) return []
+
+     
+    return data.groupChildren
+      .map((id: string) => graph!.getCellById(id) as Node)
+      .filter((n: any): n is Node => !!n && n.isNode())
+  }
+
   return {
     containerRef,
     initGraph,
-    getGraph: () => graph
+    getGraph: () => graph,
+    groupCells,
+    ungroupCells,
+    lockNode,
+    unlockNode,
+    isNodeLocked,
+    isGroupNode,
+    getGroupChildren,
   }
 }

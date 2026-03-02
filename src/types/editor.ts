@@ -1,5 +1,7 @@
 export type ObjectId = string
 
+export type ThemeMode = 'light' | 'dark'
+
 export enum ObjectType {
   RECTANGLE = 'rectangle',
   CIRCLE = 'circle',

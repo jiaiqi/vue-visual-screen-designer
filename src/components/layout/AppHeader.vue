@@ -1,24 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useEditorStore } from '@/stores/editor'
 import { useExport } from '@/composables/useExport'
 import { useRouter } from 'vue-router'
 import {
   Undo2, Redo2, Download, LayoutGrid, ZoomIn, ZoomOut,
   Maximize, Trash2, MousePointerSquareDashed, Keyboard,
-  Code, ChevronDown, FileImage, FileCode2, Eye
+  Code, ChevronDown, FileImage, FileCode2, Eye, LayoutTemplate,
+  HelpCircle
 } from 'lucide-vue-next'
 
 const emit = defineEmits<{
   (e: 'open-json-editor'): void
   (e: 'open-help-modal'): void
+  (e: 'open-template-library'): void
+  (e: 'open-guide'): void
 }>()
 
 const editorStore = useEditorStore()
 const { exportToPNG, exportToSVG } = useExport()
 const router = useRouter()
 
-// 画布缩放与全选控制
 const zoomRatio = ref(100)
 function updateZoomInfo() {
   const graph = editorStore.graph
@@ -63,14 +65,12 @@ const canUndo = ref(false)
 const canRedo = ref(false)
 
 onMounted(() => {
-  // 延迟监听 graph 的相关环境与事件
   setTimeout(() => {
     const graph = editorStore.graph
     if (graph) {
       updateZoomInfo()
       graph.on('scale', updateZoomInfo)
 
-      // 同步历史堆栈状态以控制撤销重做按钮亮度
       canUndo.value = graph.canUndo()
       canRedo.value = graph.canRedo()
       graph.on('history:change', () => {
@@ -104,14 +104,21 @@ function handlePreview() {
       <h1 class="font-extrabold text-xl tracking-tight text-slate-100 select-none">平面图设计</h1>
     </div>
 
-    <div class="actions flex items-center gap-4">
-      <!-- 预览与帮助组 -->
+    <div data-guide="header-actions" class="actions flex items-center gap-4">
       <div class="flex items-center gap-2">
         <button @click="handlePreview"
           class="flex items-center gap-1.5 px-3 py-2 text-sm font-bold rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 hover:bg-sky-500 hover:text-slate-950 transition-all active:scale-95 shadow-sm"
           title="预览设计 (只读模式)">
           <Eye class="w-4 h-4" />
           <span class="hidden xl:inline">预览设计</span>
+        </button>
+
+        <button
+          data-guide="help-button"
+          @click="emit('open-guide')"
+          class="flex items-center justify-center p-2 text-sm font-bold rounded-lg bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-slate-700 hover:text-white transition-all active:scale-95 shadow-sm"
+          title="查看操作引导">
+          <HelpCircle class="w-4 h-4" />
         </button>
 
         <button @click="emit('open-help-modal')"
@@ -123,7 +130,6 @@ function handlePreview() {
 
       <div class="h-6 w-[1px] bg-slate-800/60 mx-1"></div>
 
-      <!-- 核心操作组：撤销还原 -->
       <div class="flex items-center gap-1.5">
         <button @click="editorStore.graph?.undo()" :disabled="!canUndo"
           class="flex items-center justify-center p-2 rounded-lg bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-slate-700 hover:text-sky-400 disabled:opacity-30 disabled:hover:bg-slate-800/50 disabled:hover:text-slate-300 transition-all active:scale-95 shadow-sm"
@@ -140,7 +146,6 @@ function handlePreview() {
 
       <div class="h-6 w-[1px] bg-slate-800/60 mx-1"></div>
 
-      <!-- 快捷画布操作组 -->
       <div class="flex items-center gap-2">
         <button @click="handleSelectAll"
           class="flex items-center gap-1.5 px-3 py-2 text-sm font-bold rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 hover:text-indigo-300 transition-all active:scale-95 shadow-sm"
@@ -151,17 +156,16 @@ function handlePreview() {
 
         <button @click="handleClearCanvas"
           class="flex items-center gap-1.5 px-3 py-2 text-sm font-bold rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 hover:text-rose-300 transition-all active:scale-95 shadow-sm"
-          title="清空画布">
+          title="清空画布 (不可恢复)">
           <Trash2 class="w-4 h-4" />
           <span class="hidden md:inline">清空</span>
         </button>
       </div>
 
-      <!-- 比例缩放组 -->
       <div class="flex items-center gap-1 py-1 px-2 rounded-lg bg-slate-900/60 border border-slate-800">
         <button @click="handleZoom(-0.1)"
           class="p-1.5 flex items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors"
-          title="缩小">
+          title="缩小画布 (缩小 10%)">
           <ZoomOut class="w-4 h-4" />
         </button>
         <span class="text-xs font-mono font-bold text-slate-300 min-w-[3.5rem] text-center select-none">
@@ -169,25 +173,31 @@ function handlePreview() {
         </span>
         <button @click="handleZoom(0.1)"
           class="p-1.5 flex items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors"
-          title="放大">
+          title="放大画布 (放大 10%)">
           <ZoomIn class="w-4 h-4" />
         </button>
         <div class="w-[1px] h-4 bg-slate-800 mx-1"></div>
         <button @click="handleZoomFit"
           class="p-1.5 flex items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors"
-          title="适应视图">
+          title="适应视图 (自动缩放至合适大小)">
           <Maximize class="w-4 h-4" />
         </button>
       </div>
 
+      <button @click="emit('open-template-library')"
+        class="flex items-center gap-1.5 px-3 py-2 text-sm font-bold rounded-lg bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 hover:text-violet-300 transition-all active:scale-95 shadow-sm"
+        title="打开模板库 (快速应用预设模板)">
+        <LayoutTemplate class="w-4 h-4" />
+        <span class="hidden lg:inline">模板库</span>
+      </button>
+
       <div class="h-6 w-[1px] bg-slate-800/60 mx-1"></div>
 
-      <!-- 导出发布组 -->
       <div class="flex items-center gap-2.5">
         <div class="relative group">
           <button
             class="flex items-center gap-1.5 px-4 py-2 text-sm font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-slate-950 transition-all shadow-sm"
-            title="导出图像">
+            title="导出图像 (支持 PNG 和 SVG 格式)">
             <Download class="w-4 h-4" />
             <span>导出图像</span>
             <ChevronDown class="w-4 h-4 opacity-70 group-hover:rotate-180 transition-transform duration-300" />
@@ -222,7 +232,7 @@ function handlePreview() {
 
         <button @click="emit('open-json-editor')"
           class="group flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500 hover:text-slate-950 transition-all active:scale-95 shadow-sm"
-          title="JSON 源码管理">
+          title="JSON 源码管理 (查看和编辑画布数据)">
           <Code class="w-4 h-4 group-hover:animate-pulse" />
           <span>开发代码</span>
         </button>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Copy, Trash2, ArrowUpFromLine, ArrowDownToLine, MousePointerSquareDashed, ClipboardPaste, Layers, Unlink } from 'lucide-vue-next'
+import { Copy, Trash2, ArrowUpFromLine, ArrowDownToLine, MousePointerSquareDashed, ClipboardPaste, Layers, Unlink, Group, Ungroup, Lock, Unlock } from 'lucide-vue-next'
 import { useEditorStore } from '@/stores/editor'
+import { Node } from '@antv/x6'
 // @ts-expect-error: polybooljs 没有提供 typescript types
 import PolyBool from 'polybooljs'
 
@@ -35,6 +36,16 @@ const isMultiSelection = computed(() => {
 // 研判当前节点是否为曾经被合并过的联合体
 const isUnionNode = computed(() => {
   return contextType.value === 'node' && targetNode.value && targetNode.value.data?.isUnionShape
+})
+
+// 研判当前节点是否为组合节点
+const isGroupNode = computed(() => {
+  return contextType.value === 'node' && targetNode.value && targetNode.value.data?.isGroup
+})
+
+// 研判当前节点是否被锁定
+const isLockedNode = computed(() => {
+  return contextType.value === 'node' && targetNode.value && targetNode.value.data?.isLocked
 })
 
 // 全局点击自动关闭菜单
@@ -269,6 +280,155 @@ const action = (type: string) => {
         graph.clearCells()
       }
       break
+    case 'group':
+      {
+        const selectedNodes = graph.getSelectedCells().filter(cell => cell.isNode()) as Node[]
+        if (selectedNodes.length < 2) {
+          alert('请至少选择两个图元进行组合。')
+          break
+        }
+
+        let minX = Infinity, minY = Infinity
+        let maxX = -Infinity, maxY = -Infinity
+
+        selectedNodes.forEach(node => {
+          const pos = node.getPosition()
+          const size = node.getSize()
+          minX = Math.min(minX, pos.x)
+          minY = Math.min(minY, pos.y)
+          maxX = Math.max(maxX, pos.x + size.width)
+          maxY = Math.max(maxY, pos.y + size.height)
+        })
+
+        const padding = 10
+        const groupWidth = maxX - minX + padding * 2
+        const groupHeight = maxY - minY + padding * 2
+
+        const groupNode = graph.createNode({
+          shape: 'rect',
+          x: minX - padding,
+          y: minY - padding,
+          width: groupWidth,
+          height: groupHeight,
+          attrs: {
+            body: {
+              fill: 'rgba(59, 130, 246, 0.05)',
+              stroke: '#3b82f6',
+              strokeWidth: 2,
+              strokeDasharray: '5,5',
+              rx: 4,
+              ry: 4,
+            },
+            label: {
+              text: '组合',
+              fill: '#3b82f6',
+              fontSize: 10,
+              refX: '100%',
+              refY: 0,
+              textAnchor: 'end',
+              textVerticalAnchor: 'top',
+              refX2: -4,
+              refY2: 4,
+            }
+          },
+          data: {
+            isGroup: true,
+            groupChildren: selectedNodes.map(n => n.id),
+          },
+          zIndex: -1,
+        })
+
+        selectedNodes.forEach(node => {
+          const currentData = node.getData() || {}
+          node.setData({
+            ...currentData,
+            groupId: groupNode.id,
+          }, { overwrite: false })
+        })
+
+        graph.addCell(groupNode)
+        graph.cleanSelection()
+        graph.select([groupNode, ...selectedNodes])
+      }
+      break
+    case 'ungroup':
+      if (contextType.value === 'node' && targetNode.value && targetNode.value.data?.isGroup) {
+        const groupData = targetNode.value.data
+        const childIds: string[] = groupData.groupChildren || []
+        const children: Node[] = []
+
+        childIds.forEach((id: string) => {
+          const node = graph.getCellById(id) as Node
+          if (node && node.isNode()) {
+            const currentData = node.getData() || {}
+            delete currentData.groupId
+            node.setData(currentData, { overwrite: true })
+            children.push(node)
+          }
+        })
+
+        graph.removeCell(targetNode.value)
+        graph.cleanSelection()
+        graph.select(children)
+      }
+      break
+    case 'lock':
+      if (contextType.value === 'node' && targetNode.value) {
+        const node = targetNode.value as Node
+
+        node.setData({
+          isLocked: true,
+        }, { overwrite: false })
+
+        node.attr('body/style/pointer-events', 'none')
+        node.attr('body/strokeDasharray', '3,3')
+        node.addTools([
+          {
+            name: 'button',
+            args: {
+              x: '100%',
+              y: 0,
+              offset: { x: -8, y: 8 },
+              markup: [
+                {
+                  tagName: 'circle',
+                  selector: 'bg',
+                  attrs: {
+                    r: 8,
+                    fill: '#1e293b',
+                    stroke: '#f59e0b',
+                    strokeWidth: 1,
+                  },
+                },
+                {
+                  tagName: 'text',
+                  selector: 'icon',
+                  textContent: '🔒',
+                  attrs: {
+                    'font-size': 10,
+                    'text-anchor': 'middle',
+                    'dominant-baseline': 'central',
+                  },
+                },
+              ],
+            },
+          },
+        ])
+      }
+      break
+    case 'unlock':
+      if (contextType.value === 'node' && targetNode.value) {
+        const node = targetNode.value as Node
+
+        const currentData = node.getData() || {}
+        delete currentData.isLocked
+        node.setData(currentData, { overwrite: true })
+
+        node.attr('body/style/pointer-events', 'auto')
+        node.attr('body/strokeDasharray', null)
+        node.removeTools()
+      }
+      break
   }
   close()
 }
@@ -294,6 +454,30 @@ defineExpose({
           <Copy class="w-3.5 h-3.5" /> 复制节点
         </button>
         <div class="h-[1px] bg-slate-800 my-1 mx-2"></div>
+        
+        <!-- 组合相关操作 -->
+        <button v-if="isMultiSelection" @click="action('group')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-sky-400 hover:bg-slate-800 hover:text-sky-300 transition-colors">
+          <Group class="w-3.5 h-3.5" /> 组合图元
+        </button>
+        <button v-if="isGroupNode" @click="action('ungroup')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-sky-400 hover:bg-slate-800 hover:text-sky-300 transition-colors">
+          <Ungroup class="w-3.5 h-3.5" /> 取消组合
+        </button>
+        
+        <!-- 锁定相关操作 -->
+        <button v-if="!isLockedNode && !isGroupNode" @click="action('lock')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-amber-400 hover:bg-slate-800 hover:text-amber-300 transition-colors">
+          <Lock class="w-3.5 h-3.5" /> 锁定图元
+        </button>
+        <button v-if="isLockedNode" @click="action('unlock')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-emerald-400 hover:bg-slate-800 hover:text-emerald-300 transition-colors">
+          <Unlock class="w-3.5 h-3.5" /> 解锁图元
+        </button>
+        
+        <div class="h-[1px] bg-slate-800 my-1 mx-2"></div>
+        
+        <!-- 合并为多边形（原有功能） -->
         <button v-if="isMultiSelection" @click="action('union')"
           class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-emerald-400 hover:bg-slate-800 hover:text-emerald-300 transition-colors">
           <Layers class="w-3.5 h-3.5" /> 合并为多边形
@@ -302,14 +486,17 @@ defineExpose({
           class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-orange-400 hover:bg-slate-800 hover:text-orange-300 transition-colors">
           <Unlink class="w-3.5 h-3.5" /> 拆分为原图元
         </button>
-        <button v-else @click="action('toFront')"
+        
+        <!-- 层级操作 -->
+        <button v-if="!isMultiSelection && !isGroupNode" @click="action('toFront')"
           class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition-colors">
           <ArrowUpFromLine class="w-3.5 h-3.5" /> 置于顶层
         </button>
-        <button @click="action('toBack')"
+        <button v-if="!isMultiSelection && !isGroupNode" @click="action('toBack')"
           class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition-colors">
           <ArrowDownToLine class="w-3.5 h-3.5" /> 置于底层
         </button>
+        
         <div class="h-[1px] bg-slate-800 my-1 mx-2"></div>
         <button @click="action('delete')"
           class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors">

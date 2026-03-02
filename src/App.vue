@@ -1,9 +1,19 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 import { darkTheme, NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
+import { useEditorStore } from '@/stores/editor'
+
+const editorStore = useEditorStore()
+
+const naiveTheme = computed(() => editorStore.theme === 'dark' ? darkTheme : null)
+
+onMounted(() => {
+  editorStore.applyTheme()
+})
 </script>
 
 <template>
-  <n-config-provider :theme="darkTheme" class="app-container overflow-hidden bg-slate-950 text-slate-100">
+  <n-config-provider :theme="naiveTheme" class="app-container overflow-hidden text-slate-100">
     <n-message-provider>
       <n-dialog-provider>
         <router-view v-slot="{ Component }">
@@ -28,7 +38,9 @@ body,
   width: 100%;
   overflow: hidden;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #020617; /* slate-950 */
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .app-container {
@@ -46,23 +58,22 @@ canvas {
   box-sizing: border-box;
 }
 
-/* 滚动条美化 */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--scrollbar-thumb);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--scrollbar-thumb-hover);
 }
 
 .fade-page-enter-active,

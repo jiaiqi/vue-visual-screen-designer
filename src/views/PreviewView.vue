@@ -167,62 +167,65 @@ function handleBack() {
 </script>
 
 <template>
-  <div class="preview-view w-full h-full bg-[#020617] flex flex-col overflow-hidden text-slate-100 font-sans">
-    <!-- 预览控制条 -->
+  <div class="preview-view w-full h-full flex flex-col overflow-hidden font-sans">
     <header
-      class="h-14 border-b border-white/5 flex items-center justify-between px-6 bg-slate-900/40 backdrop-blur-xl shrink-0 z-50">
+      class="h-14 flex items-center justify-between px-6 shrink-0 z-50"
+      style="background-color: rgba(15, 23, 42, 0.4); border-bottom: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px);">
       <div class="flex items-center gap-4">
         <button @click="handleBack"
-          class="p-2 hover:bg-white/10 rounded-full transition-all active:scale-90 text-slate-400 hover:text-white">
+          class="p-2 rounded-full transition-all active:scale-90"
+          style="color: var(--color-text-muted);">
           <ArrowLeft class="w-5 h-5" />
         </button>
         <div class="flex flex-col">
-          <span class="text-xs font-bold leading-tight tracking-wide">{{ editorStore.canvasConfig.name || '未命名图纸'
+          <span class="text-xs font-bold leading-tight tracking-wide" style="color: var(--color-text-primary);">{{ editorStore.canvasConfig.name || '未命名图纸'
             }}</span>
           <div class="flex items-center gap-1.5 mt-0.5">
-            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-            <span class="text-[9px] text-slate-500 uppercase font-black tracking-tighter">Live Preview Mode</span>
+            <div class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: var(--color-accent-emerald);"></div>
+            <span class="text-[9px] uppercase font-black tracking-tighter" style="color: var(--color-text-muted);">Live Preview Mode</span>
           </div>
         </div>
       </div>
 
       <div class="flex items-center gap-3">
         <button @click="toggleFullscreen"
-          class="flex items-center gap-2 px-4 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-[11px] font-bold transition-all active:scale-95">
-          <component :is="isFullscreen ? Minimize : Maximize" class="w-3.5 h-3.5 text-sky-400" />
+          class="flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-bold transition-all active:scale-95"
+          style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+          <component :is="isFullscreen ? Minimize : Maximize" class="w-3.5 h-3.5" style="color: var(--color-accent-sky);" />
           {{ isFullscreen ? '退出全屏' : '全屏预览' }}
         </button>
       </div>
     </header>
 
-    <!-- 预览主体 -->
     <main
-      class="flex-1 relative overflow-auto flex items-center justify-center bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px] bg-slate-950 p-12 select-none">
+      class="flex-1 relative overflow-auto flex items-center justify-center p-12 select-none"
+      style="background-color: var(--color-bg-primary); background-image: radial-gradient(circle, var(--color-bg-tertiary) 1px, transparent 1px); background-size: 20px 20px;">
 
-      <!-- 渲染错误提示 -->
       <div v-if="renderError"
-        class="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md p-10 text-center">
-        <AlertCircle class="w-12 h-12 text-rose-500 mb-4 animate-bounce" />
-        <h3 class="text-lg font-bold text-white mb-2">糟糕，无法渲染预览图</h3>
-        <p class="text-xs text-slate-400 max-w-sm leading-relaxed mb-6">{{ renderError }}</p>
+        class="absolute inset-0 z-[60] flex flex-col items-center justify-center p-10 text-center"
+        style="background-color: rgba(2, 6, 23, 0.8); backdrop-filter: blur(12px);">
+        <AlertCircle class="w-12 h-12 mb-4 animate-bounce" style="color: var(--color-accent-rose);" />
+        <h3 class="text-lg font-bold mb-2" style="color: var(--color-text-primary);">糟糕，无法渲染预览图</h3>
+        <p class="text-xs max-w-sm leading-relaxed mb-6" style="color: var(--color-text-muted);">{{ renderError }}</p>
         <button @click="handleBack"
-          class="px-6 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-lg text-xs transition-all">返回编辑器重试</button>
+          class="px-6 py-2 font-bold rounded-lg text-xs transition-all"
+          style="background-color: var(--color-accent-sky); color: var(--color-bg-primary);">返回编辑器重试</button>
       </div>
 
-      <!-- 画布容器 -->
       <div ref="containerRef"
-        class="preview-container shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] bg-slate-900 border border-white/5 transition-transform duration-500 ease-out"
+        class="preview-container transition-transform duration-500 ease-out"
+        style="background-color: var(--color-bg-secondary); border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8);"
         :style="{
           width: (editorStore.canvasConfig.width || 800) + 'px',
           height: (editorStore.canvasConfig.height || 600) + 'px'
         }"></div>
     </main>
 
-    <!-- 操作提示 -->
     <div
-      class="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-2.5 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-full shadow-2xl pointer-events-none z-50">
-      <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-2">
-        <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 font-mono">Ctrl</kbd> + Scroll to Zoom
+      class="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-2.5 rounded-full shadow-2xl pointer-events-none z-50"
+      style="background-color: rgba(15, 23, 42, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1);">
+      <span class="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style="color: var(--color-text-muted);">
+        <kbd class="px-1.5 py-0.5 rounded font-mono" style="background-color: var(--color-bg-tertiary); color: var(--color-text-secondary);">Ctrl</kbd> + Scroll to Zoom
       </span>
     </div>
   </div>
