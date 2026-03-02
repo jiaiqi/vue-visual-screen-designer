@@ -3,7 +3,7 @@
 import { ref, watch } from 'vue'
 import { Dnd } from '@antv/x6-plugin-dnd'
 import { useEditorStore } from '@/stores/editor'
-import { CircleDot, Blocks, Box, ArrowLeftRight, Home, Type, ArrowRight, MoveHorizontal, Image as ImageIcon } from 'lucide-vue-next'
+import { Type, ArrowRight, MoveHorizontal, Image as ImageIcon, Square, Circle, Triangle, Minus } from 'lucide-vue-next'
 
 const dndContainer = ref<HTMLElement>()
 const editorStore = useEditorStore()
@@ -27,11 +27,11 @@ const commonPorts = {
 
 // 定义基础图元组件映射表
 const shapeTypes = [
-  { type: 'machine', label: '设备区', icon: CircleDot, w: 100, h: 100, stroke: '#f43f5e', rx: 0 },
-  { type: 'zone', label: '功能区', icon: Blocks, w: 140, h: 100, stroke: '#10b981', rx: 0 },
-  { type: 'storage', label: '仓储区', icon: Box, w: 120, h: 90, stroke: '#3b82f6', rx: 0 },
-  { type: 'passage', label: '通道', icon: ArrowLeftRight, w: 60, h: 60, stroke: '#8b5cf6', rx: 4 },
-  { type: 'room', label: '房间', icon: Home, w: 150, h: 120, stroke: '#fbbf24', rx: 0 },
+  { type: 'rect', label: '矩形', icon: Square, w: 120, h: 80, stroke: '#3b82f6', rx: 0 },
+  { type: 'circle', label: '圆形', icon: Circle, w: 100, h: 100, stroke: '#10b981', rx: 0 },
+  { type: 'triangle', label: '三角形', icon: Triangle, w: 100, h: 100, stroke: '#f59e0b', rx: 0 },
+  { type: 'trapezoid', label: '梯形', icon: MoveHorizontal, w: 120, h: 100, stroke: '#f43f5e', rx: 0 }, // 暂借 Icon
+  { type: 'line', label: '线段/连接', icon: Minus, w: 100, h: 2, stroke: '#94a3b8', rx: 0 },
   { type: 'text', label: '文字', icon: Type, w: 100, h: 40, stroke: 'transparent', rx: 0 },
   { type: 'custom_image', label: '自定义图形', icon: ImageIcon, w: 100, h: 100, stroke: '#d946ef', rx: 4 },
   { type: 'arrow_single', label: '单向箭头', icon: ArrowRight, w: 120, h: 40, stroke: '#10b981', rx: 0 },
@@ -123,8 +123,66 @@ const startDrag = (e: MouseEvent, item: typeof shapeTypes[0]) => {
         }
       }
     })
+  } else if (item.type === 'circle') {
+    node = graph.createNode({
+      shape: 'circle',
+      width: item.w,
+      height: item.h,
+      ports: commonPorts,
+      attrs: {
+        body: {
+          fill: '#1e293b',
+          stroke: item.stroke,
+          strokeWidth: 2,
+          filter: { name: 'dropShadow', args: { dx: 0, dy: 4, blur: 15, color: item.stroke.replace(')', ',0.2)').replace('rgb', 'rgba') } }
+        },
+        text: { text: item.label, fill: '#e2e8f0', fontSize: 13, fontWeight: 'bold' }
+      }
+    })
+  } else if (item.type === 'triangle' || item.type === 'trapezoid') {
+    let pointsStr = ''
+    if (item.type === 'triangle') {
+      pointsStr = `${item.w / 2},0 ${item.w},${item.h} 0,${item.h}`
+    } else {
+      // 梯形: 上小下大
+      pointsStr = `${item.w * 0.2},0 ${item.w * 0.8},0 ${item.w},${item.h} 0,${item.h}`
+    }
+    node = graph.createNode({
+      shape: 'polygon',
+      width: item.w,
+      height: item.h,
+      ports: commonPorts,
+      attrs: {
+        body: {
+          fill: '#1e293b',
+          stroke: item.stroke,
+          strokeWidth: 2,
+          refPoints: pointsStr,
+          filter: { name: 'dropShadow', args: { dx: 0, dy: 4, blur: 15, color: item.stroke.replace(')', ',0.2)').replace('rgb', 'rgba') } }
+        },
+        text: { text: item.label, fill: '#e2e8f0', fontSize: 13, fontWeight: 'bold' }
+      }
+    })
+  } else if (item.type === 'line') {
+    // 基础独立线段（两端无强制吸附），拖拽时作为一个 node 伪装也可，但在 X6 Dnd 里不支持直接拖拽 Edge
+    // 为此我们可以生成一个带非常窄高度的不可见矩形壳子，内置一条样式线段，或者是只提供首尾端口的两点容器
+    // 这里最直接合理的作为几何图形的是创建一个高度只有 2px 的 rect 来当作线条。
+    node = graph.createNode({
+      shape: 'rect',
+      width: item.w,
+      height: item.h > 4 ? item.h : 4,
+      ports: commonPorts,
+      attrs: {
+        body: {
+          fill: item.stroke,
+          stroke: item.stroke,
+          strokeWidth: 0,
+          rx: item.h / 2, ry: item.h / 2
+        }
+      }
+    })
   } else {
-    // 保底回退为其他内置矩形
+    // 保底回退为基础矩形 (包含 'rect')
     node = graph.createNode({
       shape: 'rect',
       width: item.w,
