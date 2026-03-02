@@ -3,28 +3,18 @@ import CanvasEditor from './components/editor/CanvasEditor.vue'
 import Toolbar from './components/editor/Toolbar.vue'
 import PropertyPanel from './components/editor/PropertyPanel.vue'
 import ContextMenu from './components/editor/ContextMenu.vue'
+import JsonEditorModal from './components/editor/JsonEditorModal.vue'
 
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useEditorStore } from '@/stores/editor'
 import { useExport } from '@/composables/useExport'
-import { Undo2, Redo2, Download, HardDriveDownload, HardDriveUpload, LayoutGrid, ZoomIn, ZoomOut, Maximize, Trash2, MousePointerSquareDashed, Keyboard, X } from 'lucide-vue-next'
+import { Undo2, Redo2, Download, LayoutGrid, ZoomIn, ZoomOut, Maximize, Trash2, MousePointerSquareDashed, Keyboard, X, Code, ChevronDown, FileImage, FileCode2 } from 'lucide-vue-next'
 
 const editorStore = useEditorStore()
-const { exportToPNG, exportToSVG, exportToJSON, importFromJSON } = useExport()
+const { exportToPNG, exportToSVG } = useExport()
 
-function triggerImportJSON() {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = 'application/json'
-  input.onchange = (e: Event) => {
-    const target = e.target as HTMLInputElement
-    const file = target.files?.[0]
-    if (file) {
-      importFromJSON(file)
-    }
-  }
-  input.click()
-}
+// JSON 编辑器弹窗状态
+const showJsonEditor = ref(false)
 
 // 画布缩放与全选控制
 const zoomRatio = ref(100)
@@ -200,7 +190,7 @@ onUnmounted(() => {
             <ZoomOut class="w-4 h-4" />
           </button>
           <span class="text-xs font-mono font-bold text-slate-300 min-w-[3.5rem] text-center select-none">{{ zoomRatio
-          }}%</span>
+            }}%</span>
           <button @click="handleZoom(0.1)"
             class="p-1.5 rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors" title="放大">
             <ZoomIn class="w-4 h-4" />
@@ -217,35 +207,51 @@ onUnmounted(() => {
 
         <!-- 导出发布组 -->
         <div class="flex items-center gap-2.5">
-          <div
-            class="flex items-center bg-emerald-500/10 rounded-lg p-0.5 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all">
-            <button @click="exportToPNG()"
-              class="group flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-all active:scale-95"
-              title="导出为透明 PNG">
-              <Download class="w-3.5 h-3.5 transition-transform group-hover:-translate-y-0.5" />
-              <span>PNG</span>
+          <!-- 悬浮下拉结构: 导出图像 -->
+          <div class="relative group">
+            <button
+              class="flex items-center gap-1.5 px-4 py-2 text-sm font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-slate-950 transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] group-hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+              title="导出图像">
+              <Download class="w-4 h-4" />
+              <span>导出图像</span>
+              <ChevronDown class="w-4 h-4 opacity-70 group-hover:rotate-180 transition-transform duration-300" />
             </button>
-            <div class="w-[1px] h-4 bg-emerald-500/20 mx-0.5"></div>
-            <button @click="exportToSVG()"
-              class="group flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-all active:scale-95"
-              title="导出为高清矢量 SVG">
-              <Download class="w-3.5 h-3.5 transition-transform group-hover:-translate-y-0.5" />
-              <span>SVG</span>
-            </button>
+
+            <!-- 下拉菜单板 (鼠标悬浮即显示) -->
+            <div
+              class="absolute top-full right-0 mt-2 w-48 bg-slate-800 border border-slate-700/80 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 origin-top-right z-50 overflow-hidden">
+              <div class="p-1 flex flex-col gap-0.5">
+                <button @click="exportToPNG()"
+                  class="flex items-center gap-2.5 px-3 py-2.5 w-full text-left rounded-lg text-sm font-medium text-slate-300 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors group/item relative">
+                  <div
+                    class="w-7 h-7 rounded-md bg-slate-900 flex items-center justify-center border border-slate-700 group-hover/item:border-emerald-500/30">
+                    <FileImage class="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <div class="flex flex-col">
+                    <span>生成 PNG 图像</span>
+                    <span class="text-[10px] text-slate-500 font-normal">带有透明通道的位图</span>
+                  </div>
+                </button>
+                <button @click="exportToSVG()"
+                  class="flex items-center gap-2.5 px-3 py-2.5 w-full text-left rounded-lg text-sm font-medium text-slate-300 hover:bg-sky-500/20 hover:text-sky-400 transition-colors group/item relative">
+                  <div
+                    class="w-7 h-7 rounded-md bg-slate-900 flex items-center justify-center border border-slate-700 group-hover/item:border-sky-500/30">
+                    <FileCode2 class="w-4 h-4 text-sky-500" />
+                  </div>
+                  <div class="flex flex-col">
+                    <span>生成纯净 SVG</span>
+                    <span class="text-[10px] text-slate-500 font-normal">无限放大的矢量图纸</span>
+                  </div>
+                </button>
+              </div>
+            </div>
           </div>
 
-          <button @click="exportToJSON()"
-            class="group flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 hover:bg-sky-500 hover:text-slate-950 hover:border-sky-500 transition-all active:scale-95 shadow-[0_0_10px_rgba(14,165,233,0.1)] hover:shadow-[0_0_15px_rgba(14,165,233,0.4)]"
-            title="保存工程">
-            <HardDriveDownload class="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
-            <span>保存方案</span>
-          </button>
-
-          <button @click="triggerImportJSON"
-            class="group flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500 hover:text-slate-950 hover:border-orange-500 transition-all active:scale-95 shadow-[0_0_10px_rgba(249,115,22,0.1)] hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]"
-            title="导入工程">
-            <HardDriveUpload class="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
-            <span>读取文件</span>
+          <button @click="showJsonEditor = true"
+            class="group flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500 hover:text-slate-950 hover:border-indigo-500 transition-all active:scale-95 shadow-[0_0_10px_rgba(99,102,241,0.1)] hover:shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+            title="JSON 代码/导流">
+            <Code class="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
+            <span>JSON 代码</span>
           </button>
         </div>
       </div>
@@ -271,6 +277,8 @@ onUnmounted(() => {
         </div>
       </aside>
     </main>
+
+    <JsonEditorModal v-if="showJsonEditor" @close="showJsonEditor = false" />
 
     <!-- 全局右键菜单 -->
     <ContextMenu ref="contextMenuRef" />
@@ -477,21 +485,55 @@ canvas {
 }
 
 @keyframes anim-pulse {
-  0% { transform: scale(1); filter: drop-shadow(0 0 0px transparent); }
-  50% { transform: scale(1.1); filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.8)); }
-  100% { transform: scale(1); filter: drop-shadow(0 0 0px transparent); }
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px transparent);
+  }
+
+  50% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.8));
+  }
+
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px transparent);
+  }
 }
 
 @keyframes anim-neon {
-  0%, 100% { filter: drop-shadow(0 0 5px #3b82f6); }
-  33% { filter: drop-shadow(0 0 10px #a855f7); }
-  66% { filter: drop-shadow(0 0 5px #ec4899); }
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 5px #3b82f6);
+  }
+
+  33% {
+    filter: drop-shadow(0 0 10px #a855f7);
+  }
+
+  66% {
+    filter: drop-shadow(0 0 5px #ec4899);
+  }
 }
 
 @keyframes anim-bounce {
-  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-25px); }
-  60% { transform: translateY(-12px); }
+
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+
+  40% {
+    transform: translateY(-25px);
+  }
+
+  60% {
+    transform: translateY(-12px);
+  }
 }
 
 @keyframes anim-float {
