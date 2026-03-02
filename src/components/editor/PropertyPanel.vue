@@ -25,6 +25,17 @@ const formData = ref({
   imageUrl: '', // 自定义图片URL
   animationType: 'none', // 动画类型
   animationDuration: 1, // 动画时长
+  animationReverse: false, // 动画反向
+  entranceType: 'none',   // 进场动画
+  exitType: 'none',       // 退出动画
+  motionPathId: '',      // 运动路径 ID
+  edgeTokenEnabled: false, // 是否启用粒子流
+  edgeTokenSize: 4,       // 粒子大小
+  edgeTokenSpeed: 1,      // 粒子流动频率 (s)
+  edgeTokenColor: '#3b82f6', // 粒子颜色
+  // --- 多状态图元配置 ---
+  states: [] as { value: string | number, url: string, label: string }[],
+  currentStatus: '' as string | number,
 })
 
 // Tab 切换状态
@@ -81,6 +92,12 @@ function syncDataFromCell(cell: Cell) {
 
   formData.value.animationType = (cell.getData()?.animationType as string) || 'none'
   formData.value.animationDuration = Number(cell.getData()?.animationDuration || 1)
+  formData.value.animationReverse = !!cell.getData()?.animationReverse
+  formData.value.entranceType = (cell.getData()?.entranceType as string) || 'none'
+  formData.value.exitType = (cell.getData()?.exitType as string) || 'none'
+  formData.value.motionPathId = (cell.getData()?.motionPathId as string) || ''
+  formData.value.states = cell.getData()?.states || []
+  formData.value.currentStatus = cell.getData()?.currentStatus ?? ''
 
   if (cell.isEdge()) {
     formData.value.edgeShape = cell.shape
@@ -97,10 +114,16 @@ function syncDataFromCell(cell: Cell) {
       }
       formData.value.flowReverse = animation.includes('reverse')
     }
+    formData.value.flowSpeed = cell.getData()?.flowSpeed || 1
+    formData.value.flowReverse = !!cell.getData()?.flowReverse
+    formData.value.edgeTokenEnabled = !!cell.getData()?.edgeTokenEnabled
+    formData.value.edgeTokenSize = cell.getData()?.edgeTokenSize || 4
+    formData.value.edgeTokenSpeed = cell.getData()?.edgeTokenSpeed || 1
+    formData.value.edgeTokenColor = cell.getData()?.edgeTokenColor || '#3b82f6'
   }
 }
 
-function handleUpdate(key: keyof typeof formData.value, value: string | number | boolean) {
+function handleUpdate(key: keyof typeof formData.value, value: any) {
   if (!activeCell.value) return
 
   const cell = activeCell.value as Cell
@@ -138,12 +161,23 @@ function handleUpdate(key: keyof typeof formData.value, value: string | number |
       break
     case 'animationType':
     case 'animationDuration':
+    case 'animationReverse':
+    case 'entranceType':
+    case 'exitType':
+    case 'motionPathId':
+    case 'states':
+    case 'currentStatus':
       if (cell.isNode()) {
-        const type = key === 'animationType' ? (value as string) : formData.value.animationType
-        const duration = key === 'animationDuration' ? Number(value) : formData.value.animationDuration
-
-        // 我们利用 setData 触发 X6 的 node:change:data 事件流
-        cell.setData({ animationType: type, animationDuration: duration }, { overwrite: false })
+        cell.setData({
+          animationType: formData.value.animationType,
+          animationDuration: formData.value.animationDuration,
+          animationReverse: formData.value.animationReverse,
+          entranceType: formData.value.entranceType,
+          exitType: formData.value.exitType,
+          motionPathId: formData.value.motionPathId,
+          states: formData.value.states,
+          currentStatus: key === 'currentStatus' ? value : formData.value.currentStatus
+        }, { overwrite: false })
       }
       break
     case 'edgeShape':
@@ -165,13 +199,28 @@ function handleUpdate(key: keyof typeof formData.value, value: string | number |
       break
     case 'flowSpeed':
     case 'flowReverse':
-      if (cell.isEdge() && cell.shape === 'fluid-pipe') {
-        const speed = key === 'flowSpeed' ? Number(value) : formData.value.flowSpeed
-        const reverse = key === 'flowReverse' ? Boolean(value) : formData.value.flowReverse
-        const animationStr = speed > 0
-          ? `dash-flow ${speed}s linear infinite ${reverse ? 'reverse' : 'normal'}`
-          : 'none'
-        cell.attr('fluid/style/animation', animationStr)
+    case 'edgeTokenEnabled':
+    case 'edgeTokenSize':
+    case 'edgeTokenSpeed':
+    case 'edgeTokenColor':
+      if (cell.isEdge()) {
+        const data = {
+          flowSpeed: key === 'flowSpeed' ? Number(value) : formData.value.flowSpeed,
+          flowReverse: key === 'flowReverse' ? Boolean(value) : formData.value.flowReverse,
+          edgeTokenEnabled: key === 'edgeTokenEnabled' ? Boolean(value) : formData.value.edgeTokenEnabled,
+          edgeTokenSize: key === 'edgeTokenSize' ? Number(value) : formData.value.edgeTokenSize,
+          edgeTokenSpeed: key === 'edgeTokenSpeed' ? Number(value) : formData.value.edgeTokenSpeed,
+          edgeTokenColor: key === 'edgeTokenColor' ? (value as string) : formData.value.edgeTokenColor,
+        }
+        cell.setData(data, { overwrite: false })
+
+        // 兼容旧的 fluid-pipe 属性驱动
+        if (cell.shape === 'fluid-pipe') {
+          const animationStr = data.flowSpeed > 0
+            ? `dash-flow ${data.flowSpeed}s linear infinite ${data.flowReverse ? 'reverse' : 'normal'}`
+            : 'none'
+          cell.attr('fluid/style/animation', animationStr)
+        }
       }
       break
     case 'width':
@@ -233,6 +282,20 @@ function handleImageUpload(e: Event) {
     }
   }
   reader.readAsDataURL(file)
+}
+
+function addStatusItem() {
+  formData.value.states.push({ value: '', url: '', label: '新状态' })
+  handleUpdate('states', formData.value.states)
+}
+
+function removeStatusItem(index: number) {
+  formData.value.states.splice(index, 1)
+  handleUpdate('states', formData.value.states)
+}
+
+function updateStatusItem() {
+  handleUpdate('states', formData.value.states)
 }
 </script>
 
@@ -339,12 +402,11 @@ function handleImageUpload(e: Event) {
             </div>
           </div>
         </section>
+        <!-- 自定义图片与多状态配置 -->
+        <section class="space-y-4 pt-4 border-t border-slate-800" v-if="activeCell?.isNode() && activeCell?.shape === 'image'">
+          <div class="space-y-3">
+            <label class="text-[10px] font-extrabold text-fuchsia-500 uppercase tracking-widest block">图像设置 (Image Settings)</label>
 
-        <!-- 自定义图片专属 -->
-        <section class="space-y-3 pt-4 border-t border-slate-800"
-          v-if="activeCell?.isNode() && activeCell?.shape === 'image'">
-          <label class="text-[10px] font-extrabold text-fuchsia-500 uppercase tracking-widest">图片设置 / 上传</label>
-          <div class="space-y-2">
             <div class="flex flex-col gap-1.5">
               <span class="text-[9px] font-bold text-slate-400">图像 URL 地址</span>
               <input type="text" v-model="formData.imageUrl"
@@ -352,13 +414,75 @@ function handleImageUpload(e: Event) {
                 class="w-full bg-slate-800 border border-slate-700 focus:border-fuchsia-500 rounded-md px-2.5 py-1.5 text-xs text-slate-200 outline-none"
                 placeholder="输入在线图片链接或 SVG 代码" />
             </div>
-            <div
-              class="mt-2 text-center text-[10px] text-slate-500 bg-slate-900 rounded-md py-2 border border-slate-800 border-dashed hover:border-fuchsia-500 hover:text-fuchsia-400 cursor-pointer transition-colors"
-              @click="triggerImageUpload">
+
+            <div class="mt-2 text-center text-[10px] text-slate-500 bg-slate-900 rounded-md py-2 border border-slate-800 border-dashed hover:border-fuchsia-500 hover:text-fuchsia-400 cursor-pointer transition-colors"
+                @click="triggerImageUpload">
               点击这里上传替换本地图片
             </div>
             <input type="file" ref="fileInputRef" class="hidden"
               accept="image/png, image/jpeg, image/svg+xml, image/gif" @change="handleImageUpload" />
+          </div>
+
+          <!-- 多状态子模块 -->
+          <div class="mt-6 pt-4 border-t border-slate-800/50 space-y-4">
+            <div class="flex items-center justify-between">
+              <label class="text-[10px] font-extrabold text-amber-500 uppercase tracking-widest leading-tight">多状态映射 (States)</label>
+              <button @click="addStatusItem" class="text-[9px] px-2 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded border border-amber-500/20 transition-colors">
+                + 增加
+              </button>
+            </div>
+
+            <div class="space-y-3">
+              <!-- 状态模拟器 -->
+              <div class="p-2.5 bg-slate-950/40 rounded border border-slate-800/60 shadow-inner">
+                <span class="text-[9px] font-bold text-slate-500 block mb-2 uppercase text-[8px]">状态预览模拟 (Mock State)</span>
+                <div class="flex items-center gap-2">
+                   <select v-model="formData.currentStatus"
+                    @change="e => handleUpdate('currentStatus', (e.target as HTMLSelectElement).value)"
+                    class="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-amber-400 outline-none focus:border-amber-500">
+                    <option value="">默认状态 (Default)</option>
+                    <option v-for="st in formData.states" :key="st.value" :value="st.value">
+                      {{ st.label || st.value }}
+                    </option>
+                  </select>
+                  <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_#f59e0b]"></div>
+                </div>
+              </div>
+
+              <!-- 映射列表 -->
+              <div v-for="(item, idx) in formData.states" :key="idx"
+                class="group relative flex flex-col gap-2 p-3 bg-slate-800/40 border border-slate-700/50 rounded-lg hover:border-slate-600 transition-all">
+                <button @click="removeStatusItem(idx)"
+                  class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-full flex items-center justify-center border border-rose-500/30 opacity-0 group-hover:opacity-100 transition-all z-10">
+                  ×
+                </button>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="flex flex-col gap-1">
+                    <span class="text-[8px] text-slate-500 font-bold uppercase">状态值 (Value)</span>
+                    <input type="text" v-model="item.value" @change="updateStatusItem"
+                      class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-amber-500"
+                      placeholder="如: running" />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <span class="text-[8px] text-slate-500 font-bold uppercase">显示标签</span>
+                    <input type="text" v-model="item.label" @change="updateStatusItem"
+                      class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-amber-500"
+                      placeholder="如: 运行中" />
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="text-[8px] text-slate-500 font-bold uppercase">映射图片/GIF URL</span>
+                    <input type="text" v-model="item.url" @change="updateStatusItem"
+                      class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-amber-500"
+                      placeholder="输入链接" />
+                </div>
+              </div>
+
+              <p v-if="formData.states.length === 0" class="text-center py-4 text-[10px] text-slate-600 border border-slate-800 border-dashed rounded-lg">
+                尚未配置业务状态映射。
+              </p>
+            </div>
           </div>
         </section>
       </div>
@@ -383,6 +507,9 @@ function handleImageUpload(e: Event) {
                 <option value="spin">匀速倒空翻自旋 (Spin)</option>
                 <option value="fade">幽灵渐隐显影 (Fade In-Out)</option>
                 <option value="float">垂直空浮游动 (Float-Y)</option>
+                <option value="pulse">强烈脉冲放大 (Pulse)</option>
+                <option value="neon">霓虹多色变幻 (Neon)</option>
+                <option value="bounce">活泼弹性跳跃 (Bounce)</option>
               </select>
             </div>
 
@@ -391,6 +518,90 @@ function handleImageUpload(e: Event) {
               <input type="number" :min="0.1" :step="0.1" v-model.number="formData.animationDuration"
                 @change="e => handleUpdate('animationDuration', (e.target as HTMLInputElement).value)"
                 class="w-full bg-slate-800 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-purple-500" />
+            </div>
+
+            <!-- 动画方向设置 -->
+            <div class="flex items-center justify-between border-t border-slate-800 pt-3"
+              v-if="formData.animationType !== 'none'">
+              <div class="flex flex-col gap-1.5 items-start">
+                <span class="text-[9px] font-bold text-slate-400">动画反向 (逆时针/反向)</span>
+                <label class="flex items-center mt-1 cursor-pointer">
+                  <input type="checkbox" v-model="formData.animationReverse"
+                    @change="e => handleUpdate('animationReverse', (e.target as HTMLInputElement).checked)"
+                    class="sr-only peer">
+                  <div
+                    class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-purple-500 transition-colors relative">
+                    <div
+                      class="w-3 h-3 bg-white rounded-full absolute top-0.5 left-0.5 peer-checked:translate-x-4 transition-transform">
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- 进场动画设置 -->
+            <div class="flex flex-col gap-3 pt-3 border-t border-slate-800">
+              <div class="flex flex-col gap-1.5">
+                <span class="text-[9px] font-bold text-emerald-400">进场动画 (Entrance)</span>
+                <div class="flex gap-2">
+                  <select v-model="formData.entranceType"
+                    @change="e => handleUpdate('entranceType', (e.target as HTMLSelectElement).value)"
+                    class="flex-1 bg-slate-800 border border-slate-700 rounded-md px-2 py-1.5 text-[10px] text-slate-200 outline-none focus:border-emerald-500">
+                    <option value="none">无 (None)</option>
+                    <option value="fade-in">渐显 (Fade In)</option>
+                    <option value="zoom-in">缩放进入 (Zoom In)</option>
+                    <option value="fly-in-top">从上方飞入 (Fly Top)</option>
+                    <option value="fly-in-bottom">从下方飞入 (Fly Bottom)</option>
+                  </select>
+                  <button @click="() => editorStore.graph?.trigger('node:play-entrance', { node: activeCell })"
+                    class="px-2 bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 rounded text-[10px] transition-colors">
+                    预览
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <span class="text-[9px] font-bold text-rose-400">退出动画 (Exit)</span>
+                <div class="flex gap-2">
+                  <select v-model="formData.exitType"
+                    @change="e => handleUpdate('exitType', (e.target as HTMLSelectElement).value)"
+                    class="flex-1 bg-slate-800 border border-slate-700 rounded-md px-2 py-1.5 text-[10px] text-slate-200 outline-none focus:border-rose-500">
+                    <option value="none">无 (None)</option>
+                    <option value="fade-out">渐隐 (Fade Out)</option>
+                    <option value="zoom-out">缩放退出 (Zoom Out)</option>
+                  </select>
+                  <button @click="() => editorStore.graph?.trigger('node:play-exit', { node: activeCell })"
+                    class="px-2 bg-rose-500/20 hover:bg-rose-500/40 text-rose-400 rounded text-[10px] transition-colors">
+                    预览
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 动作路径绑定 -->
+            <div class="flex flex-col gap-3 pt-3 border-t border-slate-800">
+              <span class="text-[9px] font-bold text-amber-400">动作路径动画 (Motion Path)</span>
+
+              <div class="flex flex-col gap-2">
+                <div v-if="!formData.motionPathId" class="space-y-2">
+                  <button @click="() => editorStore.graph?.trigger('motion:start-bind', { node: activeCell })"
+                    class="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 border-dashed rounded-md text-[10px] transition-colors">
+                    + 拾取画布路径作为轨道
+                  </button>
+                  <p class="text-[9px] text-slate-500 leading-tight">点击按钮后，在画布上点击任意一条连线即可绑定逻辑路径。</p>
+                </div>
+
+                <div v-else class="flex flex-col gap-2 bg-slate-950/40 p-2 rounded border border-slate-800">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[9px] text-slate-400">已绑定轨道: <span class="text-amber-500 font-mono">{{ formData.motionPathId.slice(0,8) }}</span></span>
+                    <button @click="handleUpdate('motionPathId', '')" class="text-[9px] text-rose-400 hover:text-rose-300">解除</button>
+                  </div>
+                  <button @click="() => editorStore.graph?.trigger('motion:play', { node: activeCell })"
+                    class="w-full py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded text-[10px] transition-colors mt-1">
+                    预览路径移动
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -432,6 +643,50 @@ function handleImageUpload(e: Event) {
                     </div>
                   </div>
                 </label>
+              </div>
+            </div>
+
+            <!-- 粒子流发射设置 -->
+            <div class="flex flex-col gap-3 pt-3 border-t border-slate-800">
+              <div class="flex items-center justify-between">
+                <span class="text-[9px] font-bold text-amber-400">发射粒子流 (Token Flow)</span>
+                <label class="flex items-center cursor-pointer">
+                  <input type="checkbox" v-model="formData.edgeTokenEnabled"
+                    @change="e => handleUpdate('edgeTokenEnabled', (e.target as HTMLInputElement).checked)"
+                    class="sr-only peer">
+                  <div
+                    class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-amber-500 transition-colors relative">
+                    <div
+                      class="w-3 h-3 bg-white rounded-full absolute top-0.5 left-0.5 peer-checked:translate-x-4 transition-transform">
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <div v-if="formData.edgeTokenEnabled" class="space-y-3 bg-slate-950/30 p-2 rounded-md border border-slate-800/50">
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="flex flex-col gap-1">
+                    <span class="text-[8px] text-slate-500">粒子大小</span>
+                    <input type="number" :min="1" :max="12" v-model.number="formData.edgeTokenSize"
+                      @change="e => handleUpdate('edgeTokenSize', (e.target as HTMLInputElement).value)"
+                      class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-200 outline-none" />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <span class="text-[8px] text-slate-500">发射周期(s)</span>
+                    <input type="number" :min="0.1" :step="0.1" v-model.number="formData.edgeTokenSpeed"
+                      @change="e => handleUpdate('edgeTokenSpeed', (e.target as HTMLInputElement).value)"
+                      class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-200 outline-none" />
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span class="text-[8px] text-slate-500">粒子颜色</span>
+                  <div class="flex items-center gap-2">
+                    <input type="color" v-model="formData.edgeTokenColor"
+                      @input="e => handleUpdate('edgeTokenColor', (e.target as HTMLInputElement).value)"
+                      class="w-6 h-6 rounded shrink-0 bg-transparent border-0 cursor-pointer p-0" />
+                    <span class="text-[9px] font-mono text-slate-400 uppercase">{{ formData.edgeTokenColor }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -476,6 +476,24 @@ canvas {
   }
 }
 
+@keyframes anim-pulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0px transparent); }
+  50% { transform: scale(1.1); filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.8)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0px transparent); }
+}
+
+@keyframes anim-neon {
+  0%, 100% { filter: drop-shadow(0 0 5px #3b82f6); }
+  33% { filter: drop-shadow(0 0 10px #a855f7); }
+  66% { filter: drop-shadow(0 0 5px #ec4899); }
+}
+
+@keyframes anim-bounce {
+  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-25px); }
+  60% { transform: translateY(-12px); }
+}
+
 @keyframes anim-float {
 
   0%,

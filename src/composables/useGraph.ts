@@ -1,5 +1,5 @@
 import { ref, onUnmounted } from 'vue'
-import { Graph } from '@antv/x6'
+import { Graph, Node, Edge, Cell, EdgeView } from '@antv/x6'
 import { Selection } from '@antv/x6-plugin-selection'
 import { Keyboard } from '@antv/x6-plugin-keyboard'
 import { History } from '@antv/x6-plugin-history'
@@ -91,7 +91,7 @@ export function useGraph() {
       .use(new Snapline({ enabled: true, sharp: true }))
       .use(new Transform({
         resizing: { enabled: true },
-        rotating: { enabled: true }
+        rotating: { enabled: true },
       }))
       .use(new Clipboard({ enabled: true }))
       .use(new Export())
@@ -191,45 +191,356 @@ export function useGraph() {
       const data = node.getData() || {}
       const animType = data.animationType || 'none'
 
+      // X6 对不同元件的底层渲染选择器不同：普通图元通常在 body 上，自定义图片图元在 image 属性上
+      const targetSelector = node.shape === 'image' ? 'image' : 'body'
+
       if (animType !== 'none') {
         const duration = parseFloat(data.animationDuration) || 1
+        const isReverse = !!data.animationReverse
+
+        // 核心优化：自旋(spin)类动画为了保证视觉无缝循环，必须使用 linear 匀速，
+        // 而 breath/float 等往复性动画则适合使用 ease-in-out。
+        const easing = animType === 'spin' ? 'linear' : 'ease-in-out'
+        const direction = isReverse ? 'reverse' : 'normal'
+
         // 注意：因为 SVG 的缩放原点问题，需要挂载我们定制的 class
-        node.attr('body/class', 'node-anim-trigger')
-        node.attr('body/style/animation', `anim-${animType} ${duration}s ease-in-out infinite`)
+        node.attr(`${targetSelector}/class`, 'node-anim-trigger')
+        node.attr(`${targetSelector}/style/animation`, `anim-${animType} ${duration}s ${easing} infinite ${direction}`)
       } else {
-        node.attr('body/class', '')
-        node.attr('body/style/animation', 'none')
+        node.attr(`${targetSelector}/class`, '')
+        node.attr(`${targetSelector}/style/animation`, 'none')
       }
     }
 
-    // 监听节点数据在 PropertyPanel 里被修改时的实时反馈
+    // --- 进场与退出动画执行引擎 (Transition) ---
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    graph.on('node:change:data', ({ cell }: any) => {
-      if (cell.isNode()) {
-        applyNodeAnimation(cell)
+    const playTransition = (node: any, type: string) => {
+      const originalSize = node.getSize()
+      const originalPos = node.getPosition()
+      const targetSelector = node.shape === 'image' ? 'image' : 'body'
+
+      switch (type) {
+        case 'fade-in':
+          node.attr(`${targetSelector}/opacity`, 0)
+          node.transition(`attrs/${targetSelector}/opacity`, 1, { duration: 1000 })
+          break
+        case 'zoom-in':
+          node.resize(1, 1)
+          node.attr(`${targetSelector}/opacity`, 0)
+          node.transition('size', originalSize, { duration: 800 })
+          node.transition(`attrs/${targetSelector}/opacity`, 1, { duration: 800 })
+          break
+        case 'fly-in-top':
+          node.position(originalPos.x, originalPos.y - 120)
+          node.attr(`${targetSelector}/opacity`, 0)
+          node.transition('position', originalPos, { duration: 850 })
+          node.transition(`attrs/${targetSelector}/opacity`, 1, { duration: 850 })
+          break
+        case 'fly-in-bottom':
+          node.position(originalPos.x, originalPos.y + 120)
+          node.attr(`${targetSelector}/opacity`, 0)
+          node.transition('position', originalPos, { duration: 850 })
+          node.transition(`attrs/${targetSelector}/opacity`, 1, { duration: 850 })
+          break
+        case 'fade-out':
+          node.transition(`attrs/${targetSelector}/opacity`, 0, {
+            duration: 1000,
+            complete: () => {
+              // 预览结束后恢复显示以便编辑
+              setTimeout(() => node.attr(`${targetSelector}/opacity`, 1), 800)
+            }
+          })
+          break
+        case 'zoom-out':
+          node.transition('size', { width: 1, height: 1 }, {
+            duration: 800,
+            complete: () => {
+              setTimeout(() => node.resize(originalSize.width, originalSize.height), 800)
+            }
+          })
+          node.transition(`attrs/${targetSelector}/opacity`, 0, { duration: 800 })
+          break
+      }
+    }
+
+    // 绑定预览事件
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    graph.on('node:play-entrance', ({ node }: any) => {
+      const data = node.getData() || {}
+      if (data.entranceType && data.entranceType !== 'none') {
+        playTransition(node, data.entranceType)
       }
     })
 
-    // 监听从托盘生成或 JSON 恢复装载的新节点的自启动画
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    graph.on('node:added', ({ node }: any) => {
-      applyNodeAnimation(node)
+    graph.on('node:play-exit', ({ node }: any) => {
+      const data = node.getData() || {}
+      if (data.exitType && data.exitType !== 'none') {
+        playTransition(node, data.exitType)
+      }
     })
 
-    setupGlobalEvents()
-  }
+    // 监听节点数据在 PropertyPanel 里被修改时的实时反馈
+    graph.on('node:change:data', ({ cell }: { cell: Cell }) => {
+      if (cell.isNode()) {
+        const node = cell as Node
+        applyNodeAnimation(node)
+        applyNodeStatus(node)
+      }
+    })
 
-  const setupGlobalEvents = () => {
+    // 应用多状态图片
+    const applyNodeStatus = (node: Node) => {
+      if (node.shape !== 'image') return
+      const data = node.getData() || {}
+      if (!data.states || !Array.isArray(data.states)) return
+
+      const currentStatus = data.currentStatus
+      // 如果没有状态值，保持默认 imageUrl
+      if (currentStatus === '' || currentStatus === undefined) return
+
+      const stateItem = data.states.find((st: { value: string | number, url: string }) => String(st.value) === String(currentStatus))
+      if (stateItem && stateItem.url) {
+        node.attr('image/xlink:href', stateItem.url)
+      }
+    }
+
+    graph.on('node:added', ({ node }: { node: Node }) => {
+      applyNodeAnimation(node)
+      applyNodeStatus(node)
+      // 首次添加时触发进场动画
+      const data = node.getData() || {}
+      if (data.entranceType && data.entranceType !== 'none') {
+        playTransition(node, data.entranceType)
+      }
+    })
+
+    // --- 动作路径系统 (Motion Paths) ---
+    let isPickingPath = false
+    let targetNodeForPath: Node | null = null
+
+    graph.on('motion:start-bind', ({ node }: { node: Node }) => {
+      isPickingPath = true
+      targetNodeForPath = node
+      if (graph) graph.container.style.cursor = 'crosshair'
+    })
+
+    // 处理全局点击以确认拾取
+    graph.on('edge:click', ({ edge }: { edge: Edge }) => {
+      if (isPickingPath && targetNodeForPath) {
+        targetNodeForPath.setData({ motionPathId: edge.id }, { overwrite: false })
+        isPickingPath = false
+        targetNodeForPath = null
+        if (graph) graph.container.style.cursor = 'default'
+      }
+    })
+
+    // 空白处点击取消拾取模式
+    graph.on('blank:click', () => {
+      if (isPickingPath) {
+        isPickingPath = false
+        targetNodeForPath = null
+        if (graph) graph.container.style.cursor = 'default'
+      }
+    })
+
+    // 播放动作路径动画
+    graph.on('motion:play', ({ node }: { node: Node }) => {
+      const data = node.getData() || {}
+      if (!data.motionPathId || !graph) return
+
+      const cell = graph.getCellById(data.motionPathId)
+      if (!cell || !cell.isEdge()) return
+      const edge = cell as Edge
+
+      const originalPos = node.getPosition()
+
+      // 使用动画驱动 progress (0 -> 1)
+      const duration = 2000
+      const start = Date.now()
+
+      const safeGraph = graph
+      const animate = () => {
+        if (!safeGraph) return
+        const now = Date.now()
+        const progress = Math.min(1, (now - start) / duration)
+
+        // 获取连线上对应比例的点 (通过 View 层获取几何路径)
+        const view = safeGraph.findViewByCell(edge) as EdgeView
+        if (view) {
+          const point = view.getPointAtRatio(progress)
+          if (point) {
+            const size = node.getSize()
+            node.position(point.x - size.width / 2, point.y - size.height / 2)
+          }
+        }
+
+        if (progress < 1) {
+          requestAnimationFrame(animate)
+        } else {
+          // 播放结束后 1s 自动滚回原位
+          setTimeout(() => {
+            node.transition('position', originalPos, { duration: 500 })
+          }, 1000)
+        }
+      }
+
+      requestAnimationFrame(animate)
+    })
+
+    // --- 连线粒子 Token 系统 (Edge Tokens) ---
+    const edgeTokenTimers = new Map<string, number>()
+
+    const safeGraph = graph
+    const applyEdgeTokenAnimation = (edge: Edge) => {
+      const data = edge.getData() || {}
+      const edgeId = edge.id
+
+      // 彻底清理存量定时器，防止多重叠加
+      if (edgeTokenTimers.has(edgeId)) {
+        window.clearInterval(edgeTokenTimers.get(edgeId))
+        edgeTokenTimers.delete(edgeId)
+      }
+
+      if (data.edgeTokenEnabled) {
+        const interval = (parseFloat(data.edgeTokenSpeed) || 1) * 1000
+        const size = data.edgeTokenSize || 4
+        const color = data.edgeTokenColor || '#3b82f6'
+
+        const send = () => {
+          if (!safeGraph) return
+            // X6 原生 sendToken 存在于 Graph 实例上（部分版本类型定义不全）
+            ; (safeGraph as Graph & { sendToken: (args: Record<string, any>, edge: Edge, options?: Record<string, any>) => void }).sendToken(
+              {
+                tagName: 'circle',
+                attrs: {
+                  r: size / 2,
+                  fill: color,
+                  stroke: 'transparent'
+                },
+              },
+              edge,
+              {
+                duration: 2500, // Token 滑行时间
+              },
+            )
+        }
+
+        // 立即发射首个 Token 并开启循环
+        send()
+        const timer = window.setInterval(send, interval) as unknown as number
+        edgeTokenTimers.set(edgeId, timer)
+      }
+    }
+
+    graph.on('edge:change:data', ({ cell }: { cell: Cell }) => {
+      if (cell.isEdge()) {
+        applyEdgeTokenAnimation(cell as Edge)
+      }
+    })
+
+    graph.on('edge:removed', ({ edge }: { edge: Edge }) => {
+      if (edgeTokenTimers.has(edge.id)) {
+        window.clearInterval(edgeTokenTimers.get(edge.id))
+        edgeTokenTimers.delete(edge.id)
+      }
+    })
+
+    graph.on('edge:added', ({ edge }: { edge: Edge }) => {
+      applyEdgeTokenAnimation(edge)
+    })
+
+    // --- 连线拐点交互系统 (Edge Vertices & Tools) ---
+    // 改用 mouseenter/mouseleave 确保交互手柄能即时弹出，提升工业级操作灵敏度
+    graph.on('edge:mouseenter', ({ edge }: { edge: Edge }) => {
+      edge.addTools([
+        {
+          name: 'vertices',
+          args: {
+            stopPropagation: false,
+            attrs: {
+              fill: '#ffffff',
+              stroke: '#38bdf8',
+              strokeWidth: 2,
+              r: 5
+            }
+          }
+        },
+        {
+          name: 'segments',
+          args: {
+            stopPropagation: false,
+            attrs: {
+              fill: '#38bdf8',
+              r: 3
+            }
+          }
+        }
+      ])
+    })
+
+    graph.on('edge:mouseleave', ({ edge }: { edge: Edge }) => {
+      // 只有在未选中该连线时，才在鼠标移出后清除手柄
+      if (!graph?.isSelected(edge)) {
+        edge.removeTools()
+      }
+    })
+
+    graph.on('edge:unselected', ({ edge }: { edge: Edge }) => {
+      // 彻底取消选中时清除所有手柄
+      edge.removeTools()
+    })
+
+    // --- 百分比响应式布局系统 (Percentage Layout) ---
+    const updateNodeRatios = (node: Node) => {
+      if (!graph) return
+      const { width: gW, height: gH } = graph.options
+      const pos = node.getPosition()
+      const size = node.getSize()
+
+      // 存储相对于当前画布尺寸的比例
+      node.setData({
+        xRatio: pos.x / gW,
+        yRatio: pos.y / gH,
+        wRatio: size.width / gW,
+        hRatio: size.height / gH
+      }, { overwrite: false })
+    }
+
+    graph.on('node:moved', ({ node }: { node: Node }) => updateNodeRatios(node))
+    graph.on('node:resized', ({ node }: { node: Node }) => updateNodeRatios(node))
+
+    // --- 页面大小监听与响应式重拍 ---
     const handleResize = () => {
       if (!graph || !containerRef.value) return
-      // autoResize: true 理论上会自动处理
+      const newWidth = containerRef.value.clientWidth
+      const newHeight = containerRef.value.clientHeight
+
+      // 1. 调整画布物理尺寸
+      graph.resize(newWidth, newHeight)
+
+      // 2. 响应式重排所有节点
+      const nodes = graph.getNodes()
+      nodes.forEach(node => {
+        const data = node.getData() || {}
+        if (data.xRatio !== undefined && data.yRatio !== undefined) {
+          node.position(data.xRatio * newWidth, data.yRatio * newHeight)
+        }
+        if (data.wRatio !== undefined && data.hRatio !== undefined) {
+          node.resize(data.wRatio * newWidth, data.hRatio * newHeight)
+        }
+      })
     }
     window.addEventListener('resize', handleResize)
 
+    // 退出卸载时清理所有活跃动画与资源
     onUnmounted(() => {
       window.removeEventListener('resize', handleResize)
+      edgeTokenTimers.forEach(timer => window.clearInterval(timer))
+      edgeTokenTimers.clear()
       if (graph) {
         graph.dispose()
+        editorStore.initGraph(null)
       }
     })
   }

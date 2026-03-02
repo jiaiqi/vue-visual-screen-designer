@@ -28,9 +28,9 @@ export const useEditorStore = defineStore('editor', {
     }
   }),
   actions: {
-    initGraph(graphInstance: Graph) {
+    initGraph(graphInstance: Graph | null) {
       // 使用 markRaw 绕过 Vue Proxy 监控，提高图形界面性能
-      this.graph = markRaw(graphInstance)
+      this.graph = graphInstance ? markRaw(graphInstance) : null
     },
     setMode(mode: EditorState['mode']) {
       this.mode = mode
@@ -49,7 +49,8 @@ export const useEditorStore = defineStore('editor', {
       // 同步给 X6
       if (this.graph) {
         if (partialConfig.showGrid !== undefined) {
-          partialConfig.showGrid ? this.graph.showGrid() : this.graph.hideGrid()
+          if (partialConfig.showGrid) this.graph.showGrid()
+          else this.graph.hideGrid()
         }
         if (partialConfig.gridSize !== undefined) {
           this.graph.setGridSize(partialConfig.gridSize)
