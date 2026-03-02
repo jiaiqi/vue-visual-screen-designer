@@ -182,6 +182,20 @@ const action = (type: string) => {
               width: maxX - minX,
               height: maxY - minY,
               path: pathData.trim(),
+              ports: {
+                groups: {
+                  top: { position: 'top', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
+                  right: { position: 'right', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
+                  bottom: { position: 'bottom', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
+                  left: { position: 'left', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
+                },
+                items: [
+                  { id: 'port_top', group: 'top' },
+                  { id: 'port_right', group: 'right' },
+                  { id: 'port_bottom', group: 'bottom' },
+                  { id: 'port_left', group: 'left' },
+                ],
+              },
               attrs: {
                 body: {
                   fill: selectedNodes[0]?.attr('body/fill') || '#1e293b',
