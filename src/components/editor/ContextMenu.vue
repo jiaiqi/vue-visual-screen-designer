@@ -192,7 +192,11 @@ const action = (type: string) => {
                 label: {
                   text: '组合多边形',
                   fill: '#e2e8f0',
-                  fontSize: 13
+                  fontSize: 13,
+                  refX: '50%',
+                  refY: '50%',
+                  textAnchor: 'middle',
+                  textVerticalAnchor: 'middle'
                 }
               },
               data: {
