@@ -36,9 +36,33 @@ export function useExport() {
 
     try {
       graph.toSVG((dataUri: string) => {
-        downloadFile(dataUri, filename)
+        // 由于 VITE 插件和各种开发环境扩展偶尔会深度污染或者将整个 html 页面作为 foreign 包裹进来
+        // 我们只需确保取到单纯的纯净 <svg> XML 即可，这也能阻断 "xmlParseEntityRef"
+        let svgContent = dataUri
+
+        // 如果是 base64 或 utf-8 的 uri 前缀，先剔除转回纯文本
+        if (svgContent.startsWith('data:image/svg+xml;utf8,')) {
+          const splitData = svgContent.split('data:image/svg+xml;utf8,')[1] || ''
+          svgContent = decodeURIComponent(splitData)
+        }
+
+        // 解剖截取核心 SVG 内容（规避前置的 <!DOCTYPE 等导致浏览器当成 HTML 执行脚本报错）
+        const svgStart = svgContent.indexOf('<svg')
+        const svgEnd = svgContent.lastIndexOf('</svg>') + 6
+        if (svgStart !== -1 && svgEnd !== -1) {
+          svgContent = svgContent.substring(svgStart, svgEnd)
+          // 清洗混入的各类异常 script 标签
+          svgContent = svgContent.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+        }
+
+        // 把洗干净的 SVG 转为新的 data URI 再执行下载
+        const cleanUri = 'data:image/svg+xml;utf8,' + encodeURIComponent(svgContent)
+        downloadFile(cleanUri, filename)
       }, {
-        preserveDimensions: true
+        preserveDimensions: true,
+        // 由于第三方如 vite-dev-server 或 console-ninja 等热更新注入会导致极高概率的 XML 非法字符注入且无法单纯用 stylesheet 回调处理
+        // 所以我们转为拦截生成的 SVG 内容
+        copyStyles: false
       })
     } catch {
       alert("由于未引入导出插件，目前暂不支持图像导出。")
