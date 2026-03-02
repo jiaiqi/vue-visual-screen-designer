@@ -2,6 +2,7 @@ import { Graph } from '@antv/x6'
 import { register } from '@antv/x6-vue-shape'
 import CoolingFan from '@/components/editor/nodes/CoolingFan.vue'
 import StorageTank from '@/components/editor/nodes/StorageTank.vue'
+import IconNode from '@/components/editor/nodes/IconNode.vue'
 
 export function registerEdges() {
   // 1. 电力线 (模拟高压/电流)
@@ -93,5 +94,12 @@ export function registerVueNodes() {
     width: 120,
     height: 160,
     component: StorageTank,
+  })
+
+  register({
+    shape: 'icon-node',
+    width: 64,
+    height: 64,
+    component: IconNode,
   })
 }

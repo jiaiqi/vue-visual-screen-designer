@@ -3,7 +3,7 @@
 import { ref, watch } from 'vue'
 import { Dnd } from '@antv/x6-plugin-dnd'
 import { useEditorStore } from '@/stores/editor'
-import { Type, ArrowRight, MoveHorizontal, Image as ImageIcon, Square, Circle, Triangle, Minus } from 'lucide-vue-next'
+import { Type, ArrowRight, MoveHorizontal, Image as ImageIcon, Square, Circle, Triangle, Minus, Database, Server, Cpu, Cloud, Monitor, HardDrive, Wifi, Activity, Terminal, Shield } from 'lucide-vue-next'
 
 const dndContainer = ref<HTMLElement>()
 const editorStore = useEditorStore()
@@ -38,6 +38,20 @@ const shapeTypes = [
   { type: 'arrow_double', label: '双向箭头', icon: MoveHorizontal, w: 140, h: 40, stroke: '#10b981', rx: 0 },
 ]
 
+// 常用的网络拓扑和工控隐喻的 Lucide 图标集
+const iconNodes = [
+  { type: 'icon-node', iconName: 'Database', label: '数据库', icon: Database, w: 48, h: 48, stroke: '#3b82f6', rx: 0 },
+  { type: 'icon-node', iconName: 'Server', label: '服务器', icon: Server, w: 48, h: 48, stroke: '#10b981', rx: 0 },
+  { type: 'icon-node', iconName: 'Cpu', label: '处理器', icon: Cpu, w: 48, h: 48, stroke: '#f59e0b', rx: 0 },
+  { type: 'icon-node', iconName: 'Cloud', label: '虚机/云', icon: Cloud, w: 48, h: 48, stroke: '#0ea5e9', rx: 0 },
+  { type: 'icon-node', iconName: 'Monitor', label: '监控大屏', icon: Monitor, w: 48, h: 48, stroke: '#8b5cf6', rx: 0 },
+  { type: 'icon-node', iconName: 'HardDrive', label: '磁盘阵列', icon: HardDrive, w: 48, h: 48, stroke: '#64748b', rx: 0 },
+  { type: 'icon-node', iconName: 'Wifi', label: '无线网关', icon: Wifi, w: 48, h: 48, stroke: '#14b8a6', rx: 0 },
+  { type: 'icon-node', iconName: 'Activity', label: '探针诊断', icon: Activity, w: 48, h: 48, stroke: '#ef4444', rx: 0 },
+  { type: 'icon-node', iconName: 'Terminal', label: '终端接驳', icon: Terminal, w: 48, h: 48, stroke: '#22c55e', rx: 0 },
+  { type: 'icon-node', iconName: 'Shield', label: '安全网关', icon: Shield, w: 48, h: 48, stroke: '#eab308', rx: 0 },
+]
+
 // 初始化 Dnd
 watch(() => editorStore.graph, (graph) => {
   if (graph && dndContainer.value && !dndRef.value) {
@@ -57,7 +71,19 @@ const startDrag = (e: MouseEvent, item: typeof shapeTypes[0]) => {
 
   let node
 
-  if (item.type === 'text') {
+  if (item.type === 'icon-node') {
+    node = graph.createNode({
+      shape: 'icon-node',
+      width: item.w,
+      height: item.h,
+      ports: commonPorts,
+      data: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        iconName: (item as any).iconName || 'Image',
+        color: item.stroke,
+      },
+    })
+  } else if (item.type === 'text') {
     node = graph.createNode({
       shape: 'text',
       width: item.w,
@@ -230,7 +256,22 @@ const startDrag = (e: MouseEvent, item: typeof shapeTypes[0]) => {
         </template>
       </div>
 
-      <div class="mt-6 px-1">
+      <div class="mt-6">
+        <div class="px-1 text-[11px] text-slate-500 mb-3 uppercase tracking-wider font-semibold">通用架构图标图元</div>
+        <div class="grid grid-cols-2 gap-3">
+          <template v-for="item in iconNodes" :key="item.iconName">
+            <div
+              class="flex flex-col items-center justify-center p-3 rounded-lg bg-[#1a1f2e] border border-[#2a3045] cursor-grab hover:-translate-y-0.5 hover:border-indigo-500/50 hover:bg-indigo-500/10 transition-all group"
+              @mousedown="startDrag($event, item)">
+              <component :is="item.icon" class="w-7 h-7 mb-1.5 transition-transform group-hover:scale-110"
+                :style="{ color: item.stroke }" />
+              <span class="text-[11px] text-slate-400 font-medium">{{ item.label }}</span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="mt-8 px-1">
         <div class="text-[11px] text-slate-500 mb-3 uppercase tracking-wider font-semibold">复杂设备及管线</div>
         <!-- 以后其他高级图元也可继续使用 v-for / dnd 追加在这里 -->
         <div class="text-xs text-slate-600 bg-slate-900/50 rounded p-3 border border-slate-800/50">

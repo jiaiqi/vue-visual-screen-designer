@@ -20,6 +20,7 @@ const formData = ref({
   fontSize: 14, // 默认字号
   textColor: '#e2e8f0', // 文字颜色
   edgeShape: 'edge', // 连线样式 shape
+  iconName: '', // 图标图元特定的标识
   flowSpeed: 1, // 动画周期 (s)
   flowReverse: false, // 动画反向
   imageUrl: '', // 自定义图片URL
@@ -87,13 +88,19 @@ function syncDataFromCell(cell: Cell) {
     formData.value.imageUrl = ''
   }
 
+  if (cell.shape === 'icon-node') {
+    formData.value.iconName = cell.getData()?.iconName || 'Image'
+  } else {
+    formData.value.iconName = ''
+  }
+
   formData.value.animationType = (cell.getData()?.animationType as string) || 'none'
   formData.value.animationDuration = Number(cell.getData()?.animationDuration || 1)
   formData.value.animationReverse = !!cell.getData()?.animationReverse
   formData.value.entranceType = (cell.getData()?.entranceType as string) || 'none'
   formData.value.exitType = (cell.getData()?.exitType as string) || 'none'
-    formData.value.states = (cell.getData() as any)?.states || []
-    formData.value.currentStatus = (cell.getData() as any)?.currentStatus ?? ''
+  formData.value.states = (cell.getData() as any)?.states || []
+  formData.value.currentStatus = (cell.getData() as any)?.currentStatus ?? ''
 
   if (cell.isEdge()) {
     formData.value.edgeShape = cell.shape
@@ -155,6 +162,11 @@ function handleUpdate(key: keyof typeof formData.value, value: any) {
         cell.attr('image/xlink:href', value as string)
         cell.attr('body/strokeDasharray', null)
         cell.attr('label/text', '')
+      }
+      break
+    case 'iconName':
+      if (cell.isNode() && cell.shape === 'icon-node') {
+        cell.setData({ iconName: value }, { overwrite: false })
       }
       break
     case 'animationType':
@@ -365,6 +377,20 @@ function updateStatusItem() {
           </div>
         </section>
 
+        <!-- 专有属性：IconNode -->
+        <section class="space-y-3" v-if="activeCell?.shape === 'icon-node'">
+          <label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">矢量图标控制 (Lucide)</label>
+          <div class="flex flex-col gap-1.5">
+            <span class="text-[9px] font-bold text-slate-400">图标名 (Icon Name)</span>
+            <input type="text" v-model="formData.iconName"
+              @input="e => handleUpdate('iconName', (e.target as HTMLInputElement).value)"
+              class="w-full bg-slate-800 border border-slate-700 hover:border-slate-600 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-md px-2.5 py-1.5 text-xs text-slate-200 transition-colors outline-none"
+              placeholder="例如：Database、Cpu、Server..." />
+            <span class="text-[9px] text-slate-500">支持全量 <a href="https://lucide.dev/icons" target="_blank"
+                class="text-sky-500 hover:underline">Lucide 图标</a>，采用大写驼峰命名 (PascalCase)</span>
+          </div>
+        </section>
+
         <!-- 样式外观 -->
         <section class="space-y-3" v-if="activeCell?.isNode()">
           <label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">外观样式</label>
@@ -404,9 +430,11 @@ function updateStatusItem() {
           </div>
         </section>
         <!-- 自定义图片与多状态配置 -->
-        <section class="space-y-4 pt-4 border-t border-slate-800" v-if="activeCell?.isNode() && activeCell?.shape === 'image'">
+        <section class="space-y-4 pt-4 border-t border-slate-800"
+          v-if="activeCell?.isNode() && activeCell?.shape === 'image'">
           <div class="space-y-3">
-            <label class="text-[10px] font-extrabold text-fuchsia-500 uppercase tracking-widest block">图像设置 (Image Settings)</label>
+            <label class="text-[10px] font-extrabold text-fuchsia-500 uppercase tracking-widest block">图像设置 (Image
+              Settings)</label>
 
             <div class="flex flex-col gap-1.5">
               <span class="text-[9px] font-bold text-slate-400">图像 URL 地址</span>
@@ -416,8 +444,9 @@ function updateStatusItem() {
                 placeholder="输入在线图片链接或 SVG 代码" />
             </div>
 
-            <div class="mt-2 text-center text-[10px] text-slate-500 bg-slate-900 rounded-md py-2 border border-slate-800 border-dashed hover:border-fuchsia-500 hover:text-fuchsia-400 cursor-pointer transition-colors"
-                @click="triggerImageUpload">
+            <div
+              class="mt-2 text-center text-[10px] text-slate-500 bg-slate-900 rounded-md py-2 border border-slate-800 border-dashed hover:border-fuchsia-500 hover:text-fuchsia-400 cursor-pointer transition-colors"
+              @click="triggerImageUpload">
               点击这里上传替换本地图片
             </div>
             <input type="file" ref="fileInputRef" class="hidden"
@@ -427,8 +456,10 @@ function updateStatusItem() {
           <!-- 多状态子模块 -->
           <div class="mt-6 pt-4 border-t border-slate-800/50 space-y-4">
             <div class="flex items-center justify-between">
-              <label class="text-[10px] font-extrabold text-amber-500 uppercase tracking-widest leading-tight">多状态映射 (States)</label>
-              <button @click="addStatusItem" class="text-[9px] px-2 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded border border-amber-500/20 transition-colors">
+              <label class="text-[10px] font-extrabold text-amber-500 uppercase tracking-widest leading-tight">多状态映射
+                (States)</label>
+              <button @click="addStatusItem"
+                class="text-[9px] px-2 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded border border-amber-500/20 transition-colors">
                 + 增加
               </button>
             </div>
@@ -436,9 +467,10 @@ function updateStatusItem() {
             <div class="space-y-3">
               <!-- 状态模拟器 -->
               <div class="p-2.5 bg-slate-950/40 rounded border border-slate-800/60 shadow-inner">
-                <span class="text-[9px] font-bold text-slate-500 block mb-2 uppercase text-[8px]">状态预览模拟 (Mock State)</span>
+                <span class="text-[9px] font-bold text-slate-500 block mb-2 uppercase text-[8px]">状态预览模拟 (Mock
+                  State)</span>
                 <div class="flex items-center gap-2">
-                   <select v-model="formData.currentStatus"
+                  <select v-model="formData.currentStatus"
                     @change="e => handleUpdate('currentStatus', (e.target as HTMLSelectElement).value)"
                     class="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-amber-400 outline-none focus:border-amber-500">
                     <option value="">默认状态 (Default)</option>
@@ -473,14 +505,15 @@ function updateStatusItem() {
                   </div>
                 </div>
                 <div class="flex flex-col gap-1">
-                    <span class="text-[8px] text-slate-500 font-bold uppercase">映射图片/GIF URL</span>
-                    <input type="text" v-model="item.url" @change="updateStatusItem"
-                      class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-amber-500"
-                      placeholder="输入链接" />
+                  <span class="text-[8px] text-slate-500 font-bold uppercase">映射图片/GIF URL</span>
+                  <input type="text" v-model="item.url" @change="updateStatusItem"
+                    class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-200 outline-none focus:border-amber-500"
+                    placeholder="输入链接" />
                 </div>
               </div>
 
-              <p v-if="formData.states.length === 0" class="text-center py-4 text-[10px] text-slate-600 border border-slate-800 border-dashed rounded-lg">
+              <p v-if="formData.states.length === 0"
+                class="text-center py-4 text-[10px] text-slate-600 border border-slate-800 border-dashed rounded-lg">
                 尚未配置业务状态映射。
               </p>
             </div>

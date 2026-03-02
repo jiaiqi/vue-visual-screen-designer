@@ -137,73 +137,71 @@ onUnmounted(() => {
       <div class="actions flex items-center gap-4">
         <!-- 帮助组 -->
         <button @click="isHelpModalOpen = true"
-          class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-700/50 bg-slate-800/30 text-slate-300 hover:bg-slate-800 hover:border-slate-600 hover:text-sky-400 transition-all active:scale-95"
+          class="flex items-center gap-1.5 px-3 py-2 text-sm font-bold rounded-lg bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-slate-700 hover:text-white transition-all active:scale-95 shadow-sm"
           title="查看快捷键指南">
           <Keyboard class="w-4 h-4" />
-          <span>快捷键指南</span>
+          <span class="hidden xl:inline">快捷键指南</span>
         </button>
 
-        <div class="h-6 w-[1px] bg-slate-800"></div>
+        <div class="h-6 w-[1px] bg-slate-800/60 mx-1"></div>
 
         <!-- 核心操作组：撤销还原 (结合 X6 History Plugin) -->
-        <div class="flex items-center bg-slate-900/50 rounded-lg p-1 border border-slate-800/80">
+        <div class="flex items-center gap-1.5">
           <button @click="editorStore.graph?.undo()" :disabled="!canUndo"
-            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-colors"
+            class="flex items-center justify-center p-2 rounded-lg bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-slate-700 hover:text-sky-400 disabled:opacity-30 disabled:hover:bg-slate-800/50 disabled:hover:text-slate-300 transition-all active:scale-95 shadow-sm"
             title="撤销 (Ctrl+Z)">
-            <Undo2 class="w-3.5 h-3.5" />
-            <span>撤销</span>
+            <Undo2 class="w-4 h-4" />
           </button>
 
-          <div class="w-[1px] h-4 bg-slate-800 mx-1"></div>
-
           <button @click="editorStore.graph?.redo()" :disabled="!canRedo"
-            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-colors"
+            class="flex items-center justify-center p-2 rounded-lg bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-slate-700 hover:text-sky-400 disabled:opacity-30 disabled:hover:bg-slate-800/50 disabled:hover:text-slate-300 transition-all active:scale-95 shadow-sm"
             title="重做 (Ctrl+Y)">
-            <Redo2 class="w-3.5 h-3.5" />
-            <span>重做</span>
+            <Redo2 class="w-4 h-4" />
           </button>
         </div>
 
-        <div class="h-6 w-[1px] bg-slate-800 mx-1"></div>
+        <div class="h-6 w-[1px] bg-slate-800/60 mx-1"></div>
 
         <!-- 快捷画布操作组 -->
-        <div class="flex items-center gap-1.5 bg-slate-900/50 rounded-lg p-1 border border-slate-800/80">
+        <div class="flex items-center gap-2">
           <button @click="handleSelectAll"
-            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:bg-slate-800 hover:text-indigo-400 transition-colors"
+            class="flex items-center gap-1.5 px-3 py-2 text-sm font-bold rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 hover:text-indigo-300 transition-all active:scale-95 shadow-[0_0_10px_rgba(99,102,241,0.05)] hover:shadow-[0_0_15px_rgba(99,102,241,0.2)]"
             title="全选 (Ctrl+A)">
-            <MousePointerSquareDashed class="w-3.5 h-3.5" />
-            <span>全选</span>
+            <MousePointerSquareDashed class="w-4 h-4" />
+            <span class="hidden md:inline">全选</span>
           </button>
 
           <button @click="handleClearCanvas"
-            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+            class="flex items-center gap-1.5 px-3 py-2 text-sm font-bold rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 hover:text-rose-300 transition-all active:scale-95 shadow-[0_0_10px_rgba(244,63,94,0.05)] hover:shadow-[0_0_15px_rgba(244,63,94,0.2)]"
             title="清空画布">
-            <Trash2 class="w-3.5 h-3.5" />
-            <span>清空</span>
+            <Trash2 class="w-4 h-4" />
+            <span class="hidden md:inline">清空</span>
           </button>
         </div>
 
         <!-- 比例缩放组 -->
-        <div class="flex items-center bg-slate-900/50 rounded-lg p-1 border border-slate-800/80">
+        <div class="flex items-center gap-1 py-1 px-2 rounded-lg bg-slate-900/60 border border-slate-800">
           <button @click="handleZoom(-0.1)"
-            class="p-1.5 rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors" title="缩小">
+            class="p-1.5 flex items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors"
+            title="缩小">
             <ZoomOut class="w-4 h-4" />
           </button>
           <span class="text-xs font-mono font-bold text-slate-300 min-w-[3.5rem] text-center select-none">{{ zoomRatio
             }}%</span>
           <button @click="handleZoom(0.1)"
-            class="p-1.5 rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors" title="放大">
+            class="p-1.5 flex items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors"
+            title="放大">
             <ZoomIn class="w-4 h-4" />
           </button>
-          <div class="w-[1px] h-3 bg-slate-700/50 mx-1"></div>
+          <div class="w-[1px] h-4 bg-slate-800 mx-1"></div>
           <button @click="handleZoomFit"
-            class="p-1.5 rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors"
+            class="p-1.5 flex items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors"
             title="适应视图">
             <Maximize class="w-4 h-4" />
           </button>
         </div>
 
-        <div class="h-6 w-[1px] bg-slate-800 mx-1"></div>
+        <div class="h-6 w-[1px] bg-slate-800/60 mx-1"></div>
 
         <!-- 导出发布组 -->
         <div class="flex items-center gap-2.5">
