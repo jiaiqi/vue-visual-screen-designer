@@ -6,13 +6,11 @@ import ContextMenu from './components/editor/ContextMenu.vue'
 
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useEditorStore } from '@/stores/editor'
-import { useHistoryStore } from '@/stores/history'
 import { useExport } from '@/composables/useExport'
 import { Undo2, Redo2, Download, HardDriveDownload, HardDriveUpload, LayoutGrid, ZoomIn, ZoomOut, Maximize, Trash2, MousePointerSquareDashed, Keyboard, X } from 'lucide-vue-next'
 
 const editorStore = useEditorStore()
-const historyStore = useHistoryStore()
-const { exportToPNG, exportToJSON, importFromJSON } = useExport()
+const { exportToPNG, exportToSVG, exportToJSON, importFromJSON } = useExport()
 
 function triggerImportJSON() {
   const input = document.createElement('input')
@@ -75,6 +73,9 @@ const contextMenuRef = ref<InstanceType<typeof ContextMenu>>()
 // 快捷键帮助弹窗状态
 const isHelpModalOpen = ref(false)
 
+const canUndo = ref(false)
+const canRedo = ref(false)
+
 onMounted(() => {
   // 延迟监听 graph 的相关环境与事件
   setTimeout(() => {
@@ -82,6 +83,14 @@ onMounted(() => {
     if (graph) {
       updateZoomInfo()
       graph.on('scale', updateZoomInfo)
+
+      // 同步历史堆栈状态以控制撤销重做按钮亮度
+      canUndo.value = graph.canUndo()
+      canRedo.value = graph.canRedo()
+      graph.on('history:change', () => {
+        canUndo.value = graph.canUndo()
+        canRedo.value = graph.canRedo()
+      })
 
       // X6 右键事件绑定
       graph.on('blank:contextmenu', ({ e }) => {
@@ -146,20 +155,22 @@ onUnmounted(() => {
 
         <div class="h-6 w-[1px] bg-slate-800"></div>
 
-        <!-- 核心操作组：撤销还原 -->
-        <div class="flex items-center bg-slate-900/80 rounded-lg p-1 border border-slate-800">
-          <button @click="historyStore.undo()" :disabled="!historyStore.canUndo"
-            class="p-2 rounded-md text-slate-400 hover:bg-slate-800 hover:text-slate-100 hover:shadow-sm disabled:opacity-20 transition-all active:scale-95"
+        <!-- 核心操作组：撤销还原 (结合 X6 History Plugin) -->
+        <div class="flex items-center bg-slate-900/50 rounded-lg p-1 border border-slate-800/80">
+          <button @click="editorStore.graph?.undo()" :disabled="!canUndo"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-colors"
             title="撤销 (Ctrl+Z)">
-            <Undo2 class="w-4.5 h-4.5" />
+            <Undo2 class="w-3.5 h-3.5" />
+            <span>撤销</span>
           </button>
 
           <div class="w-[1px] h-4 bg-slate-800 mx-1"></div>
 
-          <button @click="historyStore.redo()" :disabled="!historyStore.canRedo"
-            class="p-2 rounded-md text-slate-400 hover:bg-slate-800 hover:text-slate-100 hover:shadow-sm disabled:opacity-20 transition-all active:scale-95"
+          <button @click="editorStore.graph?.redo()" :disabled="!canRedo"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:bg-slate-800 hover:text-slate-100 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-colors"
             title="重做 (Ctrl+Y)">
-            <Redo2 class="w-4.5 h-4.5" />
+            <Redo2 class="w-3.5 h-3.5" />
+            <span>重做</span>
           </button>
         </div>
 
@@ -189,7 +200,7 @@ onUnmounted(() => {
             <ZoomOut class="w-4 h-4" />
           </button>
           <span class="text-xs font-mono font-bold text-slate-300 min-w-[3.5rem] text-center select-none">{{ zoomRatio
-            }}%</span>
+          }}%</span>
           <button @click="handleZoom(0.1)"
             class="p-1.5 rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors" title="放大">
             <ZoomIn class="w-4 h-4" />
@@ -206,12 +217,22 @@ onUnmounted(() => {
 
         <!-- 导出发布组 -->
         <div class="flex items-center gap-2.5">
-          <button @click="exportToPNG()"
-            class="group flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-slate-950 hover:border-emerald-500 transition-all active:scale-95 shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
-            title="导出为透明 PNG">
-            <Download class="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
-            <span>导出图像</span>
-          </button>
+          <div
+            class="flex items-center bg-emerald-500/10 rounded-lg p-0.5 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all">
+            <button @click="exportToPNG()"
+              class="group flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-all active:scale-95"
+              title="导出为透明 PNG">
+              <Download class="w-3.5 h-3.5 transition-transform group-hover:-translate-y-0.5" />
+              <span>PNG</span>
+            </button>
+            <div class="w-[1px] h-4 bg-emerald-500/20 mx-0.5"></div>
+            <button @click="exportToSVG()"
+              class="group flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-all active:scale-95"
+              title="导出为高清矢量 SVG">
+              <Download class="w-3.5 h-3.5 transition-transform group-hover:-translate-y-0.5" />
+              <span>SVG</span>
+            </button>
+          </div>
 
           <button @click="exportToJSON()"
             class="group flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 hover:bg-sky-500 hover:text-slate-950 hover:border-sky-500 transition-all active:scale-95 shadow-[0_0_10px_rgba(14,165,233,0.1)] hover:shadow-[0_0_15px_rgba(14,165,233,0.4)]"

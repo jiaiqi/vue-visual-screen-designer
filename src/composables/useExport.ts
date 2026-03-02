@@ -28,6 +28,24 @@ export function useExport() {
   }
 
   /**
+   * 导出当前画布为真实矢量 SVG 格式
+   */
+  async function exportToSVG(filename: string = 'workshop-plan.svg') {
+    const graph = editorStore.graph
+    if (!graph) return
+
+    try {
+      graph.toSVG((dataUri: string) => {
+        downloadFile(dataUri, filename)
+      }, {
+        preserveDimensions: true
+      })
+    } catch {
+      alert("由于未引入导出插件，目前暂不支持图像导出。")
+    }
+  }
+
+  /**
    * 将当前工程完整导出为 JSON 描述文件
    */
   function exportToJSON(filename: string = 'workshop-project.json') {
@@ -89,6 +107,7 @@ export function useExport() {
 
   return {
     exportToPNG,
+    exportToSVG,
     exportToJSON,
     importFromJSON
   }

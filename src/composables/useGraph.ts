@@ -145,6 +145,46 @@ export function useGraph() {
       return false
     })
 
+    // 双击自定义图片节点时，触发本地文件上传
+    graph.on('node:dblclick', ({ node }) => {
+      if (node.shape === 'image' && node.data?.isCustomImage) {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = 'image/png, image/jpeg, image/svg+xml, image/gif'
+        input.onchange = (e: Event) => {
+          const file = (e.target as HTMLInputElement).files?.[0]
+          if (!file) return
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            const dataUrl = e.target?.result as string
+            if (dataUrl) {
+              // 加载进 Image 天然获取原始长宽并等比填满其盒子
+              const img = new Image()
+              img.onload = () => {
+                const aspect = img.width / img.height
+                const curSize = node.getSize()
+                let newW = curSize.width
+                let newH = curSize.width / aspect
+                // 如果过高，以高为准压缩
+                if (newH > 200) {
+                  newH = 200
+                  newW = newH * aspect
+                }
+                node.attr('image/xlink:href', dataUrl)
+                node.resize(newW, newH)
+                // 清除原有的虚线和提示文字
+                node.attr('body/strokeDasharray', null)
+                node.attr('label/text', '')
+              }
+              img.src = dataUrl
+            }
+          }
+          reader.readAsDataURL(file)
+        }
+        input.click()
+      }
+    })
+
     setupGlobalEvents()
   }
 

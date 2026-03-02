@@ -3,7 +3,7 @@
 import { ref, watch } from 'vue'
 import { Dnd } from '@antv/x6-plugin-dnd'
 import { useEditorStore } from '@/stores/editor'
-import { CircleDot, Blocks, Box, ArrowLeftRight, Home, Type } from 'lucide-vue-next'
+import { CircleDot, Blocks, Box, ArrowLeftRight, Home, Type, ArrowRight, MoveHorizontal, Image as ImageIcon } from 'lucide-vue-next'
 
 const dndContainer = ref<HTMLElement>()
 const editorStore = useEditorStore()
@@ -33,6 +33,9 @@ const shapeTypes = [
   { type: 'passage', label: '通道', icon: ArrowLeftRight, w: 60, h: 60, stroke: '#8b5cf6', rx: 4 },
   { type: 'room', label: '房间', icon: Home, w: 150, h: 120, stroke: '#fbbf24', rx: 0 },
   { type: 'text', label: '文字', icon: Type, w: 100, h: 40, stroke: 'transparent', rx: 0 },
+  { type: 'custom_image', label: '自定义图形', icon: ImageIcon, w: 100, h: 100, stroke: '#d946ef', rx: 4 },
+  { type: 'arrow_single', label: '单向箭头', icon: ArrowRight, w: 120, h: 40, stroke: '#10b981', rx: 0 },
+  { type: 'arrow_double', label: '双向箭头', icon: MoveHorizontal, w: 140, h: 40, stroke: '#10b981', rx: 0 },
 ]
 
 // 初始化 Dnd
@@ -65,7 +68,63 @@ const startDrag = (e: MouseEvent, item: typeof shapeTypes[0]) => {
         text: { text: '文本标签', fill: '#94a3b8', fontSize: 16 }
       }
     })
+  } else if (item.type === 'custom_image') {
+    node = graph.createNode({
+      shape: 'image',
+      width: item.w,
+      height: item.h,
+      ports: commonPorts,
+      // 默认给张占位图
+      imageUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23cbd5e1"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v10h14V7H5zm2 2h2v2H7V9zm0 4h10v2H7v-2z"/></svg>',
+      attrs: {
+        body: {
+          fill: '#1e293b',
+          stroke: item.stroke,
+          strokeWidth: 2,
+          strokeDasharray: '5 5', // 虚线边框代表可替换
+          rx: item.rx, ry: item.rx
+        },
+        image: {
+          width: item.w,
+          height: item.h,
+        },
+        label: { text: '(双击可上传图片)', fill: '#94a3b8', fontSize: 11, refY: '100%', refY2: 10 }
+      },
+      data: { isCustomImage: true }
+    })
+  } else if (item.type === 'arrow_single' || item.type === 'arrow_double') {
+    // 根据用户提供的绿色工业箭头定制 Path 数据
+    const w = item.w
+    const h = Math.round(item.h)
+    const ah = Math.round(h / 3) // 箭柱部分宽度
+    const aw = Math.round(h * 0.45) // 箭头尖锐部分横向长度
+
+    let pathData = ''
+    if (item.type === 'arrow_single') {
+      // 向右的单向箭头
+      pathData = `M 0,${h / 2 - ah / 2} L ${w - aw},${h / 2 - ah / 2} L ${w - aw},0 L ${w},${h / 2} L ${w - aw},${h} L ${w - aw},${h / 2 + ah / 2} L 0,${h / 2 + ah / 2} Z`
+    } else {
+      // 双向箭头
+      pathData = `M ${aw},${h / 2 - ah / 2} L ${w - aw},${h / 2 - ah / 2} L ${w - aw},0 L ${w},${h / 2} L ${w - aw},${h} L ${w - aw},${h / 2 + ah / 2} L ${aw},${h / 2 + ah / 2} L ${aw},${h} L 0,${h / 2} L ${aw},0 Z`
+    }
+
+    node = graph.createNode({
+      shape: 'path',
+      width: item.w,
+      height: item.h,
+      ports: commonPorts,
+      path: pathData,
+      attrs: {
+        body: {
+          fill: '#00ff00',      // 刺眼的工业绿
+          stroke: '#000000',    // 强烈的黑边包围
+          strokeWidth: 1.5,
+          filter: { name: 'dropShadow', args: { dx: 1, dy: 3, blur: 5, color: 'rgba(0,0,0,0.5)' } }
+        }
+      }
+    })
   } else {
+    // 保底回退为其他内置矩形
     node = graph.createNode({
       shape: 'rect',
       width: item.w,

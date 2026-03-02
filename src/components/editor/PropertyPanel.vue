@@ -22,6 +22,7 @@ const formData = ref({
   edgeShape: 'edge', // 连线样式 shape
   flowSpeed: 1, // 动画周期 (s)
   flowReverse: false, // 动画反向
+  imageUrl: '', // 自定义图片URL
 })
 
 // 监听画布的选区变动
@@ -66,6 +67,12 @@ function syncDataFromCell(cell: Cell) {
   formData.value.fill = (cell.attr('body/fill') as string) || '#1e293b'
   formData.value.stroke = (cell.attr('body/stroke') as string) || '#3b82f6'
   formData.value.rx = Number(cell.attr('body/rx') || 0)
+
+  if (cell.shape === 'image') {
+    formData.value.imageUrl = (cell.attr('image/xlink:href') as string) || ''
+  } else {
+    formData.value.imageUrl = ''
+  }
 
   if (cell.isEdge()) {
     formData.value.edgeShape = cell.shape
@@ -112,6 +119,13 @@ function handleUpdate(key: keyof typeof formData.value, value: string | number |
       if (cell.isNode()) {
         cell.attr('body/rx', Number(value))
         cell.attr('body/ry', Number(value)) // 圆角同步
+      }
+      break
+    case 'imageUrl':
+      if (cell.isNode() && cell.shape === 'image') {
+        cell.attr('image/xlink:href', value as string)
+        cell.attr('body/strokeDasharray', null)
+        cell.attr('label/text', '')
       }
       break
     case 'edgeShape':
@@ -165,6 +179,42 @@ function handleUpdate(key: keyof typeof formData.value, value: string | number |
       }
       break
   }
+}
+
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+function triggerImageUpload() {
+  fileInputRef.value?.click()
+}
+
+function handleImageUpload(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file || !activeCell.value) return
+  const reader = new FileReader()
+  reader.onload = (ev) => {
+    const dataUrl = ev.target?.result as string
+    if (dataUrl && activeCell.value?.isNode()) {
+      formData.value.imageUrl = dataUrl
+      handleUpdate('imageUrl', dataUrl)
+
+      const img = new Image()
+      img.onload = () => {
+        const aspect = img.width / img.height
+        const cell = activeCell.value as Node
+        const curSize = cell.getSize()
+        let newW = curSize.width
+        let newH = curSize.width / aspect
+        if (newH > 200) {
+          newH = 200
+          newW = newH * aspect
+        }
+        cell.resize(newW, newH)
+        syncDataFromCell(cell)
+      }
+      img.src = dataUrl
+    }
+  }
+  reader.readAsDataURL(file)
 }
 </script>
 
@@ -254,6 +304,28 @@ function handleUpdate(key: keyof typeof formData.value, value: string | number |
               @change="e => handleUpdate('height', (e.target as HTMLInputElement).value)"
               class="w-full bg-slate-800 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-sky-500" />
           </div>
+        </div>
+      </section>
+
+      <!-- 自定义图片专属 -->
+      <section class="space-y-3 pt-4 border-t border-slate-800"
+        v-if="activeCell.isNode() && activeCell.shape === 'image'">
+        <label class="text-[10px] font-extrabold text-fuchsia-500 uppercase tracking-widest">图片设置 / 上传</label>
+        <div class="space-y-2">
+          <div class="flex flex-col gap-1.5">
+            <span class="text-[9px] font-bold text-slate-400">图像 URL 地址</span>
+            <input type="text" v-model="formData.imageUrl"
+              @input="e => handleUpdate('imageUrl', (e.target as HTMLInputElement).value)"
+              class="w-full bg-slate-800 border border-slate-700 focus:border-fuchsia-500 rounded-md px-2.5 py-1.5 text-xs text-slate-200 outline-none"
+              placeholder="输入在线图片链接或 SVG 代码" />
+          </div>
+          <div
+            class="mt-2 text-center text-[10px] text-slate-500 bg-slate-900 rounded-md py-2 border border-slate-800 border-dashed hover:border-fuchsia-500 hover:text-fuchsia-400 cursor-pointer transition-colors"
+            @click="triggerImageUpload">
+            点击这里上传替换本地图片
+          </div>
+          <input type="file" ref="fileInputRef" class="hidden" accept="image/png, image/jpeg, image/svg+xml, image/gif"
+            @change="handleImageUpload" />
         </div>
       </section>
 
