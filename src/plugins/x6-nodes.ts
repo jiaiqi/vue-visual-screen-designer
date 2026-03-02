@@ -3,6 +3,8 @@ import { register } from '@antv/x6-vue-shape'
 import CoolingFan from '@/components/editor/nodes/CoolingFan.vue'
 import StorageTank from '@/components/editor/nodes/StorageTank.vue'
 import IconNode from '@/components/editor/nodes/IconNode.vue'
+import ProgressBarNode from '@/components/editor/nodes/ProgressBarNode.vue'
+import DigitalNode from '@/components/editor/nodes/DigitalNode.vue'
 
 export function registerEdges() {
   // 1. 电力线 (模拟高压/电流)
@@ -101,5 +103,19 @@ export function registerVueNodes() {
     width: 64,
     height: 64,
     component: IconNode,
+  })
+
+  register({
+    shape: 'progress-node',
+    width: 200,
+    height: 24,
+    component: ProgressBarNode,
+  })
+
+  register({
+    shape: 'digital-node',
+    width: 120,
+    height: 48,
+    component: DigitalNode,
   })
 }

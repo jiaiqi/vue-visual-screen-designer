@@ -21,6 +21,15 @@ const formData = ref({
   textColor: '#e2e8f0', // 文字颜色
   edgeShape: 'edge', // 连线样式 shape
   iconName: '', // 图标图元特定的标识
+  progressValue: 50,
+  progressColor: '#3b82f6',
+  progressBgColor: '#1e293b',
+  showProgressText: true,
+  numberValue: 0,
+  numberFormat: 'none',
+  decimalPlaces: 0,
+  useGrouping: true,
+  animateRoll: true,
   flowSpeed: 1, // 动画周期 (s)
   flowReverse: false, // 动画反向
   imageUrl: '', // 自定义图片URL
@@ -92,6 +101,25 @@ function syncDataFromCell(cell: Cell) {
     formData.value.iconName = cell.getData()?.iconName || 'Image'
   } else {
     formData.value.iconName = ''
+  }
+
+  if (cell.shape === 'progress-node') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = (cell.getData() || {}) as any
+    formData.value.progressValue = typeof data.progressValue === 'number' ? data.progressValue : 50
+    formData.value.progressColor = data.progressColor || '#3b82f6'
+    formData.value.progressBgColor = data.progressBgColor || '#1e293b'
+    formData.value.showProgressText = data.showProgressText !== false
+  }
+
+  if (cell.shape === 'digital-node') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = (cell.getData() || {}) as any
+    formData.value.numberValue = typeof data.numberValue === 'number' ? data.numberValue : 0
+    formData.value.numberFormat = data.numberFormat || 'none'
+    formData.value.decimalPlaces = typeof data.decimalPlaces === 'number' ? data.decimalPlaces : 0
+    formData.value.useGrouping = data.useGrouping !== false
+    formData.value.animateRoll = data.animateRoll !== false
   }
 
   formData.value.animationType = (cell.getData()?.animationType as string) || 'none'
@@ -167,6 +195,26 @@ function handleUpdate(key: keyof typeof formData.value, value: any) {
     case 'iconName':
       if (cell.isNode() && cell.shape === 'icon-node') {
         cell.setData({ iconName: value }, { overwrite: false })
+      }
+      break
+    case 'progressValue':
+    case 'progressColor':
+    case 'progressBgColor':
+    case 'showProgressText':
+      if (cell.isNode() && cell.shape === 'progress-node') {
+        cell.setData({ [key]: value }, { overwrite: false })
+        // 同步修改外观颜色记录（虽然 ProgressNode 自己接管了渲染，但便于与外观面板联动使用）
+        if (key === 'progressColor') cell.attr('body/stroke', value as string)
+        if (key === 'progressBgColor') cell.attr('body/fill', value as string)
+      }
+      break
+    case 'numberValue':
+    case 'numberFormat':
+    case 'decimalPlaces':
+    case 'useGrouping':
+    case 'animateRoll':
+      if (cell.isNode() && cell.shape === 'digital-node') {
+        cell.setData({ [key]: value }, { overwrite: false })
       }
       break
     case 'animationType':
@@ -388,6 +436,90 @@ function updateStatusItem() {
               placeholder="例如：Database、Cpu、Server..." />
             <span class="text-[9px] text-slate-500">支持全量 <a href="https://lucide.dev/icons" target="_blank"
                 class="text-sky-500 hover:underline">Lucide 图标</a>，采用大写驼峰命名 (PascalCase)</span>
+          </div>
+        </section>
+
+        <!-- 专有属性：ProgressNode -->
+        <section class="space-y-3" v-if="activeCell?.shape === 'progress-node'">
+          <label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">进度指示器设定</label>
+          <div class="flex flex-col gap-1.5">
+            <span class="text-[9px] font-bold text-slate-400">进度值 ({{ formData.progressValue }}%)</span>
+            <input type="range" min="0" max="100" v-model.number="formData.progressValue"
+              @input="e => handleUpdate('progressValue', Number((e.target as HTMLInputElement).value))"
+              class="w-full accent-sky-500 cursor-pointer" />
+
+            <div class="flex items-center justify-between mt-2">
+              <span class="text-[9px] font-bold text-slate-400">显示中心百分比文本</span>
+              <input type="checkbox" v-model="formData.showProgressText"
+                @change="e => handleUpdate('showProgressText', (e.target as HTMLInputElement).checked)"
+                class="rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-sky-500 w-4 h-4 cursor-pointer" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mt-2">
+              <div class="flex flex-col gap-1.5">
+                <span class="text-[9px] font-bold text-slate-400">填充高亮色彩</span>
+                <div class="flex items-center gap-2">
+                  <input type="color" v-model="formData.progressColor"
+                    @input="e => handleUpdate('progressColor', (e.target as HTMLInputElement).value)"
+                    class="w-8 h-8 rounded shrink-0 bg-transparent border-0 cursor-pointer p-0" />
+                  <span class="text-[9px] font-mono text-slate-400 uppercase">{{ formData.progressColor }}</span>
+                </div>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <span class="text-[9px] font-bold text-slate-400">轨道背景边框</span>
+                <div class="flex items-center gap-2">
+                  <input type="color" v-model="formData.progressBgColor"
+                    @input="e => handleUpdate('progressBgColor', (e.target as HTMLInputElement).value)"
+                    class="w-8 h-8 rounded shrink-0 bg-transparent border-0 cursor-pointer p-0" />
+                  <span class="text-[9px] font-mono text-slate-400 uppercase">{{ formData.progressBgColor }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 专有属性：DigitalNode -->
+        <section class="space-y-3" v-if="activeCell?.shape === 'digital-node'">
+          <label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">智能数字翻牌</label>
+          <div class="space-y-2">
+            <div class="flex flex-col gap-1.5">
+              <span class="text-[9px] font-bold text-slate-400">设置数值 (Number)</span>
+              <input type="number" v-model.number="formData.numberValue"
+                @change="e => handleUpdate('numberValue', Number((e.target as HTMLInputElement).value))"
+                class="w-full bg-slate-800 border border-slate-700 hover:border-slate-600 focus:border-sky-500 rounded-md px-2.5 py-1.5 text-xs text-slate-200 transition-colors outline-none" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1.5">
+                <span class="text-[9px] font-bold text-slate-400">大额单位修饰</span>
+                <select v-model="formData.numberFormat"
+                  @change="e => handleUpdate('numberFormat', (e.target as HTMLSelectElement).value)"
+                  class="w-full bg-slate-800 border border-slate-700 hover:border-slate-600 focus:border-sky-500 rounded-md px-2 py-1.5 text-xs text-slate-200 transition-colors outline-none">
+                  <option value="none">原始数值</option>
+                  <option value="auto">自动 (万/亿)</option>
+                </select>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <span class="text-[9px] font-bold text-slate-400">保留小数位</span>
+                <input type="number" min="0" max="10" step="1" v-model.number="formData.decimalPlaces"
+                  @change="e => handleUpdate('decimalPlaces', Number((e.target as HTMLInputElement).value))"
+                  class="w-full bg-slate-800 border border-slate-700 hover:border-slate-600 focus:border-sky-500 rounded-md px-2.5 py-1.5 text-xs text-slate-200 transition-colors outline-none" />
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between mt-1 pt-1.5 border-t border-slate-800/80">
+              <span class="text-[9px] font-bold text-slate-400">开启千分位 (,)</span>
+              <input type="checkbox" v-model="formData.useGrouping"
+                @change="e => handleUpdate('useGrouping', (e.target as HTMLInputElement).checked)"
+                class="rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-sky-500 w-4 h-4 cursor-pointer" />
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-[9px] font-bold text-slate-400">变动翻页动画 (Roll)</span>
+              <input type="checkbox" v-model="formData.animateRoll"
+                @change="e => handleUpdate('animateRoll', (e.target as HTMLInputElement).checked)"
+                class="rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-sky-500 w-4 h-4 cursor-pointer" />
+            </div>
           </div>
         </section>
 
