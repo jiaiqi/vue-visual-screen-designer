@@ -1,9 +1,9 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { Dnd } from '@antv/x6-plugin-dnd'
 import { useEditorStore } from '@/stores/editor'
-import { Type, ArrowRight, MoveHorizontal, Image as ImageIcon, Square, Circle, Triangle, Minus, Database, Server, Cpu, Cloud, Monitor, HardDrive, Wifi, Activity, Terminal, Shield, AlignLeft, Hash } from 'lucide-vue-next'
+import { Type, ArrowRight, MoveHorizontal, Image as ImageIcon, Square, Circle, Triangle, Minus, Database, Server, Cpu, Cloud, Monitor, HardDrive, Wifi, Activity, Terminal, Shield, AlignLeft, Hash, Search, ChevronDown } from 'lucide-vue-next'
 
 const dndContainer = ref<HTMLElement>()
 const editorStore = useEditorStore()
@@ -65,6 +65,35 @@ watch(() => editorStore.graph, (graph) => {
     })
   }
 }, { immediate: true })
+
+// 设置分类开关折叠状态
+const openGroups = ref<Record<string, boolean>>({
+  base: true,
+  icons: true,
+  advanced: true
+})
+
+const toggleGroup = (key: string) => {
+  openGroups.value[key] = !openGroups.value[key]
+}
+
+const searchQuery = ref('')
+
+// 过滤后的类别
+const filteredShapeTypes = computed(() => {
+  const query = searchQuery.value.toLowerCase().trim()
+  if (!query) return shapeTypes
+  return shapeTypes.filter(item => item.label.toLowerCase().includes(query))
+})
+
+const filteredIconNodes = computed(() => {
+  const query = searchQuery.value.toLowerCase().trim()
+  if (!query) return iconNodes
+  return iconNodes.filter(item =>
+    item.label.toLowerCase().includes(query) ||
+    item.iconName.toLowerCase().includes(query)
+  )
+})
 
 // 拖拽挂载
 const startDrag = (e: MouseEvent, item: typeof shapeTypes[0]) => {
@@ -287,46 +316,113 @@ const startDrag = (e: MouseEvent, item: typeof shapeTypes[0]) => {
     class="w-[280px] h-full bg-[#141824] border-r border-[#2a3045] flex flex-col shrink-0 z-20 shadow-xl overflow-hidden"
     ref="dndContainer">
     <!-- Vue 原生面板头部 -->
-    <div class="px-4 py-3 text-sm font-semibold text-slate-400 uppercase tracking-widest border-b border-[#2a3045]">
-      基础图元
+    <div
+      class="px-4 py-3 text-sm font-semibold text-slate-400 uppercase tracking-widest border-b border-[#2a3045] flex items-center justify-between shrink-0">
+      <span>基础图元</span>
+    </div>
+
+    <!-- 搜索区悬浮 -->
+    <div class="p-3 bg-[#1a1f2e] border-b border-[#2a3045] shrink-0">
+      <div class="relative w-full">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <component :is="Search" class="h-4 w-4 text-slate-500" />
+        </div>
+        <input type="text" v-model="searchQuery" placeholder="搜索图元名称..."
+          class="block w-full pl-9 pr-3 py-1.5 border border-[#2a3045] rounded-md text-xs bg-[#141824] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
+      </div>
     </div>
 
     <!-- 面板内容滚动区 -->
-    <div class="flex-1 overflow-y-auto p-3">
-      <div class="grid grid-cols-2 gap-3">
-        <template v-for="item in shapeTypes" :key="item.type">
-          <div
-            class="flex flex-col items-center justify-center p-4 rounded-lg bg-[#1a1f2e] border border-[#2a3045] cursor-grab hover:-translate-y-0.5 hover:border-sky-500 hover:bg-[#1e2640] transition-all"
-            @mousedown="startDrag($event, item)">
-            <component :is="item.icon" class="w-6 h-6 mb-2"
-              :style="{ color: item.stroke !== 'transparent' ? item.stroke : '#94a3b8' }" />
-            <span class="text-xs text-slate-300 font-medium">{{ item.label }}</span>
-          </div>
-        </template>
+    <div class="flex-1 overflow-y-auto custom-scrollbar">
+
+      <!-- === 分类一：基础控制体 === -->
+      <div class="border-b border-[#2a3045] pb-2">
+        <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#1e2640] transition-colors"
+          @click="toggleGroup('base')">
+          <span class="text-[11px] text-slate-300 uppercase tracking-wider font-semibold">基础控制体</span>
+          <component :is="ChevronDown" class="w-4 h-4 text-slate-500 transition-transform duration-200"
+            :class="{ '-rotate-90': !openGroups['base'] }" />
+        </div>
+
+        <div v-show="openGroups['base'] && filteredShapeTypes.length > 0" class="px-3 pb-2 grid grid-cols-2 gap-3">
+          <template v-for="item in filteredShapeTypes" :key="item.type">
+            <div
+              class="flex flex-col items-center justify-center p-4 rounded-lg bg-[#1a1f2e] border border-[#2a3045] cursor-grab hover:-translate-y-0.5 hover:border-sky-500 hover:bg-[#1e2640] transition-all"
+              @mousedown="startDrag($event, item)">
+              <component :is="item.icon" class="w-6 h-6 mb-2"
+                :style="{ color: item.stroke !== 'transparent' ? item.stroke : '#94a3b8' }" />
+              <span class="text-xs text-slate-300 font-medium">{{ item.label }}</span>
+            </div>
+          </template>
+        </div>
+        <div v-show="openGroups['base'] && filteredShapeTypes.length === 0"
+          class="px-4 py-2 text-xs text-slate-500 text-center">
+          未找到对应基础图元
+        </div>
       </div>
 
-      <div class="mt-6">
-        <div class="px-1 text-[11px] text-slate-500 mb-3 uppercase tracking-wider font-semibold">通用架构图标图元</div>
-        <div class="grid grid-cols-2 gap-3">
-          <template v-for="item in iconNodes" :key="item.iconName">
+      <!-- === 分类二：通用架构与标志 === -->
+      <div class="border-b border-[#2a3045] pb-2">
+        <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#1e2640] transition-colors"
+          @click="toggleGroup('icons')">
+          <span class="text-[11px] text-slate-300 uppercase tracking-wider font-semibold">通用架构图标图元</span>
+          <component :is="ChevronDown" class="w-4 h-4 text-slate-500 transition-transform duration-200"
+            :class="{ '-rotate-90': !openGroups['icons'] }" />
+        </div>
+
+        <div v-show="openGroups['icons'] && filteredIconNodes.length > 0" class="px-3 pb-2 grid grid-cols-2 gap-3">
+          <template v-for="item in filteredIconNodes" :key="item.iconName">
             <div
               class="flex flex-col items-center justify-center p-3 rounded-lg bg-[#1a1f2e] border border-[#2a3045] cursor-grab hover:-translate-y-0.5 hover:border-indigo-500/50 hover:bg-indigo-500/10 transition-all group"
-              @mousedown="startDrag($event, item)">
+              @mousedown="startDrag($event, item as any)">
               <component :is="item.icon" class="w-7 h-7 mb-1.5 transition-transform group-hover:scale-110"
                 :style="{ color: item.stroke }" />
               <span class="text-[11px] text-slate-400 font-medium">{{ item.label }}</span>
             </div>
           </template>
         </div>
+        <div v-show="openGroups['icons'] && filteredIconNodes.length === 0"
+          class="px-4 py-2 text-xs text-slate-500 text-center">
+          未找到相关架构图标 (支持搜英文如: Server)
+        </div>
       </div>
 
-      <div class="mt-8 px-1">
-        <div class="text-[11px] text-slate-500 mb-3 uppercase tracking-wider font-semibold">复杂设备及管线</div>
-        <!-- 以后其他高级图元也可继续使用 v-for / dnd 追加在这里 -->
-        <div class="text-xs text-slate-600 bg-slate-900/50 rounded p-3 border border-slate-800/50">
-          更多高阶工业组件开发中...
+      <!-- === 分类三：复杂设备及管线 === -->
+      <div class="pb-4">
+        <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#1e2640] transition-colors"
+          @click="toggleGroup('advanced')">
+          <span class="text-[11px] text-slate-300 uppercase tracking-wider font-semibold">复杂设备及管线</span>
+          <component :is="ChevronDown" class="w-4 h-4 text-slate-500 transition-transform duration-200"
+            :class="{ '-rotate-90': !openGroups['advanced'] }" />
+        </div>
+
+        <div v-show="openGroups['advanced']" class="px-3">
+          <div class="text-xs text-slate-600 bg-slate-900/50 rounded p-3 border border-slate-800/50">
+            已集成在上方搜索大类中，更多定制组件开发中...
+          </div>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 针对于滚动区的定制外观 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+</style>

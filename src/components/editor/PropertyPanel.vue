@@ -2,6 +2,7 @@
 import { ref, watch, onUnmounted } from 'vue'
 import { Cell, Edge, Node } from '@antv/x6'
 import { useEditorStore } from '@/stores/editor'
+import IconPickerDialog from './IconPickerDialog.vue'
 
 const editorStore = useEditorStore()
 const activeCell = ref<Cell | null>(null)
@@ -44,6 +45,8 @@ const formData = ref({
   states: [] as { value: string | number, url: string, label: string }[],
   currentStatus: '' as string | number,
 })
+
+const showIconPicker = ref(false)
 
 // Tab 切换状态
 const activeTab = ref<'style' | 'animate'>('style')
@@ -358,6 +361,12 @@ function removeStatusItem(index: number) {
 function updateStatusItem() {
   handleUpdate('states', formData.value.states)
 }
+
+function handleIconSelected(iconName: string) {
+  formData.value.iconName = iconName
+  handleUpdate('iconName', iconName)
+  showIconPicker.value = false
+}
 </script>
 
 <template>
@@ -428,12 +437,23 @@ function updateStatusItem() {
         <!-- 专有属性：IconNode -->
         <section class="space-y-3" v-if="activeCell?.shape === 'icon-node'">
           <label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">矢量图标控制 (Lucide)</label>
-          <div class="flex flex-col gap-1.5">
-            <span class="text-[9px] font-bold text-slate-400">图标名 (Icon Name)</span>
-            <input type="text" v-model="formData.iconName"
-              @input="e => handleUpdate('iconName', (e.target as HTMLInputElement).value)"
-              class="w-full bg-slate-800 border border-slate-700 hover:border-slate-600 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-md px-2.5 py-1.5 text-xs text-slate-200 transition-colors outline-none"
-              placeholder="例如：Database、Cpu、Server..." />
+          <div class="flex flex-col gap-2">
+
+            <div class="flex items-center gap-2">
+              <div class="flex-1 flex flex-col gap-1.5">
+                <span class="text-[9px] font-bold text-slate-400">图标名 (Icon Name)</span>
+                <input type="text" v-model="formData.iconName"
+                  @input="e => handleUpdate('iconName', (e.target as HTMLInputElement).value)"
+                  class="w-full bg-slate-800 border border-slate-700 hover:border-slate-600 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-md px-2.5 py-1.5 text-xs text-slate-200 transition-colors outline-none"
+                  placeholder="例如：Database、Cpu..." />
+              </div>
+              <button @click="showIconPicker = true"
+                class="mt-4 px-3 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded-md text-xs transition-colors shrink-0"
+                title="打开全量图标可视化挑选面板">
+                浏览图标库...
+              </button>
+            </div>
+
             <span class="text-[9px] text-slate-500">支持全量 <a href="https://lucide.dev/icons" target="_blank"
                 class="text-sky-500 hover:underline">Lucide 图标</a>，采用大写驼峰命名 (PascalCase)</span>
           </div>
@@ -820,6 +840,9 @@ function updateStatusItem() {
       <p class="text-xs text-slate-400">未选中任何图元对象</p>
     </div>
   </div>
+  <!-- ================= 核心组件注入：图文选择器弹出层 ================= -->
+  <IconPickerDialog v-model:show="showIconPicker" :current-icon="formData.iconName"
+    @select="(icon) => { formData.iconName = icon; handleUpdate('iconName', icon) }" />
 </template>
 
 <style scoped>
