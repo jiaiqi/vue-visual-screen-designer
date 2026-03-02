@@ -5,7 +5,7 @@
 @layer base {
   :root {
     --background: 222.2 84% 4.9%; /* 深沉的深蓝黑色 */
-    --foreground: 210 40% 98%;    /* 亮白反色文字 */
+    --foreground: 210 40% 98%; /* 亮白反色文字 */
 
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
@@ -66,4 +66,22 @@
   to {
     stroke-dashoffset: -24; /* 匹配 DashArray(12+12) 周期，消除跳顿和视觉抽搐 */
   }
+}
+
+/* 连接桩交互优化：按需显示 */
+.x6-port-body {
+  opacity: 0;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: crosshair;
+}
+
+/* 鼠标悬停图元或图元被选中时，显示连接桩 */
+.x6-node:hover .x6-port-body,
+.x6-node-selected .x6-port-body {
+  opacity: 1;
+}
+
+/* 连线过程中，强制显示所有磁吸点以便吸附 */
+.x6-graph-connecting .x6-port-body {
+  opacity: 1;
 }

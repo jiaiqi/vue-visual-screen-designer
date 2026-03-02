@@ -1,5 +1,5 @@
 import { ref, onUnmounted } from 'vue'
-import { Graph, Node, Edge, Cell, EdgeView } from '@antv/x6'
+import { Graph, Node, Edge, Cell } from '@antv/x6'
 import { Selection } from '@antv/x6-plugin-selection'
 import { Keyboard } from '@antv/x6-plugin-keyboard'
 import { History } from '@antv/x6-plugin-history'
@@ -55,7 +55,7 @@ export function useGraph() {
         allowLoop: false,
         highlight: true, // 提示高亮
         router: {
-          name: 'manhattan', // 采用工业级正交直角路油
+          name: 'orth', // 降级为正交路由，解决曼哈顿算法在复杂场景下的路径解算崩溃
           args: { padding: 15 },
         },
         connector: {
@@ -315,139 +315,38 @@ export function useGraph() {
       }
     })
 
-    // --- 动作路径系统 (Motion Paths) ---
-    let isPickingPath = false
-    let targetNodeForPath: Node | null = null
-
-    graph.on('motion:start-bind', ({ node }: { node: Node }) => {
-      isPickingPath = true
-      targetNodeForPath = node
-      if (graph) graph.container.style.cursor = 'crosshair'
-    })
-
-    // 处理全局点击以确认拾取
-    graph.on('edge:click', ({ edge }: { edge: Edge }) => {
-      if (isPickingPath && targetNodeForPath) {
-        targetNodeForPath.setData({ motionPathId: edge.id }, { overwrite: false })
-        isPickingPath = false
-        targetNodeForPath = null
-        if (graph) graph.container.style.cursor = 'default'
-      }
-    })
-
-    // 空白处点击取消拾取模式
-    graph.on('blank:click', () => {
-      if (isPickingPath) {
-        isPickingPath = false
-        targetNodeForPath = null
-        if (graph) graph.container.style.cursor = 'default'
-      }
-    })
-
-    // 播放动作路径动画
-    graph.on('motion:play', ({ node }: { node: Node }) => {
+    graph.on('node:added', ({ node }: { node: Node }) => {
+      applyNodeAnimation(node)
+      applyNodeStatus(node)
+      // 首次添加时触发进场动画
       const data = node.getData() || {}
-      if (!data.motionPathId || !graph) return
-
-      const cell = graph.getCellById(data.motionPathId)
-      if (!cell || !cell.isEdge()) return
-      const edge = cell as Edge
-
-      const originalPos = node.getPosition()
-
-      // 使用动画驱动 progress (0 -> 1)
-      const duration = 2000
-      const start = Date.now()
-
-      const safeGraph = graph
-      const animate = () => {
-        if (!safeGraph) return
-        const now = Date.now()
-        const progress = Math.min(1, (now - start) / duration)
-
-        // 获取连线上对应比例的点 (通过 View 层获取几何路径)
-        const view = safeGraph.findViewByCell(edge) as EdgeView
-        if (view) {
-          const point = view.getPointAtRatio(progress)
-          if (point) {
-            const size = node.getSize()
-            node.position(point.x - size.width / 2, point.y - size.height / 2)
-          }
-        }
-
-        if (progress < 1) {
-          requestAnimationFrame(animate)
-        } else {
-          // 播放结束后 1s 自动滚回原位
-          setTimeout(() => {
-            node.transition('position', originalPos, { duration: 500 })
-          }, 1000)
-        }
+      if (data.entranceType && data.entranceType !== 'none') {
+        playTransition(node, data.entranceType)
       }
-
-      requestAnimationFrame(animate)
     })
 
-    // --- 连线粒子 Token 系统 (Edge Tokens) ---
-    const edgeTokenTimers = new Map<string, number>()
-
-    const safeGraph = graph
-    const applyEdgeTokenAnimation = (edge: Edge) => {
-      const data = edge.getData() || {}
-      const edgeId = edge.id
-
-      // 彻底清理存量定时器，防止多重叠加
-      if (edgeTokenTimers.has(edgeId)) {
-        window.clearInterval(edgeTokenTimers.get(edgeId))
-        edgeTokenTimers.delete(edgeId)
+    graph.on('node:change:data', ({ cell }: { cell: Cell }) => {
+      if (cell.isNode()) {
+        const node = cell as Node
+        applyNodeAnimation(node)
+        applyNodeStatus(node)
       }
+    })
 
-      if (data.edgeTokenEnabled) {
-        const interval = (parseFloat(data.edgeTokenSpeed) || 1) * 1000
-        const size = data.edgeTokenSize || 4
-        const color = data.edgeTokenColor || '#3b82f6'
-
-        const send = () => {
-          if (!safeGraph) return
-            // X6 原生 sendToken 存在于 Graph 实例上（部分版本类型定义不全）
-            ; (safeGraph as Graph & { sendToken: (args: Record<string, any>, edge: Edge, options?: Record<string, any>) => void }).sendToken(
-              {
-                tagName: 'circle',
-                attrs: {
-                  r: size / 2,
-                  fill: color,
-                  stroke: 'transparent'
-                },
-              },
-              edge,
-              {
-                duration: 2500, // Token 滑行时间
-              },
-            )
-        }
-
-        // 立即发射首个 Token 并开启循环
-        send()
-        const timer = window.setInterval(send, interval) as unknown as number
-        edgeTokenTimers.set(edgeId, timer)
-      }
-    }
-
-    graph.on('edge:change:data', ({ cell }: { cell: Cell }) => {
-      if (cell.isEdge()) {
-        applyEdgeTokenAnimation(cell as Edge)
+    graph.on('node:added', ({ node }: { node: Node }) => {
+      applyNodeAnimation(node)
+      applyNodeStatus(node)
+      // 首次添加时触发进场动画
+      const data = node.getData() || {}
+      if (data.entranceType && data.entranceType !== 'none') {
+        playTransition(node, data.entranceType)
       }
     })
 
     graph.on('edge:removed', ({ edge }: { edge: Edge }) => {
-      if (edgeTokenTimers.has(edge.id)) {
-        window.clearInterval(edgeTokenTimers.get(edge.id))
-        edgeTokenTimers.delete(edge.id)
-      }
-    })
-
-    graph.on('edge:added', ({ edge }: { edge: Edge }) => {
-      applyEdgeTokenAnimation(edge)
+      // 停止所有标签相关的过渡
+      edge.stopTransition('labels')
+      edge.off('transition:finish')
     })
 
     // --- 连线拐点交互系统 (Edge Vertices & Tools) ---
@@ -509,41 +408,34 @@ export function useGraph() {
 
     graph.on('node:moved', ({ node }: { node: Node }) => updateNodeRatios(node))
     graph.on('node:resized', ({ node }: { node: Node }) => updateNodeRatios(node))
+  }
 
-    // --- 页面大小监听与响应式重拍 ---
-    const handleResize = () => {
-      if (!graph || !containerRef.value) return
-      const newWidth = containerRef.value.clientWidth
-      const newHeight = containerRef.value.clientHeight
+  // --- 统筹销毁逻辑 (移出 initGraph 闭包，确保在 setup 顶层运行) ---
+  const handleResize = () => {
+    if (!graph || !containerRef.value) return
+    const newWidth = containerRef.value.clientWidth
+    const newHeight = containerRef.value.clientHeight
+    graph.resize(newWidth, newHeight)
 
-      // 1. 调整画布物理尺寸
-      graph.resize(newWidth, newHeight)
-
-      // 2. 响应式重排所有节点
-      const nodes = graph.getNodes()
-      nodes.forEach(node => {
-        const data = node.getData() || {}
-        if (data.xRatio !== undefined && data.yRatio !== undefined) {
-          node.position(data.xRatio * newWidth, data.yRatio * newHeight)
-        }
-        if (data.wRatio !== undefined && data.hRatio !== undefined) {
-          node.resize(data.wRatio * newWidth, data.hRatio * newHeight)
-        }
-      })
-    }
-    window.addEventListener('resize', handleResize)
-
-    // 退出卸载时清理所有活跃动画与资源
-    onUnmounted(() => {
-      window.removeEventListener('resize', handleResize)
-      edgeTokenTimers.forEach(timer => window.clearInterval(timer))
-      edgeTokenTimers.clear()
-      if (graph) {
-        graph.dispose()
-        editorStore.initGraph(null)
+    const nodes = graph.getNodes()
+    nodes.forEach(node => {
+      const data = node.getData() || {}
+      if (data.xRatio !== undefined && data.yRatio !== undefined) {
+        node.position(data.xRatio * newWidth, data.yRatio * newHeight)
+      }
+      if (data.wRatio !== undefined && data.hRatio !== undefined) {
+        node.resize(data.wRatio * newWidth, data.hRatio * newHeight)
       }
     })
   }
+
+  onUnmounted(() => {
+    window.removeEventListener('resize', handleResize)
+    if (graph) {
+      graph.dispose()
+      editorStore.initGraph(null)
+    }
+  })
 
   return {
     containerRef,

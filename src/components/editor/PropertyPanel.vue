@@ -28,11 +28,8 @@ const formData = ref({
   animationReverse: false, // 动画反向
   entranceType: 'none',   // 进场动画
   exitType: 'none',       // 退出动画
-  motionPathId: '',      // 运动路径 ID
-  edgeTokenEnabled: false, // 是否启用粒子流
-  edgeTokenSize: 4,       // 粒子大小
-  edgeTokenSpeed: 1,      // 粒子流动频率 (s)
-  edgeTokenColor: '#3b82f6', // 粒子颜色
+  sourceMarker: false,   // 起始箭头
+  targetMarker: false,   // 终点箭头
   // --- 多状态图元配置 ---
   states: [] as { value: string | number, url: string, label: string }[],
   currentStatus: '' as string | number,
@@ -95,9 +92,8 @@ function syncDataFromCell(cell: Cell) {
   formData.value.animationReverse = !!cell.getData()?.animationReverse
   formData.value.entranceType = (cell.getData()?.entranceType as string) || 'none'
   formData.value.exitType = (cell.getData()?.exitType as string) || 'none'
-  formData.value.motionPathId = (cell.getData()?.motionPathId as string) || ''
-  formData.value.states = cell.getData()?.states || []
-  formData.value.currentStatus = cell.getData()?.currentStatus ?? ''
+    formData.value.states = (cell.getData() as any)?.states || []
+    formData.value.currentStatus = (cell.getData() as any)?.currentStatus ?? ''
 
   if (cell.isEdge()) {
     formData.value.edgeShape = cell.shape
@@ -116,10 +112,12 @@ function syncDataFromCell(cell: Cell) {
     }
     formData.value.flowSpeed = cell.getData()?.flowSpeed || 1
     formData.value.flowReverse = !!cell.getData()?.flowReverse
-    formData.value.edgeTokenEnabled = !!cell.getData()?.edgeTokenEnabled
-    formData.value.edgeTokenSize = cell.getData()?.edgeTokenSize || 4
-    formData.value.edgeTokenSpeed = cell.getData()?.edgeTokenSpeed || 1
-    formData.value.edgeTokenColor = cell.getData()?.edgeTokenColor || '#3b82f6'
+
+    // 提取箭头状态
+    const attrs = (cell as Edge).attrs || {}
+    formData.value.sourceMarker = !!attrs.line?.sourceMarker
+    formData.value.targetMarker = !!attrs.line?.targetMarker
+    formData.value.edgeShape = cell.shape
   }
 }
 
@@ -164,7 +162,6 @@ function handleUpdate(key: keyof typeof formData.value, value: any) {
     case 'animationReverse':
     case 'entranceType':
     case 'exitType':
-    case 'motionPathId':
     case 'states':
     case 'currentStatus':
       if (cell.isNode()) {
@@ -174,7 +171,6 @@ function handleUpdate(key: keyof typeof formData.value, value: any) {
           animationReverse: formData.value.animationReverse,
           entranceType: formData.value.entranceType,
           exitType: formData.value.exitType,
-          motionPathId: formData.value.motionPathId,
           states: formData.value.states,
           currentStatus: key === 'currentStatus' ? value : formData.value.currentStatus
         }, { overwrite: false })
@@ -185,32 +181,37 @@ function handleUpdate(key: keyof typeof formData.value, value: any) {
         const edge = cell as Edge
         const graph = editorStore.graph
         if (!graph) return
+
+        // 创建新连线并保留关键数据
         const newEdge = graph.createEdge({
           shape: value as string,
           source: edge.getSource(),
           target: edge.getTarget(),
           vertices: edge.getVertices(),
           router: edge.getRouter(),
+          data: edge.getData(),
         })
+
         graph.addEdge(newEdge)
         graph.removeCell(edge)
         graph.select(newEdge)
+        activeCell.value = newEdge
+      }
+      break
+    case 'sourceMarker':
+    case 'targetMarker':
+      if (cell.isEdge()) {
+        const isSource = key === 'sourceMarker'
+        const marker = value ? { name: 'classic', size: 8 } : null
+        cell.attr(`line/${isSource ? 'sourceMarker' : 'targetMarker'}`, marker)
       }
       break
     case 'flowSpeed':
     case 'flowReverse':
-    case 'edgeTokenEnabled':
-    case 'edgeTokenSize':
-    case 'edgeTokenSpeed':
-    case 'edgeTokenColor':
       if (cell.isEdge()) {
         const data = {
           flowSpeed: key === 'flowSpeed' ? Number(value) : formData.value.flowSpeed,
           flowReverse: key === 'flowReverse' ? Boolean(value) : formData.value.flowReverse,
-          edgeTokenEnabled: key === 'edgeTokenEnabled' ? Boolean(value) : formData.value.edgeTokenEnabled,
-          edgeTokenSize: key === 'edgeTokenSize' ? Number(value) : formData.value.edgeTokenSize,
-          edgeTokenSpeed: key === 'edgeTokenSpeed' ? Number(value) : formData.value.edgeTokenSpeed,
-          edgeTokenColor: key === 'edgeTokenColor' ? (value as string) : formData.value.edgeTokenColor,
         }
         cell.setData(data, { overwrite: false })
 
@@ -577,32 +578,6 @@ function updateStatusItem() {
                 </div>
               </div>
             </div>
-
-            <!-- 动作路径绑定 -->
-            <div class="flex flex-col gap-3 pt-3 border-t border-slate-800">
-              <span class="text-[9px] font-bold text-amber-400">动作路径动画 (Motion Path)</span>
-
-              <div class="flex flex-col gap-2">
-                <div v-if="!formData.motionPathId" class="space-y-2">
-                  <button @click="() => editorStore.graph?.trigger('motion:start-bind', { node: activeCell })"
-                    class="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 border-dashed rounded-md text-[10px] transition-colors">
-                    + 拾取画布路径作为轨道
-                  </button>
-                  <p class="text-[9px] text-slate-500 leading-tight">点击按钮后，在画布上点击任意一条连线即可绑定逻辑路径。</p>
-                </div>
-
-                <div v-else class="flex flex-col gap-2 bg-slate-950/40 p-2 rounded border border-slate-800">
-                  <div class="flex items-center justify-between">
-                    <span class="text-[9px] text-slate-400">已绑定轨道: <span class="text-amber-500 font-mono">{{ formData.motionPathId.slice(0,8) }}</span></span>
-                    <button @click="handleUpdate('motionPathId', '')" class="text-[9px] text-rose-400 hover:text-rose-300">解除</button>
-                  </div>
-                  <button @click="() => editorStore.graph?.trigger('motion:play', { node: activeCell })"
-                    class="w-full py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded text-[10px] transition-colors mt-1">
-                    预览路径移动
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -616,9 +591,33 @@ function updateStatusItem() {
                 @change="e => handleUpdate('edgeShape', (e.target as HTMLSelectElement).value)"
                 class="w-full bg-slate-800 border border-slate-700 rounded-md px-2.5 py-2 text-xs text-slate-200 outline-none focus:border-sky-500">
                 <option value="edge">普通实心连线 (Normal Solid Line)</option>
+                <option value="electric-line">电力供电线路 (Electric Line)</option>
+                <option value="signal-line">信号传输线路 (Signal Line)</option>
+                <option value="bus-line">工业数据总线 (Industrial Bus)</option>
                 <option value="fluid-pipe">工业流体管道 (Fluid Pipe Animation)</option>
               </select>
               <p class="text-[10px] text-slate-500 mt-1 leading-tight">注：切换路径模式将会重新描绘该连接段。</p>
+            </div>
+
+            <!-- 端点装饰 -->
+            <div class="flex flex-col gap-3 pt-3 border-t border-slate-800">
+              <div class="flex items-center justify-between">
+                <span class="text-[9px] font-bold text-slate-400">端点装饰 (Markers)</span>
+                <div class="flex items-center gap-4">
+                  <label class="flex items-center gap-2 cursor-pointer group">
+                    <input type="checkbox" v-model="formData.sourceMarker"
+                      @change="e => handleUpdate('sourceMarker', (e.target as HTMLInputElement).checked)"
+                      class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0 focus:ring-offset-0" />
+                    <span class="text-[10px] text-slate-400 group-hover:text-slate-200 transition-colors">起点箭头</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer group">
+                    <input type="checkbox" v-model="formData.targetMarker"
+                      @change="e => handleUpdate('targetMarker', (e.target as HTMLInputElement).checked)"
+                      class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0 focus:ring-offset-0" />
+                    <span class="text-[10px] text-slate-400 group-hover:text-slate-200 transition-colors">终点箭头</span>
+                  </label>
+                </div>
+              </div>
             </div>
 
             <!-- 流体专属参数 -->
@@ -643,50 +642,6 @@ function updateStatusItem() {
                     </div>
                   </div>
                 </label>
-              </div>
-            </div>
-
-            <!-- 粒子流发射设置 -->
-            <div class="flex flex-col gap-3 pt-3 border-t border-slate-800">
-              <div class="flex items-center justify-between">
-                <span class="text-[9px] font-bold text-amber-400">发射粒子流 (Token Flow)</span>
-                <label class="flex items-center cursor-pointer">
-                  <input type="checkbox" v-model="formData.edgeTokenEnabled"
-                    @change="e => handleUpdate('edgeTokenEnabled', (e.target as HTMLInputElement).checked)"
-                    class="sr-only peer">
-                  <div
-                    class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-amber-500 transition-colors relative">
-                    <div
-                      class="w-3 h-3 bg-white rounded-full absolute top-0.5 left-0.5 peer-checked:translate-x-4 transition-transform">
-                    </div>
-                  </div>
-                </label>
-              </div>
-
-              <div v-if="formData.edgeTokenEnabled" class="space-y-3 bg-slate-950/30 p-2 rounded-md border border-slate-800/50">
-                <div class="grid grid-cols-2 gap-2">
-                  <div class="flex flex-col gap-1">
-                    <span class="text-[8px] text-slate-500">粒子大小</span>
-                    <input type="number" :min="1" :max="12" v-model.number="formData.edgeTokenSize"
-                      @change="e => handleUpdate('edgeTokenSize', (e.target as HTMLInputElement).value)"
-                      class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-200 outline-none" />
-                  </div>
-                  <div class="flex flex-col gap-1">
-                    <span class="text-[8px] text-slate-500">发射周期(s)</span>
-                    <input type="number" :min="0.1" :step="0.1" v-model.number="formData.edgeTokenSpeed"
-                      @change="e => handleUpdate('edgeTokenSpeed', (e.target as HTMLInputElement).value)"
-                      class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-200 outline-none" />
-                  </div>
-                </div>
-                <div class="flex flex-col gap-1">
-                  <span class="text-[8px] text-slate-500">粒子颜色</span>
-                  <div class="flex items-center gap-2">
-                    <input type="color" v-model="formData.edgeTokenColor"
-                      @input="e => handleUpdate('edgeTokenColor', (e.target as HTMLInputElement).value)"
-                      class="w-6 h-6 rounded shrink-0 bg-transparent border-0 cursor-pointer p-0" />
-                    <span class="text-[9px] font-mono text-slate-400 uppercase">{{ formData.edgeTokenColor }}</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
