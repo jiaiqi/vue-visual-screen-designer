@@ -4,7 +4,7 @@ import { useEditorStore } from '@/stores/editor'
 import {
   NForm, NFormItem, NInput, NSelect, NInputNumber,
   NColorPicker, NCheckbox, NText, NDivider,
-  NRadioGroup, NRadio, NUpload, NIcon, NCollapse, NCollapseItem,
+  NRadioGroup, NRadio, NRadioButton, NUpload, NIcon, NCollapse, NCollapseItem,
   NButton, NSlider, NSwitch
 } from 'naive-ui'
 import { Upload } from 'lucide-vue-next'
@@ -15,6 +15,8 @@ const UploadIcon = markRaw(Upload)
 
 const config = computed(() => editorStore.canvasConfig)
 const snaplineConfig = computed(() => editorStore.snaplineConfig)
+const coordinateSystem = computed(() => editorStore.coordinateSystem)
+const unit = computed(() => editorStore.unit)
 
 const categoryOptions = [
   { label: '基础底图', value: '基础底图' },
@@ -36,6 +38,16 @@ const snaplineColorOptions = [
   { label: '绿色', value: '#22c55e' },
 ]
 
+const coordinateSystemOptions = [
+  { label: '左上角原点', value: 'top-left' },
+  { label: '中心原点', value: 'center' },
+]
+
+const unitOptions = [
+  { label: '像素 (px)', value: 'px' },
+  { label: '百分比 (%)', value: 'percent' },
+]
+
 function handleUpdate(partial: Record<string, unknown>) {
   if (editorStore) {
     editorStore.updateCanvasConfig(partial)
@@ -45,6 +57,18 @@ function handleUpdate(partial: Record<string, unknown>) {
 function handleSnaplineUpdate(partial: Record<string, unknown>) {
   if (editorStore) {
     editorStore.updateSnaplineConfig(partial)
+  }
+}
+
+function handleCoordinateSystemChange(value: 'top-left' | 'center') {
+  if (editorStore) {
+    editorStore.switchCoordinateSystem(value)
+  }
+}
+
+function handleUnitChange(value: 'px' | 'percent') {
+  if (editorStore) {
+    editorStore.switchUnit(value)
   }
 }
 
@@ -97,6 +121,18 @@ function handleImageUpload({ file }: { file: { file: File | null } }) {
           </div>
         </div>
       </div>
+
+      <n-form-item label="坐标系">
+        <n-radio-group :value="coordinateSystem" @update:value="handleCoordinateSystemChange">
+          <n-radio-button v-for="opt in coordinateSystemOptions" :key="opt.value" :value="opt.value" :label="opt.label" />
+        </n-radio-group>
+      </n-form-item>
+
+      <n-form-item label="单位">
+        <n-radio-group :value="unit" @update:value="handleUnitChange">
+          <n-radio-button v-for="opt in unitOptions" :key="opt.value" :value="opt.value" :label="opt.label" />
+        </n-radio-group>
+      </n-form-item>
 
       <n-form-item label="背景颜色">
         <n-color-picker :value="config.backgroundColor" :show-alpha="true"

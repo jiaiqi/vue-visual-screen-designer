@@ -7,7 +7,7 @@ import {
   Undo2, Redo2, Download, LayoutGrid, ZoomIn, ZoomOut,
   Maximize, Trash2, MousePointerSquareDashed, Keyboard,
   Code, ChevronDown, FileImage, FileCode2, Eye, LayoutTemplate,
-  HelpCircle
+  HelpCircle, Sun, Moon
 } from 'lucide-vue-next'
 
 const emit = defineEmits<{
@@ -101,7 +101,7 @@ function handlePreview() {
         class="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center mr-1 shadow-[0_0_15px_rgba(14,165,233,0.3)]">
         <LayoutGrid class="w-5 h-5 text-slate-950" />
       </div>
-      <h1 class="font-extrabold text-xl tracking-tight text-slate-100 select-none">平面图设计</h1>
+      <h1 class="font-extrabold text-xl tracking-tight text-slate-100 select-none">大屏设计器</h1>
     </div>
 
     <div data-guide="header-actions" class="actions flex items-center gap-4">
@@ -110,7 +110,7 @@ function handlePreview() {
           class="flex items-center gap-1.5 px-3 py-2 text-sm font-bold rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 hover:bg-sky-500 hover:text-slate-950 transition-all active:scale-95 shadow-sm"
           title="预览设计 (只读模式)">
           <Eye class="w-4 h-4" />
-          <span class="hidden xl:inline">预览设计</span>
+          <span class="hidden xl:inline">预览</span>
         </button>
 
         <button
@@ -119,6 +119,14 @@ function handlePreview() {
           class="flex items-center justify-center p-2 text-sm font-bold rounded-lg bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-slate-700 hover:text-white transition-all active:scale-95 shadow-sm"
           title="查看操作引导">
           <HelpCircle class="w-4 h-4" />
+        </button>
+
+        <button
+          @click="editorStore.toggleTheme()"
+          class="flex items-center justify-center p-2 text-sm font-bold rounded-lg bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-slate-700 hover:text-white transition-all active:scale-95 shadow-sm"
+          :title="editorStore.theme === 'dark' ? '切换到亮色主题' : '切换到暗色主题'">
+          <Sun v-if="editorStore.theme === 'dark'" class="w-4 h-4" />
+          <Moon v-else class="w-4 h-4" />
         </button>
 
         <button @click="emit('open-help-modal')"
@@ -234,7 +242,7 @@ function handlePreview() {
           class="group flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500 hover:text-slate-950 transition-all active:scale-95 shadow-sm"
           title="JSON 源码管理 (查看和编辑画布数据)">
           <Code class="w-4 h-4 group-hover:animate-pulse" />
-          <span>开发代码</span>
+          <span>JSON 数据</span>
         </button>
       </div>
     </div>

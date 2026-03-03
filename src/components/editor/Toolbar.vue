@@ -3,7 +3,7 @@
 import { ref, watch, computed } from 'vue'
 import { Dnd } from '@antv/x6'
 import { useEditorStore } from '@/stores/editor'
-import { Type, ArrowRight, MoveHorizontal, Image as ImageIcon, Square, Circle, Triangle, Minus, Database, Server, Cpu, Cloud, Monitor, HardDrive, Wifi, Activity, Terminal, Shield, AlignLeft, Hash, Search, ChevronDown, PanelLeftClose, PanelLeft, Star, Clock, BarChart, LineChart, PieChart, TrendingUp, ScatterChart, Gauge, Map, GitBranch, Filter, Grid3X3, LayoutDashboard, Sun, Workflow, Radar } from 'lucide-vue-next'
+import { Type, ArrowRight, MoveHorizontal, Image as ImageIcon, Square, Circle, Triangle, Minus, Database, Server, Cpu, Cloud, Monitor, HardDrive, Wifi, Activity, Terminal, Shield, AlignLeft, Hash, Search, ChevronDown, PanelLeftClose, PanelLeft, Star, BarChart, LineChart, PieChart, TrendingUp, ScatterChart, Gauge, Map, GitBranch, Filter, Grid3X3, LayoutDashboard, Sun, Workflow, Radar } from 'lucide-vue-next'
 import { chartCategories, type ChartConfig } from '@/data/chartConfigs'
 
 const dndContainer = ref<HTMLElement>()
@@ -106,15 +106,6 @@ watch(() => editorStore.graph, (graph) => {
   }
 }, { immediate: true })
 
-const openGroups = ref<Record<string, boolean>>({
-  recent: true,
-  favorites: true,
-  base: true,
-  icons: true,
-  advanced: true,
-  charts: true
-})
-
 const openChartCategories = ref<Record<string, boolean>>({
   line: true,
   area: true,
@@ -133,15 +124,13 @@ const openChartCategories = ref<Record<string, boolean>>({
   sankey: true
 })
 
-const toggleGroup = (key: string) => {
-  openGroups.value[key] = !openGroups.value[key]
-}
-
 const toggleChartCategory = (key: string) => {
   openChartCategories.value[key] = !openChartCategories.value[key]
 }
 
 const searchQuery = ref('')
+
+const activeCategory = ref('base')
 
 const filteredShapeTypes = computed(() => {
   const query = searchQuery.value.toLowerCase().trim()
@@ -163,35 +152,7 @@ const filteredIconNodes = computed(() => {
 })
 
 const allShapes = computed(() => [...shapeTypes, ...iconNodes])
-
-const recentShapeItems = computed(() => {
-  return editorStore.recentShapes
-    .map(recent => {
-      const found = allShapes.value.find(s => {
-        if (recent.iconName) {
-          return s.type === recent.type && (s as typeof iconNodes[0]).iconName === recent.iconName
-        }
-        return s.type === recent.type
-      })
-      return found ? { ...found, recent } : null
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null)
-})
-
-const favoriteShapeItems = computed(() => {
-  return editorStore.favoriteShapes
-    .map(key => {
-      const [type, iconName] = key.split(':')
-      const found = allShapes.value.find(s => {
-        if (iconName) {
-          return s.type === type && (s as typeof iconNodes[0]).iconName === iconName
-        }
-        return s.type === type
-      })
-      return found || null
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null)
-})
+// })
 
 const getItemKey = (item: typeof shapeTypes[0] | typeof iconNodes[0]): string => {
   const iconName = (item as typeof iconNodes[0]).iconName
@@ -433,9 +394,9 @@ const startChartDrag = (e: MouseEvent, chart: ChartConfig) => {
     },
     attrs: {
       body: {
-        fill: '#1e293b',
-        stroke: '#3b82f6',
-        strokeWidth: 2,
+        fill: 'transparent',
+        stroke: 'transparent',
+        strokeWidth: 0,
       }
     }
   })
@@ -461,8 +422,8 @@ const filteredChartCategories = computed(() => {
 
 <template>
   <div
-    class="h-full bg-[#141824] border-r border-[#2a3045] flex flex-col shrink-0 z-20 shadow-xl overflow-hidden transition-all duration-300"
-    :class="isCollapsed ? 'w-[60px]' : 'w-[280px]'"
+    class="h-full bg-[#141824] border-r  border-[#2a3045] flex flex-col shrink-0 z-20 shadow-xl overflow-hidden transition-all duration-300"
+    :class="isCollapsed ? 'w-[60px]' : 'w-full'"
     ref="dndContainer">
 
     <!-- 折叠模式 -->
@@ -508,12 +469,12 @@ const filteredChartCategories = computed(() => {
       </div>
     </template>
 
-    <!-- 展开模式 -->
+    <!-- 展开模式 - 新布局 -->
     <template v-else>
-      <!-- Vue 原生面板头部 -->
+      <!-- 面板头部 -->
       <div
         class="px-4 py-3 text-sm font-semibold text-slate-400 uppercase tracking-widest border-b border-[#2a3045] flex items-center justify-between shrink-0">
-        <span>基础图元</span>
+        <span>图元库</span>
         <button
           @click="editorStore.toggleToolbar()"
           class="p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors text-slate-500 hover:text-slate-300"
@@ -522,7 +483,7 @@ const filteredChartCategories = computed(() => {
         </button>
       </div>
 
-      <!-- 搜索区悬浮 -->
+      <!-- 搜索区 -->
       <div class="p-3 bg-[#1a1f2e] border-b border-[#2a3045] shrink-0">
         <div class="relative w-full">
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -533,196 +494,167 @@ const filteredChartCategories = computed(() => {
         </div>
       </div>
 
-      <!-- 面板内容滚动区 -->
-      <div class="flex-1 overflow-y-auto custom-scrollbar">
-
-        <!-- === 最近使用 === -->
-        <div v-if="recentShapeItems.length > 0 && !searchQuery" class="border-b border-[#2a3045] pb-2">
-          <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#1e2640] transition-colors"
-            @click="toggleGroup('recent')">
-            <span class="text-[11px] text-slate-300 uppercase tracking-wider font-semibold flex items-center gap-2">
-              <Clock class="w-3.5 h-3.5" />
-              最近使用
-            </span>
-            <component :is="ChevronDown" class="w-4 h-4 text-slate-500 transition-transform duration-200"
-              :class="{ '-rotate-90': !openGroups['recent'] }" />
-          </div>
-
-          <div v-show="openGroups['recent']" class="px-3 pb-2 grid grid-cols-2 gap-3">
-            <template v-for="item in recentShapeItems" :key="`recent-${getItemKey(item)}`">
-              <div
-                class="flex flex-col items-center justify-center p-3 rounded-lg bg-[#1a1f2e] border border-[#2a3045] cursor-grab hover:-translate-y-0.5 hover:border-amber-500/50 hover:bg-amber-500/10 transition-all group relative"
-                @mousedown="startDrag($event, item)">
-                <component :is="item.icon" class="w-6 h-6 mb-1.5"
-                  :style="{ color: item.stroke !== 'transparent' ? item.stroke : '#94a3b8' }" />
-                <span class="text-[11px] text-slate-400 font-medium">{{ item.label }}</span>
-                <button
-                  @click="handleToggleFavorite($event, item)"
-                  class="absolute top-1.5 right-1.5 p-1 rounded transition-all opacity-0 group-hover:opacity-100"
-                  :class="isFavorite(item) ? 'opacity-100 text-amber-400' : 'text-slate-500 hover:text-amber-400'">
-                  <Star class="w-3.5 h-3.5" :fill="isFavorite(item) ? 'currentColor' : 'none'" />
-                </button>
+      <!-- 主内容区 - 左右布局 -->
+      <div class="flex-1 flex overflow-hidden">
+        <!-- 左侧分类标签栏 -->
+        <div class="flex-shrink-0 bg-[#0f172a] border-r border-[#2a3045] overflow-y-auto custom-scrollbar">
+          <div class="flex flex-col py-2">
+            <!-- 基础图元 -->
+            <button
+              @click="activeCategory = 'base'"
+              :class="[
+                'px-3 py-3 text-xs font-medium transition-all text-left border-l-2',
+                activeCategory === 'base'
+                  ? 'bg-[#1e2640] border-sky-500 text-sky-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#1a1f2e]'
+              ]">
+              <div class="flex flex-col items-center gap-2">
+                <Square class="w-4 h-4" />
+                <span class="text-[10px]">基础</span>
               </div>
-            </template>
-          </div>
-        </div>
+            </button>
 
-        <!-- === 收藏 === -->
-        <div v-if="favoriteShapeItems.length > 0 && !searchQuery" class="border-b border-[#2a3045] pb-2">
-          <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#1e2640] transition-colors"
-            @click="toggleGroup('favorites')">
-            <span class="text-[11px] text-slate-300 uppercase tracking-wider font-semibold flex items-center gap-2">
-              <Star class="w-3.5 h-3.5" />
-              收藏
-            </span>
-            <component :is="ChevronDown" class="w-4 h-4 text-slate-500 transition-transform duration-200"
-              :class="{ '-rotate-90': !openGroups['favorites'] }" />
-          </div>
-
-          <div v-show="openGroups['favorites']" class="px-3 pb-2 grid grid-cols-2 gap-3">
-            <template v-for="item in favoriteShapeItems" :key="`fav-${getItemKey(item)}`">
-              <div
-                class="flex flex-col items-center justify-center p-3 rounded-lg bg-[#1a1f2e] border border-amber-500/30 cursor-grab hover:-translate-y-0.5 hover:border-amber-500/50 hover:bg-amber-500/10 transition-all group relative"
-                @mousedown="startDrag($event, item)">
-                <component :is="item.icon" class="w-6 h-6 mb-1.5"
-                  :style="{ color: item.stroke !== 'transparent' ? item.stroke : '#94a3b8' }" />
-                <span class="text-[11px] text-slate-400 font-medium">{{ item.label }}</span>
-                <button
-                  @click="handleToggleFavorite($event, item)"
-                  class="absolute top-1.5 right-1.5 p-1 rounded text-amber-400 hover:text-amber-300 transition-all">
-                  <Star class="w-3.5 h-3.5" fill="currentColor" />
-                </button>
+            <!-- 架构图标 -->
+            <button
+              @click="activeCategory = 'icons'"
+              :class="[
+                'px-3 py-3 text-xs font-medium transition-all text-left border-l-2',
+                activeCategory === 'icons'
+                  ? 'bg-[#1e2640] border-indigo-500 text-indigo-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#1a1f2e]'
+              ]">
+              <div class="flex flex-col items-center gap-2">
+                <Database class="w-4 h-4" />
+                <span class="text-[10px]">架构</span>
               </div>
-            </template>
-          </div>
-        </div>
+            </button>
 
-        <!-- === 分类一：基础控制体 === -->
-        <div class="border-b border-[#2a3045] pb-2">
-          <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#1e2640] transition-colors"
-            @click="toggleGroup('base')">
-            <span class="text-[11px] text-slate-300 uppercase tracking-wider font-semibold">基础控制体</span>
-            <component :is="ChevronDown" class="w-4 h-4 text-slate-500 transition-transform duration-200"
-              :class="{ '-rotate-90': !openGroups['base'] }" />
-          </div>
-
-          <div v-show="openGroups['base'] && filteredShapeTypes.length > 0" class="px-3 pb-2 grid grid-cols-2 gap-3">
-            <template v-for="item in filteredShapeTypes" :key="item.type">
-              <div
-                class="flex flex-col items-center justify-center p-4 rounded-lg bg-[#1a1f2e] border border-[#2a3045] cursor-grab hover:-translate-y-0.5 hover:border-sky-500 hover:bg-[#1e2640] transition-all group relative"
-                @mousedown="startDrag($event, item)">
-                <component :is="item.icon" class="w-6 h-6 mb-2"
-                  :style="{ color: item.stroke !== 'transparent' ? item.stroke : '#94a3b8' }" />
-                <span class="text-xs text-slate-300 font-medium">{{ item.label }}</span>
-                <button
-                  @click="handleToggleFavorite($event, item)"
-                  class="absolute top-1.5 right-1.5 p-1 rounded transition-all opacity-0 group-hover:opacity-100"
-                  :class="isFavorite(item) ? 'opacity-100 text-amber-400' : 'text-slate-500 hover:text-amber-400'">
-                  <Star class="w-3.5 h-3.5" :fill="isFavorite(item) ? 'currentColor' : 'none'" />
-                </button>
+            <!-- 图表 -->
+            <button
+              @click="activeCategory = 'charts'"
+              :class="[
+                'px-3 py-3 text-xs font-medium transition-all text-left border-l-2',
+                activeCategory === 'charts'
+                  ? 'bg-[#1e2640] border-purple-500 text-purple-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#1a1f2e]'
+              ]">
+              <div class="flex flex-col items-center gap-2">
+                <BarChart class="w-4 h-4" />
+                <span class="text-[10px]">图表</span>
               </div>
-            </template>
-          </div>
-          <div v-show="openGroups['base'] && filteredShapeTypes.length === 0"
-            class="px-4 py-2 text-xs text-slate-500 text-center">
-            未找到对应基础图元
-          </div>
-        </div>
+            </button>
 
-        <!-- === 分类二：通用架构与标志 === -->
-        <div class="border-b border-[#2a3045] pb-2">
-          <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#1e2640] transition-colors"
-            @click="toggleGroup('icons')">
-            <span class="text-[11px] text-slate-300 uppercase tracking-wider font-semibold">通用架构图标图元</span>
-            <component :is="ChevronDown" class="w-4 h-4 text-slate-500 transition-transform duration-200"
-              :class="{ '-rotate-90': !openGroups['icons'] }" />
-          </div>
-
-          <div v-show="openGroups['icons'] && filteredIconNodes.length > 0" class="px-3 pb-2 grid grid-cols-2 gap-3">
-            <template v-for="item in filteredIconNodes" :key="item.iconName">
-              <div
-                class="flex flex-col items-center justify-center p-3 rounded-lg bg-[#1a1f2e] border border-[#2a3045] cursor-grab hover:-translate-y-0.5 hover:border-indigo-500/50 hover:bg-indigo-500/10 transition-all group relative"
-                @mousedown="startDrag($event, item as any)">
-                <component :is="item.icon" class="w-7 h-7 mb-1.5 transition-transform group-hover:scale-110"
-                  :style="{ color: item.stroke }" />
-                <span class="text-[11px] text-slate-400 font-medium">{{ item.label }}</span>
-                <button
-                  @click="handleToggleFavorite($event, item)"
-                  class="absolute top-1.5 right-1.5 p-1 rounded transition-all opacity-0 group-hover:opacity-100"
-                  :class="isFavorite(item) ? 'opacity-100 text-amber-400' : 'text-slate-500 hover:text-amber-400'">
-                  <Star class="w-3.5 h-3.5" :fill="isFavorite(item) ? 'currentColor' : 'none'" />
-                </button>
+            <!-- 复杂设备 -->
+            <button
+              @click="activeCategory = 'advanced'"
+              :class="[
+                'px-3 py-3 text-xs font-medium transition-all text-left border-l-2',
+                activeCategory === 'advanced'
+                  ? 'bg-[#1e2640] border-amber-500 text-amber-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#1a1f2e]'
+              ]">
+              <div class="flex flex-col items-center gap-2">
+                <Workflow class="w-4 h-4" />
+                <span class="text-[10px]">设备</span>
               </div>
-            </template>
-          </div>
-          <div v-show="openGroups['icons'] && filteredIconNodes.length === 0"
-            class="px-4 py-2 text-xs text-slate-500 text-center">
-            未找到相关架构图标 (支持搜英文如: Server)
+            </button>
           </div>
         </div>
 
-        <!-- === 分类三：复杂设备及管线 === -->
-        <div class="border-b border-[#2a3045] pb-2">
-          <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#1e2640] transition-colors"
-            @click="toggleGroup('advanced')">
-            <span class="text-[11px] text-slate-300 uppercase tracking-wider font-semibold">复杂设备及管线</span>
-            <component :is="ChevronDown" class="w-4 h-4 text-slate-500 transition-transform duration-200"
-              :class="{ '-rotate-90': !openGroups['advanced'] }" />
-          </div>
-
-          <div v-show="openGroups['advanced']" class="px-3">
-            <div class="text-xs text-slate-600 bg-slate-900/50 rounded p-3 border border-slate-800/50">
-              已集成在上方搜索大类中，更多定制组件开发中...
-            </div>
-          </div>
-        </div>
-
-        <!-- === 分类四：图表 === -->
-        <div class="pb-4">
-          <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#1e2640] transition-colors"
-            @click="toggleGroup('charts')">
-            <span class="text-[11px] text-slate-300 uppercase tracking-wider font-semibold flex items-center gap-2">
-              <BarChart class="w-3.5 h-3.5" />
-              图表
-            </span>
-            <component :is="ChevronDown" class="w-4 h-4 text-slate-500 transition-transform duration-200"
-              :class="{ '-rotate-90': !openGroups['charts'] }" />
-          </div>
-
-          <div v-show="openGroups['charts']" class="px-3">
-            <!-- 图表分类手风琴 -->
-            <template v-for="category in filteredChartCategories" :key="category.id">
-              <div class="mb-2">
-                <div class="flex items-center justify-between px-3 py-2 cursor-pointer bg-[#0f172a] rounded-t border border-[#2a3045] border-b-0 transition-colors hover:bg-[#1e2640]"
-                  @click="toggleChartCategory(category.id)">
-                  <span class="text-[11px] text-slate-400 font-medium flex items-center gap-2">
-                    <component :is="categoryIconMap[category.id] || BarChart" class="w-3.5 h-3.5" />
-                    {{ category.name }}
-                    <span class="text-slate-600">({{ category.charts.length }})</span>
-                  </span>
-                  <component :is="ChevronDown" class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
-                    :class="{ '-rotate-90': !openChartCategories[category.id] }" />
-                </div>
-
-                <div v-show="openChartCategories[category.id]"
-                  class="border border-[#2a3045] border-t-0 rounded-b p-2 grid grid-cols-2 gap-2">
-                  <template v-for="chart in category.charts" :key="chart.id">
+        <!-- 右侧内容区 -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar bg-[#141824]">
+          <div class="p-3">
+            <!-- 基础图元内容 -->
+            <template v-if="activeCategory === 'base'">
+              <div class="mb-4">
+                <h3 class="text-xs font-semibold text-slate-300 mb-3 px-1">基础图元</h3>
+                <div class="grid grid-cols-[repeat(auto-fill,minmax(70px,1fr))] gap-2">
+                  <template v-for="item in filteredShapeTypes" :key="item.type">
                     <div
-                      class="flex flex-col items-center justify-center p-2 rounded bg-[#1a1f2e] border border-[#2a3045] cursor-grab hover:border-purple-500/50 hover:bg-purple-500/10 transition-all group"
-                      @mousedown="startChartDrag($event, chart)">
-                      <div class="w-8 h-8 flex items-center justify-center mb-1 rounded bg-[#0f172a]">
-                        <component :is="categoryIconMap[category.id] || BarChart" class="w-4 h-4 text-purple-400" />
-                      </div>
-                      <span class="text-[10px] text-slate-400 text-center leading-tight">{{ chart.name }}</span>
+                      class="flex flex-col items-center justify-center p-2 rounded-lg bg-[#1a1f2e] border border-[#2a3045] cursor-grab hover:-translate-y-0.5 hover:border-sky-500 hover:bg-[#1e2640] transition-all group relative"
+                      @mousedown="startDrag($event, item)">
+                      <component :is="item.icon" class="w-5 h-5 mb-1"
+                        :style="{ color: item.stroke !== 'transparent' ? item.stroke : '#94a3b8' }" />
+                      <span class="text-[9px] text-slate-400 font-medium text-center leading-tight">{{ item.label }}</span>
+                      <button
+                        @click="handleToggleFavorite($event, item)"
+                        class="absolute top-1 right-1 p-0.5 rounded transition-all opacity-0 group-hover:opacity-100"
+                        :class="isFavorite(item) ? 'opacity-100 text-amber-400' : 'text-slate-500 hover:text-amber-400'">
+                        <Star class="w-3 h-3" :fill="isFavorite(item) ? 'currentColor' : 'none'" />
+                      </button>
                     </div>
                   </template>
                 </div>
               </div>
             </template>
 
-            <div v-if="filteredChartCategories.length === 0" class="text-xs text-slate-500 text-center py-4">
-              未找到匹配的图表类型
-            </div>
+            <!-- 架构图标内容 -->
+            <template v-if="activeCategory === 'icons'">
+              <div class="mb-4">
+                <h3 class="text-xs font-semibold text-slate-300 mb-3 px-1">通用架构图标</h3>
+                <div class="grid grid-cols-[repeat(auto-fill,minmax(70px,1fr))] gap-2">
+                  <template v-for="item in filteredIconNodes" :key="item.iconName">
+                    <div
+                      class="flex flex-col items-center justify-center p-2 rounded-lg bg-[#1a1f2e] border border-[#2a3045] cursor-grab hover:-translate-y-0.5 hover:border-indigo-500/50 hover:bg-indigo-500/10 transition-all group relative"
+                      @mousedown="startDrag($event, item as any)">
+                      <component :is="item.icon" class="w-6 h-6 mb-1 transition-transform group-hover:scale-110"
+                        :style="{ color: item.stroke }" />
+                      <span class="text-[9px] text-slate-400 font-medium text-center leading-tight">{{ item.label }}</span>
+                      <button
+                        @click="handleToggleFavorite($event, item)"
+                        class="absolute top-1 right-1 p-0.5 rounded transition-all opacity-0 group-hover:opacity-100"
+                        :class="isFavorite(item) ? 'opacity-100 text-amber-400' : 'text-slate-500 hover:text-amber-400'">
+                        <Star class="w-3 h-3" :fill="isFavorite(item) ? 'currentColor' : 'none'" />
+                      </button>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+
+            <!-- 图表内容 -->
+            <template v-if="activeCategory === 'charts'">
+              <div class="space-y-3">
+                <template v-for="category in filteredChartCategories" :key="category.id">
+                  <div>
+                    <div class="flex items-center justify-between px-2 py-2 cursor-pointer bg-[#0f172a] rounded border border-[#2a3045] transition-colors hover:bg-[#1e2640]"
+                      @click="toggleChartCategory(category.id)">
+                      <span class="text-[10px] text-slate-400 font-medium flex items-center gap-2">
+                        <component :is="categoryIconMap[category.id] || BarChart" class="w-3.5 h-3.5" />
+                        {{ category.name }}
+                        <span class="text-slate-600">({{ category.charts.length }})</span>
+                      </span>
+                      <component :is="ChevronDown" class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
+                        :class="{ '-rotate-90': !openChartCategories[category.id] }" />
+                    </div>
+
+                    <div v-show="openChartCategories[category.id]"
+                      class="mt-1 grid grid-cols-[repeat(auto-fill,minmax(60px,1fr))] gap-1.5 p-1">
+                      <template v-for="chart in category.charts" :key="chart.id">
+                        <div
+                          class="flex flex-col items-center justify-center p-1.5 rounded bg-[#1a1f2e] border border-[#2a3045] cursor-grab hover:border-purple-500/50 hover:bg-purple-500/10 transition-all group"
+                          @mousedown="startChartDrag($event, chart)">
+                          <div class="w-6 h-6 flex items-center justify-center mb-0.5 rounded bg-[#0f172a]">
+                            <component :is="categoryIconMap[category.id] || BarChart" class="w-3.5 h-3.5 text-purple-400" />
+                          </div>
+                          <span class="text-[8px] text-slate-400 text-center leading-tight line-clamp-2">{{ chart.name }}</span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+
+            <!-- 复杂设备内容 -->
+            <template v-if="activeCategory === 'advanced'">
+              <div class="text-xs text-slate-500 bg-slate-900/50 rounded-lg p-4 border border-slate-800/50 text-center">
+                <Workflow class="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p>复杂设备及管线</p>
+                <p class="text-slate-600 mt-1">已集成在上方搜索大类中</p>
+                <p class="text-slate-600">更多定制组件开发中...</p>
+              </div>
+            </template>
           </div>
         </div>
       </div>

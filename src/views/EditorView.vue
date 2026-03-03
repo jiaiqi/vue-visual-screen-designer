@@ -88,7 +88,7 @@ onMounted(() => {
     />
 
     <main class="flex-1 flex overflow-hidden relative">
-      <div 
+      <div
         data-guide="toolbar"
         class="h-full shrink-0 transition-all duration-300 ease-in-out overflow-hidden"
         :style="{ width: toolbarWidth }">
@@ -102,6 +102,7 @@ onMounted(() => {
       >
         <Ruler />
         <CanvasEditor :class="{ 'ruler-active': showRuler }" />
+        <Minimap />
       </div>
 
       <aside
@@ -189,8 +190,6 @@ onMounted(() => {
     </Transition>
 
     <GuideTour v-model="showGuide" @complete="handleGuideComplete" />
-
-    <Minimap />
   </div>
 </template>
 

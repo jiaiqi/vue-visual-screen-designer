@@ -133,7 +133,7 @@ const handleApply = () => {
             <span class="text-sky-400 font-mono font-bold text-sm">{ }</span>
           </div>
           <div>
-            <h3 class="text-sm font-bold text-slate-200">JSON 数据控制中心</h3>
+            <h3 class="text-sm font-bold text-slate-200">JSON 数据</h3>
             <p class="text-[10px] text-slate-500 mt-0.5">查看当前画布状态、复制数据片段或直接从外部源重新导入覆盖绘图区。</p>
           </div>
         </div>

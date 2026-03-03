@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onUnmounted, markRaw } from 'vue'
+import { ref, watch, onUnmounted, markRaw, computed } from 'vue'
 import { Cell, Edge, Node } from '@antv/x6'
 import { useEditorStore } from '@/stores/editor'
 import IconPickerDialog from '../IconPickerDialog.vue'
@@ -14,6 +14,7 @@ import {
   Play, Share2, Trash2, Plus, Eye, Lock, Unlock,
   RotateCcw, SlidersHorizontal
 } from 'lucide-vue-next'
+import { formatValueWithUnit, parseInputWithValue } from '@/utils/coordinate-transform'
 
 const editorStore = useEditorStore()
 const activeCell = ref<Cell | null>(null)
@@ -137,6 +138,29 @@ const sliderModes = ref<Record<string, boolean>>({
   fontSize: false,
   rx: false,
 })
+
+// 计算属性：根据单位显示位置值
+const canvasConfig = computed(() => editorStore.canvasConfig)
+const unit = computed(() => editorStore.unit)
+
+const displayX = computed(() => {
+  return formatValueWithUnit(formData.value.x, canvasConfig.value.width, unit.value)
+})
+
+const displayY = computed(() => {
+  return formatValueWithUnit(formData.value.y, canvasConfig.value.height, unit.value)
+})
+
+// 处理位置输入
+function handlePositionUpdate(axis: 'x' | 'y', value: string | number | null) {
+  if (!activeCell.value || !activeCell.value.isNode()) return
+
+  const inputValue = value === null ? '' : String(value)
+  const total = axis === 'x' ? canvasConfig.value.width : canvasConfig.value.height
+  const pixelValue = parseInputWithValue(inputValue, total)
+
+  handleUpdate(axis, pixelValue)
+}
 
 const getStoredCollapseNames = (): string[] => {
   try {
@@ -446,7 +470,7 @@ function refreshChart() {
 <template>
   <div v-if="activeCell" class="node-properties h-full flex flex-col">
     <n-tabs type="line" justify-content="space-evenly" size="small" class="shrink-0 bg-slate-900 border-b border-slate-800">
-      <n-tab-pane name="style" tab="基础样式">
+      <n-tab-pane name="style" tab="外观">
         <div class="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-160px)] custom-scrollbar">
           <n-form label-placement="top" size="small">
             <template v-if="activeCell">
@@ -771,12 +795,22 @@ function refreshChart() {
                     </n-grid-item>
                     <n-grid-item>
                       <n-form-item label="X 坐标">
-                        <n-input-number :value="formData.x" @update:value="v => handleUpdate('x', v)" :show-button="false" :disabled="formData.isLocked" />
+                        <n-input
+                          :value="displayX"
+                          @update:value="v => handlePositionUpdate('x', v)"
+                          :disabled="formData.isLocked"
+                          placeholder="输入坐标值（如 100 或 50%）"
+                        />
                       </n-form-item>
                     </n-grid-item>
                     <n-grid-item>
                       <n-form-item label="Y 坐标">
-                        <n-input-number :value="formData.y" @update:value="v => handleUpdate('y', v)" :show-button="false" :disabled="formData.isLocked" />
+                        <n-input
+                          :value="displayY"
+                          @update:value="v => handlePositionUpdate('y', v)"
+                          :disabled="formData.isLocked"
+                          placeholder="输入坐标值（如 100 或 50%）"
+                        />
                       </n-form-item>
                     </n-grid-item>
                   </n-grid>
@@ -845,24 +879,70 @@ function refreshChart() {
         </div>
       </n-tab-pane>
 
-      <n-tab-pane name="action" tab="高级动作">
+      <n-tab-pane name="action" tab="动画">
         <div class="p-4 space-y-6 overflow-y-auto max-h-[calc(100vh-160px)] custom-scrollbar">
           <n-form label-placement="top" size="small">
              <div class="section-header">持续动画 (Loop)</div>
-             <n-form-item label="动画模式">
+             <n-form-item label="动画类型">
                <n-select :value="formData.animationType" @update:value="v => handleUpdate('animationType', v)"
                  :options="[
                    { label: '无动画', value: 'none' },
-                   { label: '呼吸', value: 'breath' },
-                   { label: '闪烁', value: 'blink' },
-                   { label: '移动', value: 'move' },
-                   { label: '自旋', value: 'spin' },
-                   { label: '浮动', value: 'float' },
+                   { label: '淡入', value: 'fade-in' },
+                   { label: '从左滑入', value: 'slide-in-left' },
+                   { label: '从右滑入', value: 'slide-in-right' },
+                   { label: '从下滑入', value: 'slide-in-up' },
+                   { label: '从上滑入', value: 'slide-in-down' },
+                   { label: '缩放进入', value: 'zoom-in' },
+                   { label: '弹跳进入', value: 'bounce-in' },
+                   { label: '旋转进入', value: 'rotate-in' },
+                   { label: 'X 轴翻转', value: 'flip-in-x' },
+                   { label: 'Y 轴翻转', value: 'flip-in-y' },
+                   { label: '弹跳', value: 'bounce' },
+                   { label: '脉冲', value: 'pulse' },
+                   { label: '抖动', value: 'shake' },
+                   { label: '摇摆', value: 'swing' },
+                   { label: '晃动', value: 'wobble' },
                  ]"
                />
              </n-form-item>
+
+             <n-form-item v-if="formData.animationType !== 'none'" label="动画方向">
+               <n-select :value="formData.animationDirection" @update:value="v => handleUpdate('animationDirection', v)"
+                 :options="[
+                   { label: '正常', value: 'normal' },
+                   { label: '反向', value: 'reverse' },
+                   { label: '交替', value: 'alternate' },
+                 ]"
+               />
+             </n-form-item>
+
              <n-form-item v-if="formData.animationType !== 'none'" label="单次时长 (秒)">
-               <n-input-number :value="formData.animationDuration" @update:value="v => handleUpdate('animationDuration', v)" :min="0.1" :step="0.1" :show-button="false" />
+               <n-input-number :value="formData.animationDuration" @update:value="v => handleUpdate('animationDuration', v)" :min="0.1" :max="10" :step="0.1" :show-button="false" />
+             </n-form-item>
+
+             <n-form-item v-if="formData.animationType !== 'none'" label="延迟时间 (秒)">
+               <n-input-number :value="formData.animationDelay" @update:value="v => handleUpdate('animationDelay', v)" :min="0" :max="5" :step="0.1" :show-button="false" />
+             </n-form-item>
+
+             <n-form-item v-if="formData.animationType !== 'none'" label="播放次数">
+               <n-select :value="formData.animationIteration" @update:value="v => handleUpdate('animationIteration', v)"
+                 :options="[
+                   { label: '无限循环', value: 'infinite' },
+                   { label: '1 次', value: '1' },
+                   { label: '2 次', value: '2' },
+                   { label: '3 次', value: '3' },
+                 ]"
+               />
+             </n-form-item>
+
+             <n-form-item v-if="formData.animationType !== 'none'">
+               <template #label>
+                 <n-text depth="3" style="font-size: 12px">预览动画</n-text>
+               </template>
+               <n-button block secondary type="primary" @click="() => editorStore.graph?.trigger('node:play-animation', { node: activeCell })">
+                 <template #icon><n-icon :component="Icons.Play" /></template>
+                 播放预览
+               </n-button>
              </n-form-item>
 
              <n-divider />

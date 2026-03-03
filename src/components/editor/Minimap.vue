@@ -8,13 +8,7 @@ import { Map, MapPin } from 'lucide-vue-next'
 const editorStore = useEditorStore()
 
 const minimapContainer = ref<HTMLDivElement>()
-const containerRef = ref<HTMLElement>()
-
 const showMinimap = ref(editorStore.showMinimap)
-
-const position = ref({ x: 20, y: 20 })
-const isDragging = ref(false)
-const dragStart = ref({ x: 0, y: 0 })
 
 let minimapInstance: MiniMap | null = null
 
@@ -63,37 +57,9 @@ const toggleMinimap = () => {
   showMinimap.value = editorStore.showMinimap
 }
 
-const handleMouseDown = (e: MouseEvent) => {
-  if (e.target === minimapContainer.value?.querySelector('canvas')) return
-  
-  isDragging.value = true
-  dragStart.value = {
-    x: e.clientX - position.value.x,
-    y: e.clientY - position.value.y
-  }
-
-  document.addEventListener('mousemove', handleMouseMove)
-  document.addEventListener('mouseup', handleMouseUp)
-}
-
-const handleMouseMove = (e: MouseEvent) => {
-  if (!isDragging.value) return
-  
-  position.value = {
-    x: e.clientX - dragStart.value.x,
-    y: e.clientY - dragStart.value.y
-  }
-}
-
-const handleMouseUp = () => {
-  isDragging.value = false
-  document.removeEventListener('mousemove', handleMouseMove)
-  document.removeEventListener('mouseup', handleMouseUp)
-}
-
 onMounted(async () => {
   await nextTick()
-  
+
   if (editorStore.graph && showMinimap.value) {
     setTimeout(() => {
       initMinimap()
@@ -124,8 +90,6 @@ watch(showMinimap, async (show) => {
 
 onUnmounted(() => {
   disposeMinimap()
-  document.removeEventListener('mousemove', handleMouseMove)
-  document.removeEventListener('mouseup', handleMouseUp)
 })
 </script>
 
@@ -142,13 +106,7 @@ onUnmounted(() => {
 
     <div
       v-if="showMinimap"
-      ref="containerRef"
       class="minimap-container"
-      :style="{
-        right: position.x + 'px',
-        bottom: position.y + 'px'
-      }"
-      @mousedown="handleMouseDown"
     >
       <div class="minimap-header">
         <Map class="w-3 h-3" />
@@ -161,10 +119,10 @@ onUnmounted(() => {
 
 <style scoped>
 .minimap-wrapper {
-  position: fixed;
+  position: absolute;
   z-index: 100;
-  right: 20px;
-  bottom: 20px;
+  right: 16px;
+  bottom: 16px;
 }
 
 .minimap-toggle-btn {
@@ -200,8 +158,6 @@ onUnmounted(() => {
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   overflow: hidden;
-  cursor: move;
-  user-select: none;
 }
 
 .minimap-header {

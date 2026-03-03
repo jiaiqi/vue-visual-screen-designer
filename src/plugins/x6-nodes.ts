@@ -44,44 +44,42 @@ export function registerEdges() {
 
   // 4. 原有的 3D 流体管道
   Graph.registerEdge('fluid-pipe', {
-    inherit: 'edge', // 继承基础连线
+    inherit: 'edge',
     attrs: {
-      // 管道外壳/底色
-      line: {
-        connection: true, // 必须携带此属性，X6 才会注入连线路径
-        stroke: '#475569', // 具有工业金属感的暗色
-        strokeWidth: 10,
-        strokeLinejoin: 'round',
-        targetMarker: null, // 管道默认无箭头
-      },
-      // 内部流动液体特效层
-      fluid: {
-        connection: true, // 同上，绑定路径
-        stroke: '#38bdf8', // 亮蓝色液体
-        strokeWidth: 6,
-        strokeDasharray: '12, 12', // 拉大虚线距离实现明显的水流
-        style: {
-          animation: 'dash-flow 1s linear infinite',
-        }
-      }
+    line: {
+      connection: true,
+      stroke: '#475569',
+      strokeWidth: 10,
+      strokeLinejoin: 'round',
+      targetMarker: null,
     },
+    fluid: {
+      connection: true,
+      stroke: '#38bdf8',
+      strokeWidth: 6,
+      strokeDasharray: '12, 12',
+      style: {
+        animation: 'dash-flow 1s linear infinite',
+      }
+    }
+  },
     markup: [
-      {
-        tagName: 'path',
-        selector: 'line',
-        attrs: {
-          fill: 'none',
-        },
+    {
+      tagName: 'path',
+      selector: 'line',
+      attrs: {
+        fill: 'none',
       },
-      {
-        tagName: 'path',
-        selector: 'fluid',
-        attrs: {
-          fill: 'none',
-        },
+    },
+    {
+      tagName: 'path',
+      selector: 'fluid',
+      attrs: {
+        fill: 'none',
       },
-    ],
-  })
+    },
+  ],
+})
 }
 
 export function registerVueNodes() {

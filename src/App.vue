@@ -2,12 +2,18 @@
 import { computed, onMounted } from 'vue'
 import { darkTheme, NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
 import { useEditorStore } from '@/stores/editor'
+import { registerAllAnimations } from '@/utils/animations'
 
 const editorStore = useEditorStore()
 
 const naiveTheme = computed(() => editorStore.theme === 'dark' ? darkTheme : null)
 
-onMounted(() => {
+onMounted(async () => {
+  // 注册所有动画
+  registerAllAnimations()
+
+  // 初始化存储数据
+  await editorStore.initializeStore()
   editorStore.applyTheme()
 })
 </script>

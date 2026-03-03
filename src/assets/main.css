@@ -111,6 +111,11 @@
   }
 }
 
+/* 流体动画样式类 */
+.fluid-animation {
+  animation: dash-flow 1s linear infinite;
+}
+
 /* 连接桩交互优化：按需显示 */
 .x6-port-body {
   opacity: 0;

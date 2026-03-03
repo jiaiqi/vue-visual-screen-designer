@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { markRaw } from 'vue'
 import type { Graph } from '@antv/x6'
 import type { ThemeMode } from '@/types/editor'
+import { transformNodePosition } from '@/utils/coordinate-transform'
+import { getItem, setItem } from '@/utils/storage'
 
 export interface RecentShapeItem {
   type: string
@@ -45,54 +47,57 @@ interface EditorState {
     sharp: boolean
     showSpacing: boolean
   }
+  coordinateSystem: 'top-left' | 'center'
+  unit: 'px' | 'percent'
 }
 
 const GUIDE_STORAGE_KEY = 'vue-fabric-editor-guide-completed'
 const RECENT_SHAPES_KEY = 'vue-fabric-editor-recent-shapes'
 const FAVORITE_SHAPES_KEY = 'vue-fabric-editor-favorite-shapes'
+const THEME_KEY = 'theme'
 const MAX_RECENT_SHAPES = 6
 
-function loadRecentShapes(): RecentShapeItem[] {
+// 异步加载数据
+async function loadRecentShapesAsync(): Promise<RecentShapeItem[]> {
   try {
-    const saved = localStorage.getItem(RECENT_SHAPES_KEY)
-    return saved ? JSON.parse(saved) : []
+    const saved = await getItem<RecentShapeItem[]>(RECENT_SHAPES_KEY, 'recentShapes')
+    return saved || []
   } catch {
     return []
   }
 }
 
-function loadFavoriteShapes(): string[] {
+async function loadFavoriteShapesAsync(): Promise<string[]> {
   try {
-    const saved = localStorage.getItem(FAVORITE_SHAPES_KEY)
-    return saved ? JSON.parse(saved) : []
+    const saved = await getItem<string[]>(FAVORITE_SHAPES_KEY, 'favoriteShapes')
+    return saved || []
   } catch {
     return []
   }
 }
 
-function saveRecentShapes(shapes: RecentShapeItem[]) {
-  localStorage.setItem(RECENT_SHAPES_KEY, JSON.stringify(shapes))
+async function saveRecentShapesAsync(shapes: RecentShapeItem[]) {
+  await setItem(RECENT_SHAPES_KEY, shapes, 'recentShapes')
 }
 
-function saveFavoriteShapes(favorites: string[]) {
-  localStorage.setItem(FAVORITE_SHAPES_KEY, JSON.stringify(favorites))
+async function saveFavoriteShapesAsync(favorites: string[]) {
+  await setItem(FAVORITE_SHAPES_KEY, favorites, 'favoriteShapes')
 }
 
 export const useEditorStore = defineStore('editor', {
   state: (): EditorState => {
-    const savedTheme = localStorage.getItem('theme') as ThemeMode | null
-    const hasSeenGuide = localStorage.getItem(GUIDE_STORAGE_KEY) === 'true'
+    // 使用同步方式初始化，异步数据在 onMounted 中加载
     return {
       mode: 'select',
       currentTool: 'select',
       graph: null,
-      theme: savedTheme || 'dark',
-      hasSeenGuide,
+      theme: 'dark',
+      hasSeenGuide: false,
       isToolbarCollapsed: false,
       isPropertyPanelCollapsed: false,
       showMinimap: true,
-      recentShapes: loadRecentShapes(),
-      favoriteShapes: loadFavoriteShapes(),
+      recentShapes: [],
+      favoriteShapes: [],
       canvasConfig: {
         name: '暖通',
         category: '智慧物联',
@@ -117,10 +122,29 @@ export const useEditorStore = defineStore('editor', {
         color: '#f97316',
         sharp: true,
         showSpacing: true
-      }
+      },
+      coordinateSystem: 'top-left',
+      unit: 'px'
     }
   },
   actions: {
+    async initializeStore() {
+      // 异步加载存储的数据
+      const [savedTheme, hasSeenGuide, recentShapes, favoriteShapes] = await Promise.all([
+        getItem<ThemeMode>(THEME_KEY, 'theme'),
+        getItem<boolean>(GUIDE_STORAGE_KEY, 'guide'),
+        loadRecentShapesAsync(),
+        loadFavoriteShapesAsync()
+      ])
+
+      if (savedTheme) {
+        this.theme = savedTheme
+        this.applyTheme()
+      }
+      this.hasSeenGuide = hasSeenGuide || false
+      this.recentShapes = recentShapes
+      this.favoriteShapes = favoriteShapes
+    },
     initGraph(graphInstance: Graph | null) {
       this.graph = graphInstance ? markRaw(graphInstance) : null
 
@@ -141,7 +165,7 @@ export const useEditorStore = defineStore('editor', {
     },
     setTheme(theme: ThemeMode) {
       this.theme = theme
-      localStorage.setItem('theme', theme)
+      setItem(THEME_KEY, theme, 'theme').catch(console.error)
       this.applyTheme()
     },
     toggleTheme() {
@@ -210,11 +234,12 @@ export const useEditorStore = defineStore('editor', {
     },
     completeGuide() {
       this.hasSeenGuide = true
-      localStorage.setItem(GUIDE_STORAGE_KEY, 'true')
+      setItem(GUIDE_STORAGE_KEY, true, 'guide').catch(console.error)
     },
     resetGuide() {
       this.hasSeenGuide = false
-      localStorage.removeItem(GUIDE_STORAGE_KEY)
+      // localForage 不直接支持 removeItem，使用 setItem 设置为 null
+      setItem(GUIDE_STORAGE_KEY, null as any, 'guide').catch(console.error)
     },
     toggleToolbar() {
       this.isToolbarCollapsed = !this.isToolbarCollapsed
@@ -255,7 +280,7 @@ export const useEditorStore = defineStore('editor', {
         this.recentShapes = this.recentShapes.slice(0, MAX_RECENT_SHAPES)
       }
 
-      saveRecentShapes(this.recentShapes)
+      saveRecentShapesAsync(this.recentShapes).catch(console.error)
     },
     toggleFavorite(type: string, iconName?: string) {
       const key = iconName ? `${type}:${iconName}` : type
@@ -267,11 +292,40 @@ export const useEditorStore = defineStore('editor', {
         this.favoriteShapes.splice(index, 1)
       }
 
-      saveFavoriteShapes(this.favoriteShapes)
+      saveFavoriteShapesAsync(this.favoriteShapes).catch(console.error)
     },
     isFavorite(type: string, iconName?: string): boolean {
       const key = iconName ? `${type}:${iconName}` : type
       return this.favoriteShapes.includes(key)
+    },
+    switchCoordinateSystem(system: 'top-left' | 'center') {
+      const oldSystem = this.coordinateSystem
+      this.coordinateSystem = system
+
+      // 如果坐标系发生变化，转换所有图元位置
+      if (oldSystem !== system && this.graph) {
+        const { width, height } = this.canvasConfig
+        const nodes = this.graph.getNodes()
+
+        nodes.forEach(node => {
+          const oldX = node.getPosition().x
+          const oldY = node.getPosition().y
+
+          const newPos = transformNodePosition(
+            oldX,
+            oldY,
+            width,
+            height,
+            oldSystem,
+            system
+          )
+
+          node.setPosition(newPos.x, newPos.y)
+        })
+      }
+    },
+    switchUnit(unit: 'px' | 'percent') {
+      this.unit = unit
     }
   }
 })

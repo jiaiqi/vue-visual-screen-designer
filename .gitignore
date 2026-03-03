@@ -40,5 +40,6 @@ __screenshots__/
 
 # Trae
 .trae/specs/*
+.trae/documents/*
 
 /docs/*

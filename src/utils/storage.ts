@@ -1,52 +1,80 @@
+/**
+ * LocalForage 存储工具模块
+ * 提供异步本地存储功能，支持更大的存储空间
+ */
 import localforage from 'localforage'
-import type { ProjectData } from '@/types/editor'
 
-const STORE_KEY = 'workshop_editor_autosave'
+// 配置存储实例
+export const storage = {
+  // 主题存储
+  theme: localforage.createInstance({
+    name: 'vue-fabric-editor',
+    storeName: 'theme',
+    description: '主题和用户偏好设置'
+  }),
 
-export const storage = localforage.createInstance({
-  name: 'WorkshopEditorDB',
-  storeName: 'projects',
-  description: '存储车间布局工程离线快照'
-})
+  // 最近使用图元
+  recentShapes: localforage.createInstance({
+    name: 'vue-fabric-editor',
+    storeName: 'recent-shapes',
+    description: '最近使用的图元记录'
+  }),
 
-// 防抖包装保存动作，隔绝主线程卡顿
-export function useAutoSave() {
-  let timer: ReturnType<typeof setTimeout>
+  // 收藏图元
+  favoriteShapes: localforage.createInstance({
+    name: 'vue-fabric-editor',
+    storeName: 'favorite-shapes',
+    description: '收藏的图元列表'
+  }),
 
-  const saveSnapshot = async (data: string | ProjectData) => {
-    try {
-      if (typeof data === 'string') {
-        const json = JSON.parse(data)
-        await storage.setItem(STORE_KEY, json)
-      } else {
-        await storage.setItem(STORE_KEY, data)
-      }
-    } catch (error) {
-      console.error('Failed to autosave project:', error)
-    }
+  // 指南完成状态
+  guide: localforage.createInstance({
+    name: 'vue-fabric-editor',
+    storeName: 'guide',
+    description: '新手指南完成状态'
+  }),
+
+  // 图纸数据
+  drawings: localforage.createInstance({
+    name: 'vue-fabric-editor',
+    storeName: 'drawings',
+    description: '保存的图纸数据'
+  })
+}
+
+// 通用的存储方法
+export async function getItem<T>(key: string, store: 'theme' | 'recentShapes' | 'favoriteShapes' | 'guide' | 'drawings' = 'theme'): Promise<T | null> {
+  try {
+    return await storage[store].getItem<T>(key)
+  } catch (error) {
+    console.error(`读取 ${store}.${key} 失败:`, error)
+    return null
   }
+}
 
-  const debouncedSave = (data: string | ProjectData, delay = 2000) => {
-    clearTimeout(timer)
-    timer = setTimeout(() => {
-      saveSnapshot(data)
-    }, delay)
+export async function setItem<T>(key: string, value: T, store: 'theme' | 'recentShapes' | 'favoriteShapes' | 'guide' | 'drawings' = 'theme'): Promise<T> {
+  try {
+    return await storage[store].setItem<T>(key, value)
+  } catch (error) {
+    console.error(`保存 ${store}.${key} 失败:`, error)
+    throw error
   }
+}
 
-  const loadSnapshot = async (): Promise<ProjectData | null> => {
-    try {
-      const data = await storage.getItem<ProjectData>(STORE_KEY)
-      return data
-    } catch (error) {
-      console.error('Failed to load snapshot:', error)
-      return null
-    }
+export async function removeItem(key: string, store: 'theme' | 'recentShapes' | 'favoriteShapes' | 'guide' | 'drawings' = 'theme'): Promise<void> {
+  try {
+    await storage[store].removeItem(key)
+  } catch (error) {
+    console.error(`删除 ${store}.${key} 失败:`, error)
+    throw error
   }
+}
 
-  return {
-    saveSnapshot,
-    debouncedSave,
-    loadSnapshot,
-    clearSnapshot: () => storage.removeItem(STORE_KEY)
+export async function clearStore(store: 'theme' | 'recentShapes' | 'favoriteShapes' | 'guide' | 'drawings'): Promise<void> {
+  try {
+    await storage[store].clear()
+  } catch (error) {
+    console.error(`清空 ${store} 失败:`, error)
+    throw error
   }
 }

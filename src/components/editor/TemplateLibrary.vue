@@ -40,7 +40,8 @@ const handleConfirmApply = () => {
   if (!graph) return
 
   graph.clearCells()
-  graph.fromJSON(pendingTemplate.value.data)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  graph.fromJSON(pendingTemplate.value.data as any)
   graph.centerContent()
 
   confirmDialog.value = false
