@@ -15,6 +15,7 @@ import {
 } from '@antv/x6'
 import { register } from '@antv/x6-vue-shape'
 import { useEditorStore } from '@/stores/editor'
+import { registerDashboardNodes, registerDecorationNodes } from '@/plugins/x6-nodes'
 
 void register
 
@@ -36,10 +37,22 @@ export function useGraph() {
   const initGraph = (el: HTMLElement) => {
     if (graph) return
 
+    // 根据坐标系设置画布模式
+    const isCenterOrigin = editorStore.coordinateSystem === 'center'
+    const { width: canvasW, height: canvasH } = editorStore.canvasConfig
+
+    // 注册大屏卡片容器节点
+    registerDashboardNodes()
+
+    // 注册装饰类组件
+    registerDecorationNodes()
+
     // 初始化 X6 引擎
     graph = new Graph({
       container: el,
-      autoResize: true,
+      width: canvasW,
+      height: canvasH,
+      autoResize: isCenterOrigin ? true : false,
       background: {
         color: '#0f172a',
       },
@@ -52,17 +65,24 @@ export function useGraph() {
           thickness: 1,
         },
       },
+      // 根据坐标系设置平移模式
       panning: {
         enabled: true,
-        modifiers: ['space', 'alt'], // 按住空格或 Alt 拖拽平移画布
+        modifiers: ['space', 'alt'], // 左上角模式只在按键时平移
       },
       mousewheel: {
         enabled: true,
         zoomAtMousePosition: true,
         modifiers: ['ctrl', 'meta'],
         minScale: 0.1,
-        maxScale: 10,
+        maxScale: 5,
       },
+      // // 限制节点移动范围
+      // translating: {
+      //   restrict: isCenterOrigin
+      //     ? false // 中心原点模式不限制
+      //     : { x: 0, y: 0, width: canvasW, height: canvasH }, // 左上角模式限制在画布范围内
+      // },
       connecting: {
         snap: true,
         allowBlank: false,
@@ -91,11 +111,11 @@ export function useGraph() {
     // 挂载插件生态
     graph
       .use(new Scroller({
-        enabled: true,
-        pannable: true,
+        enabled: !isCenterOrigin, // 左上角模式启用滚动条
+        pannable: true, // 中心模式启用拖拽平移
         pageVisible: false,
         pageBreak: false,
-        padding: 50,
+        padding: 0,
         modifiers: ['space'],
       }))
       .use(new Selection({
@@ -858,7 +878,7 @@ export function useGraph() {
     const data = groupNode.getData() || {}
     if (!data.isGroup || !data.groupChildren) return []
 
-     
+
     return data.groupChildren
       .map((id: string) => graph!.getCellById(id) as Node)
       .filter((n: any): n is Node => !!n && n.isNode())

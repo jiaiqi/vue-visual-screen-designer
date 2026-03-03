@@ -6,7 +6,6 @@ import ContextMenu from '../components/editor/ContextMenu.vue'
 import JsonEditorModal from '../components/editor/JsonEditorModal.vue'
 import TemplateLibrary from '../components/editor/TemplateLibrary.vue'
 import GuideTour from '../components/editor/GuideTour.vue'
-import Ruler from '../components/editor/Ruler.vue'
 import Minimap from '../components/editor/Minimap.vue'
 import AppHeader from '../components/layout/AppHeader.vue'
 
@@ -18,7 +17,6 @@ const editorStore = useEditorStore()
 
 const showGuide = ref(false)
 
-const showRuler = computed(() => editorStore.canvasConfig.showRuler)
 const isToolbarCollapsed = computed(() => editorStore.isToolbarCollapsed)
 const isPropertyPanelCollapsed = computed(() => editorStore.isPropertyPanelCollapsed)
 
@@ -97,11 +95,10 @@ onMounted(() => {
 
       <div
         data-guide="canvas"
-        class="flex-1 relative flex flex-col shadow-inner min-width-0"
-        style="background-color: var(--color-bg-secondary); min-width: 0"
+        class="flex-1 relative flex flex-col shadow-inner overflow-hidden"
+        style="background-color: var(--color-bg-secondary);"
       >
-        <Ruler />
-        <CanvasEditor :class="{ 'ruler-active': showRuler }" />
+        <CanvasEditor />
         <Minimap />
       </div>
 

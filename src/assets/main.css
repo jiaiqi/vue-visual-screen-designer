@@ -111,9 +111,51 @@
   }
 }
 
+@keyframes dash-flow-long {
+  to {
+    stroke-dashoffset: -1000; /* 长虚线流动动画 */
+  }
+}
+
+@keyframes ant-line {
+  to {
+    stroke-dashoffset: -1000;
+  }
+}
+
+@keyframes flow-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes flow-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px rgba(56, 189, 248, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.8));
+  }
+}
+
 /* 流体动画样式类 */
 .fluid-animation {
   animation: dash-flow 1s linear infinite;
+}
+
+.dashed-animation {
+  animation: dash-flow-long 30s linear infinite;
+}
+
+.pulse-animation {
+  animation: flow-pulse 2s ease-in-out infinite;
+}
+
+.glow-animation {
+  animation: flow-glow 2s ease-in-out infinite;
 }
 
 /* 连接桩交互优化：按需显示 */

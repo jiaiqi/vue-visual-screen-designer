@@ -7,7 +7,7 @@ import {
   Undo2, Redo2, Download, LayoutGrid, ZoomIn, ZoomOut,
   Maximize, Trash2, MousePointerSquareDashed, Keyboard,
   Code, ChevronDown, FileImage, FileCode2, Eye, LayoutTemplate,
-  HelpCircle, Sun, Moon
+  HelpCircle, Sun, Moon, ArrowUpFromLine, ArrowDownToLine, ArrowUp, ArrowDown
 } from 'lucide-vue-next'
 
 const emit = defineEmits<{
@@ -91,6 +91,36 @@ function handlePreview() {
     router.push('/preview')
   }
 }
+
+function handleLayerAction(action: 'toFront' | 'toBack' | 'forward' | 'backward') {
+  const graph = editorStore.graph
+  if (!graph) return
+
+  const selectedCells = graph.getSelectedCells()
+  if (selectedCells.length !== 1 || !selectedCells[0]?.isNode()) {
+    return
+  }
+
+  const node = selectedCells[0]
+  switch (action) {
+    case 'toFront':
+      node.toFront()
+      break
+    case 'toBack':
+      node.toBack()
+      break
+    case 'forward':
+      if (node.zIndex != null) {
+        node.zIndex = (node.zIndex ?? 0) + 1
+      }
+      break
+    case 'backward':
+      if (node.zIndex != null) {
+        node.zIndex = (node.zIndex ?? 0) - 1
+      }
+      break
+  }
+}
 </script>
 
 <template>
@@ -170,6 +200,34 @@ function handlePreview() {
         </button>
       </div>
 
+      <div class="h-6 w-[1px] bg-slate-800/60 mx-1"></div>
+
+      <!-- 层级管理工具 -->
+      <div class="flex items-center gap-1">
+        <button @click="handleLayerAction('toFront')"
+          class="flex items-center justify-center p-2 rounded-lg bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-sky-500/20 hover:border-sky-500/50 hover:text-sky-400 transition-all active:scale-95 shadow-sm"
+          title="置于顶层">
+          <ArrowUpFromLine class="w-4 h-4" />
+        </button>
+        <button @click="handleLayerAction('forward')"
+          class="flex items-center justify-center p-2 rounded-lg bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-sky-500/20 hover:border-sky-500/50 hover:text-sky-400 transition-all active:scale-95 shadow-sm"
+          title="上移一层">
+          <ArrowUp class="w-4 h-4" />
+        </button>
+        <button @click="handleLayerAction('backward')"
+          class="flex items-center justify-center p-2 rounded-lg bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-sky-500/20 hover:border-sky-500/50 hover:text-sky-400 transition-all active:scale-95 shadow-sm"
+          title="下移一层">
+          <ArrowDown class="w-4 h-4" />
+        </button>
+        <button @click="handleLayerAction('toBack')"
+          class="flex items-center justify-center p-2 rounded-lg bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-sky-500/20 hover:border-sky-500/50 hover:text-sky-400 transition-all active:scale-95 shadow-sm"
+          title="置于底层">
+          <ArrowDownToLine class="w-4 h-4" />
+        </button>
+      </div>
+
+      <div class="h-6 w-[1px] bg-slate-800/60 mx-1"></div>
+
       <div class="flex items-center gap-1 py-1 px-2 rounded-lg bg-slate-900/60 border border-slate-800">
         <button @click="handleZoom(-0.1)"
           class="p-1.5 flex items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-sky-400 transition-colors"
@@ -212,7 +270,7 @@ function handlePreview() {
           </button>
 
           <div
-            class="absolute top-full right-0 mt-2 w-48 bg-slate-800 border border-slate-700/80 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 origin-top-right z-50 overflow-hidden">
+            class="absolute top-full right-0 mt-2 w-60 bg-slate-800 border border-slate-700/80 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 origin-top-right z-50 overflow-hidden">
             <div class="p-1 flex flex-col gap-0.5">
               <button @click="exportToPNG()"
                 class="flex items-center gap-2.5 px-3 py-2.5 w-full text-left rounded-lg text-sm font-medium text-slate-300 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors group/item">

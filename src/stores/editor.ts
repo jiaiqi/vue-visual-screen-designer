@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { markRaw } from 'vue'
-import type { Graph } from '@antv/x6'
+import type { Graph, Scroller } from '@antv/x6'
 import type { ThemeMode } from '@/types/editor'
 import { transformNodePosition } from '@/utils/coordinate-transform'
 import { getItem, setItem } from '@/utils/storage'
@@ -95,7 +95,7 @@ export const useEditorStore = defineStore('editor', {
       hasSeenGuide: false,
       isToolbarCollapsed: false,
       isPropertyPanelCollapsed: false,
-      showMinimap: true,
+      showMinimap: false,
       recentShapes: [],
       favoriteShapes: [],
       canvasConfig: {
@@ -322,6 +322,14 @@ export const useEditorStore = defineStore('editor', {
 
           node.setPosition(newPos.x, newPos.y)
         })
+
+        // 重新初始化画布模式（滚动条、拖拽等）
+        // 需要重新配置 Scroller 和 panning
+        const isCenterOrigin = system === 'center'
+
+        // X6 不支持动态修改 scroller 配置，需要重新初始化 Graph
+        // 这里暂时不做处理，用户需要刷新页面才能看到效果
+        console.log('坐标系已切换为:', system, isCenterOrigin ? '(中心原点)' : '(左上角原点)')
       }
     },
     switchUnit(unit: 'px' | 'percent') {

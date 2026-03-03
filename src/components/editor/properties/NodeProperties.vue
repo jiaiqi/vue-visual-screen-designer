@@ -58,7 +58,13 @@ const defaultFormData = {
   rx: 4,
   fontSize: 14,
   textColor: '#e2e8f0',
-  edgeShape: 'edge',
+  edgeShape: 'fluid-pipe',
+  connector: 'rounded',
+  router: 'orth',
+  strokeWidth: 4,
+  lineStyle: 'solid',
+  targetMarker: 'classic',
+  connectorRadius: 10,
   iconName: '',
   progressValue: 50,
   progressColor: '#3b82f6',
@@ -78,7 +84,6 @@ const defaultFormData = {
   entranceType: 'none',
   exitType: 'none',
   sourceMarker: false,
-  targetMarker: false,
   states: [] as { value: string | number, url: string, label: string }[],
   currentStatus: '' as string | number,
   isLocked: false,
@@ -100,7 +105,13 @@ const formData = ref({
   rx: 4,
   fontSize: 14,
   textColor: '#e2e8f0',
-  edgeShape: 'edge',
+  edgeShape: 'fluid-pipe',
+  connector: 'rounded',
+  router: 'orth',
+  strokeWidth: 4,
+  lineStyle: 'solid',
+  targetMarker: 'classic',
+  connectorRadius: 10,
   iconName: '',
   progressValue: 50,
   progressColor: '#3b82f6',
@@ -117,10 +128,12 @@ const formData = ref({
   animationType: 'none',
   animationDuration: 1,
   animationReverse: false,
+  animationDirection: 'normal',
+  animationDelay: 0,
+  animationIteration: '1',
   entranceType: 'none',
   exitType: 'none',
   sourceMarker: false,
-  targetMarker: false,
   states: [] as { value: string | number, url: string, label: string }[],
   currentStatus: '' as string | number,
   isLocked: false,
@@ -267,7 +280,7 @@ function syncDataFromCell(cell: Cell) {
       formData.value.flowReverse = !!data.flowReverse
       const attrs = (cell as Edge).attrs || {}
       formData.value.sourceMarker = !!attrs.line?.sourceMarker
-      formData.value.targetMarker = !!attrs.line?.targetMarker
+      formData.value.targetMarker = attrs.line?.targetMarker ? 'classic' : ''
     }
   } catch (err) {
     console.error('数据同步崩溃:', err)
@@ -990,6 +1003,79 @@ function refreshChart() {
              </n-grid>
 
              <template v-if="activeCell?.isEdge()">
+                <n-divider />
+                <div class="section-header">边样式</div>
+
+                <n-form-item label="边类型">
+                  <n-select :value="formData.edgeShape" @update:value="v => handleUpdate('edgeShape', v)"
+                    :options="[
+                      { label: '流体管道', value: 'fluid-pipe' },
+                      { label: '电力线', value: 'electric-line' },
+                      { label: '信号线', value: 'signal-line' },
+                      { label: '总线', value: 'bus-line' },
+                      { label: '虚线', value: 'dashed-line' },
+                      { label: '点线', value: 'dotted-line' },
+                      { label: '流动线', value: 'flow-line' },
+                      { label: '警告线', value: 'warning-line' },
+                      { label: '数据线', value: 'data-line' },
+                    ]"
+                  />
+                </n-form-item>
+
+                <n-form-item label="连接器">
+                  <n-select :value="formData.connector" @update:value="v => handleUpdate('connector', v)"
+                    :options="[
+                      { label: '圆角', value: 'rounded' },
+                      { label: '平滑', value: 'smooth' },
+                      { label: '直线', value: 'normal' },
+                    ]"
+                  />
+                </n-form-item>
+
+                <n-form-item label="路由器">
+                  <n-select :value="formData.router" @update:value="v => handleUpdate('router', v)"
+                    :options="[
+                      { label: '正交', value: 'orth' },
+                      { label: '曼哈顿', value: 'manhattan' },
+                      { label: '地铁', value: 'metro' },
+                      { label: '无', value: 'normal' },
+                    ]"
+                  />
+                </n-form-item>
+
+                <n-form-item label="线条宽度">
+                  <n-input-number :value="formData.strokeWidth" @update:value="v => handleUpdate('strokeWidth', v)" :min="1" :max="20" :step="1" :show-button="false" />
+                </n-form-item>
+
+                <n-form-item label="线条颜色">
+                  <n-color-picker :value="formData.stroke" @update:value="v => handleUpdate('stroke', v)" :modes="['hex']" />
+                </n-form-item>
+
+                <n-form-item label="线条样式">
+                  <n-select :value="formData.lineStyle" @update:value="v => handleUpdate('lineStyle', v)"
+                    :options="[
+                      { label: '实线', value: 'solid' },
+                      { label: '虚线', value: 'dashed' },
+                      { label: '点线', value: 'dotted' },
+                    ]"
+                  />
+                </n-form-item>
+
+                <n-form-item label="箭头标记">
+                  <n-select :value="formData.targetMarker as string" @update:value="v => handleUpdate('targetMarker', v)"
+                    :options="[
+                      { label: '无', value: '' },
+                      { label: '经典', value: 'classic' },
+                      { label: '箭头', value: 'block' },
+                      { label: '圆点', value: 'circle' },
+                    ]"
+                  />
+                </n-form-item>
+
+                <n-form-item label="圆角半径">
+                  <n-input-number :value="formData.connectorRadius" @update:value="v => handleUpdate('connectorRadius', v)" :min="0" :max="50" :step="1" :show-button="false" />
+                </n-form-item>
+
                 <n-divider />
                 <div class="section-header">流体控制</div>
                 <n-form-item label="水流速率 (秒/周期)">

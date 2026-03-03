@@ -105,10 +105,19 @@ const formData = ref({
   animationIteration: 'infinite',
   flowSpeed: 1,
   flowReverse: false,
+  // 边样式属性
+  edgeShape: 'fluid-pipe',
+  connector: 'rounded',
+  router: 'orth',
+  strokeWidth: 4,
+  lineStyle: 'solid',
+  targetMarker: 'classic',
+  connectorRadius: 10,
 })
 
 const defaultFormData = { ...formData.value }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function handleUpdate(key: string, value: unknown) {
   if (!activeCell.value) return
   const cell = activeCell.value
@@ -165,6 +174,7 @@ function handleUpdate(key: string, value: unknown) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function handleUpdateAnimation(key: string, value: unknown) {
   if (!activeCell.value) return
   const cell = activeCell.value
@@ -207,6 +217,62 @@ function handleUpdateAnimation(key: string, value: unknown) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function handleUpdateEdgeStyle(key: string, value: unknown) {
+  if (!activeCell.value || !activeCell.value.isEdge()) return
+  const cell = activeCell.value
+
+  // @ts-expect-error dynamic key assignment
+  formData.value[key] = value
+
+  // 更新边的样式
+  const edgeShape = formData.value.edgeShape
+  const connector = formData.value.connector
+  const router = formData.value.router
+  const strokeWidth = formData.value.strokeWidth
+  const stroke = formData.value.stroke
+  const lineStyle = formData.value.lineStyle
+  const targetMarker = formData.value.targetMarker
+  const connectorRadius = formData.value.connectorRadius
+
+  // 设置边的类型
+  cell.setAttrByPath('shape', edgeShape)
+
+  // 设置连接器
+  cell.setConnector(connector, {
+    radius: connectorRadius,
+  })
+
+  // 设置路由器
+  if (router && router !== 'normal') {
+    cell.setRouter({ name: router })
+  }
+
+  // 设置线条样式
+  const strokeDasharray = lineStyle === 'dashed' ? '8, 8' :
+                        lineStyle === 'dotted' ? '2, 4' : '0'
+
+  cell.attr('line/stroke', stroke)
+  cell.attr('line/strokeWidth', strokeWidth)
+  cell.attr('line/strokeDasharray', strokeDasharray)
+  if (targetMarker) {
+    cell.attr('line/targetMarker', { name: targetMarker as string, size: 8 })
+  } else {
+    cell.attr('line/targetMarker', null)
+  }
+
+  // 根据边类型应用动画
+  if (edgeShape === 'flow-line') {
+    cell.setAttrByPath('line/style', 'animation: dash-flow-long 30s linear infinite')
+  } else if (edgeShape === 'fluid-pipe') {
+    cell.setAttrByPath('fluid/style', 'animation: dash-flow 1s linear infinite')
+  } else {
+    cell.setAttrByPath('line/style', 'animation: none')
+    cell.setAttrByPath('fluid/style', 'animation: none')
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function updateChartOption(path: string, value: unknown) {
   if (!activeCell.value || activeCell.value.shape !== 'chart-node') return
 
@@ -228,6 +294,7 @@ function updateChartOption(path: string, value: unknown) {
   activeCell.value.setData({ chartOption: newOption }, { overwrite: false })
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function refreshChart() {
   if (!activeCell.value || activeCell.value.shape !== 'chart-node') return
 
@@ -237,6 +304,7 @@ function refreshChart() {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function handleResetToDefault() {
   if (!activeCell.value) return
 

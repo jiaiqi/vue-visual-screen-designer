@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Copy, Trash2, ArrowUpFromLine, ArrowDownToLine, MousePointerSquareDashed, ClipboardPaste, Layers, Unlink, Group, Ungroup, Lock, Unlock } from 'lucide-vue-next'
+import { Copy, Trash2, ArrowUpFromLine, ArrowDownToLine, ArrowUp, ArrowDown, MousePointerSquareDashed, ClipboardPaste, Layers, Unlink, Group, Ungroup, Lock, Unlock } from 'lucide-vue-next'
 import { useEditorStore } from '@/stores/editor'
 import { Node } from '@antv/x6'
 // @ts-expect-error: polybooljs 没有提供 typescript types
@@ -272,6 +272,16 @@ const action = (type: string) => {
         targetNode.value.toBack()
       }
       break
+    case 'forward':
+      if (contextType.value === 'node' && targetNode.value) {
+        targetNode.value.zIndex(targetNode.value.zIndex() + 1)
+      }
+      break
+    case 'backward':
+      if (contextType.value === 'node' && targetNode.value) {
+        targetNode.value.zIndex(targetNode.value.zIndex() - 1)
+      }
+      break
     case 'selectAll':
       graph.select(graph.getCells())
       break
@@ -491,6 +501,14 @@ defineExpose({
         <button v-if="!isMultiSelection && !isGroupNode" @click="action('toFront')"
           class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition-colors">
           <ArrowUpFromLine class="w-3.5 h-3.5" /> 置于顶层
+        </button>
+        <button v-if="!isMultiSelection && !isGroupNode" @click="action('forward')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition-colors">
+          <ArrowUp class="w-3.5 h-3.5" /> 上移一层
+        </button>
+        <button v-if="!isMultiSelection && !isGroupNode" @click="action('backward')"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition-colors">
+          <ArrowDown class="w-3.5 h-3.5" /> 下移一层
         </button>
         <button v-if="!isMultiSelection && !isGroupNode" @click="action('toBack')"
           class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition-colors">

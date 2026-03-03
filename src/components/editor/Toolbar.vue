@@ -3,7 +3,7 @@
 import { ref, watch, computed } from 'vue'
 import { Dnd } from '@antv/x6'
 import { useEditorStore } from '@/stores/editor'
-import { Type, ArrowRight, MoveHorizontal, Image as ImageIcon, Square, Circle, Triangle, Minus, Database, Server, Cpu, Cloud, Monitor, HardDrive, Wifi, Activity, Terminal, Shield, AlignLeft, Hash, Search, ChevronDown, PanelLeftClose, PanelLeft, Star, BarChart, LineChart, PieChart, TrendingUp, ScatterChart, Gauge, Map, GitBranch, Filter, Grid3X3, LayoutDashboard, Sun, Workflow, Radar } from 'lucide-vue-next'
+import { Type, ArrowRight, MoveHorizontal, Image as ImageIcon, Square, Circle, Triangle, Minus, Database, Server, Cpu, Cloud, Monitor, HardDrive, Wifi, Activity, Terminal, Shield, AlignLeft, Hash, Search, ChevronDown, PanelLeftClose, PanelLeft, Star, BarChart, LineChart, PieChart, TrendingUp, ScatterChart, Gauge, Map, GitBranch, Filter, Grid3X3, LayoutDashboard, Sun, Workflow, Radar, Columns, AlignVerticalJustifyCenter, AlignHorizontalJustifyCenter, ArrowDownToLine, Box, MinusSquare, GripVertical, Timer, ListOrdered, Table, Calendar, Sparkles } from 'lucide-vue-next'
 import { chartCategories, type ChartConfig } from '@/data/chartConfigs'
 
 const dndContainer = ref<HTMLElement>()
@@ -39,6 +39,31 @@ const shapeTypes = [
   { type: 'digital-node', label: '数字看板', icon: Hash, w: 160, h: 48, stroke: '#10b981', rx: 0 },
   { type: 'arrow_single', label: '单向箭头', icon: ArrowRight, w: 120, h: 40, stroke: '#10b981', rx: 0 },
   { type: 'arrow_double', label: '双向箭头', icon: MoveHorizontal, w: 140, h: 40, stroke: '#10b981', rx: 0 },
+  // 大屏卡片容器
+  { type: 'dashboard-container', label: '大屏卡片', icon: LayoutDashboard, w: 400, h: 300, stroke: '#0ea5e9', rx: 6 },
+  // 边框组件
+  { type: 'border-tech', label: '边框-科技', icon: Box, w: 300, h: 200, stroke: '#00f0ff', rx: 4 },
+  { type: 'border-glow', label: '边框-发光', icon: Sparkles, w: 300, h: 200, stroke: '#ff00ff', rx: 8 },
+  { type: 'border-gradient', label: '边框-渐变', icon: GripVertical, w: 300, h: 200, stroke: '#ff6b6b', rx: 6 },
+  // 分割线
+  { type: 'divider-h', label: '分割线-水平', icon: AlignHorizontalJustifyCenter, w: 400, h: 2, stroke: '#00f0ff', rx: 0 },
+  { type: 'divider-v', label: '分割线-垂直', icon: AlignVerticalJustifyCenter, w: 2, h: 200, stroke: '#00f0ff', rx: 0 },
+  // 装饰元素
+  { type: 'decoration-corner', label: '装饰-角标', icon: MinusSquare, w: 60, h: 60, stroke: '#00f0ff', rx: 0 },
+  { type: 'decoration-line', label: '装饰-动线', icon: ArrowDownToLine, w: 200, h: 4, stroke: '#00f0ff', rx: 0 },
+  // 按钮
+  { type: 'button-primary', label: '按钮-主要', icon: Box, w: 120, h: 40, stroke: '#0066ff', rx: 6 },
+  { type: 'button-default', label: '按钮-默认', icon: Box, w: 120, h: 40, stroke: '#64748b', rx: 6 },
+  // 标签
+  { type: 'tag-status', label: '标签-状态', icon: Filter, w: 80, h: 28, stroke: '#10b981', rx: 14 },
+  // 表格
+  { type: 'table-basic', label: '表格-基础', icon: Table, w: 400, h: 200, stroke: '#3b82f6', rx: 0 },
+  // 列表-排名
+  { type: 'list-rank', label: '列表-排名', icon: ListOrdered, w: 300, h: 200, stroke: '#8b5cf6', rx: 0 },
+  // 时间轴
+  { type: 'timeline-h', label: '时间轴-横向', icon: Calendar, w: 500, h: 80, stroke: '#06b6d4', rx: 0 },
+  { type: 'timeline-v', label: '时间轴-纵向', icon: Calendar, w: 100, h: 300, stroke: '#06b6d4', rx: 0 },
+  { type: 'countdown', label: '倒计时', icon: Timer, w: 200, h: 80, stroke: '#f59e0b', rx: 0 },
 ]
 
 const iconNodes = [
@@ -150,9 +175,6 @@ const filteredIconNodes = computed(() => {
     matchPinyin(item.label, query)
   )
 })
-
-const allShapes = computed(() => [...shapeTypes, ...iconNodes])
-// })
 
 const getItemKey = (item: typeof shapeTypes[0] | typeof iconNodes[0]): string => {
   const iconName = (item as typeof iconNodes[0]).iconName
@@ -351,6 +373,175 @@ const startDrag = (e: MouseEvent, item: typeof shapeTypes[0]) => {
           stroke: item.stroke,
           strokeWidth: 0,
           rx: item.h / 2, ry: item.h / 2
+        }
+      }
+    })
+  } else if (['border-tech', 'border-glow', 'border-gradient'].includes(item.type)) {
+    // 边框组件
+    node = graph.createNode({
+      shape: item.type,
+      width: item.w,
+      height: item.h,
+      data: {
+        title: '标题',
+      },
+      attrs: {
+        headerText: {
+          text: '标题',
+        },
+      },
+    })
+  } else if (item.type === 'divider-h' || item.type === 'divider-v') {
+    // 分割线组件
+    node = graph.createNode({
+      shape: item.type,
+      width: item.w,
+      height: item.h,
+    })
+  } else if (item.type === 'decoration-corner') {
+    // 装饰-角标
+    node = graph.createNode({
+      shape: item.type,
+      width: item.w,
+      height: item.h,
+    })
+  } else if (item.type === 'decoration-line') {
+    // 装饰-动线
+    node = graph.createNode({
+      shape: item.type,
+      width: item.w,
+      height: item.h,
+    })
+  } else if (item.type === 'button-primary' || item.type === 'button-default') {
+    // 按钮组件
+    node = graph.createNode({
+      shape: item.type,
+      width: item.w,
+      height: item.h,
+      attrs: {
+        text: {
+          text: '按钮',
+        },
+      },
+    })
+  } else if (item.type === 'tag-status') {
+    // 标签组件
+    node = graph.createNode({
+      shape: item.type,
+      width: item.w,
+      height: item.h,
+      attrs: {
+        text: {
+          text: '状态',
+        },
+      },
+    })
+  } else if (item.type === 'table-basic') {
+    // 表格组件
+    node = graph.createNode({
+      shape: 'table-basic',
+      width: item.w,
+      height: item.h,
+      ports: commonPorts,
+      data: {
+        tableTitle: '表格标题',
+        headerData: ['列1', '列2', '列3'],
+        bodyData: [
+          ['数据1-1', '数据1-2', '数据1-3'],
+          ['数据2-1', '数据2-2', '数据2-3'],
+          ['数据3-1', '数据3-2', '数据3-3'],
+        ],
+        headerBgColor: '#1e3a5f',
+        headerTextColor: '#60a5fa',
+        rowBgColor: '#0f172a',
+        rowAltBgColor: '#1e293b',
+        rowTextColor: '#94a3b8',
+        borderColor: '#334155',
+      },
+      attrs: {
+        body: {
+          fill: '#0f172a',
+          stroke: item.stroke,
+          strokeWidth: 1,
+        }
+      }
+    })
+  } else if (item.type === 'list-rank') {
+    // 列表-排名组件
+    node = graph.createNode({
+      shape: 'list-rank',
+      width: item.w,
+      height: item.h,
+      ports: commonPorts,
+      data: {
+        listTitle: '排名列表',
+        listData: [
+          { rank: 1, name: '项目 A', value: 100 },
+          { rank: 2, name: '项目 B', value: 95 },
+          { rank: 3, name: '项目 C', value: 88 },
+          { rank: 4, name: '项目 D', value: 75 },
+          { rank: 5, name: '项目 E', value: 60 },
+        ],
+        headerBgColor: '#1e3a5f',
+        headerTextColor: '#60a5fa',
+        rowBgColor: '#0f172a',
+        rowAltBgColor: '#1e293b',
+        rowTextColor: '#94a3b8',
+        borderColor: '#334155',
+      },
+      attrs: {
+        body: {
+          fill: '#0f172a',
+          stroke: item.stroke,
+          strokeWidth: 1,
+        }
+      }
+    })
+  } else if (item.type === 'timeline-h' || item.type === 'timeline-v') {
+    // 时间轴组件
+    const isHorizontal = item.type === 'timeline-h'
+    node = graph.createNode({
+      shape: item.type,
+      width: item.w,
+      height: item.h,
+      ports: commonPorts,
+      data: {
+        timelineType: isHorizontal ? 'horizontal' : 'vertical',
+        timelineNodes: [
+          { id: '1', label: '阶段一', time: '09:00' },
+          { id: '2', label: '阶段二', time: '10:00' },
+          { id: '3', label: '阶段三', time: '11:00' },
+        ],
+        lineColor: item.stroke,
+        bgColor: '#1e293b',
+        nodeColor: item.stroke,
+      },
+      attrs: {
+        body: {
+          fill: '#1e293b',
+          stroke: item.stroke,
+          strokeWidth: 1,
+        }
+      }
+    })
+  } else if (item.type === 'countdown') {
+    // 倒计时组件
+    node = graph.createNode({
+      shape: 'countdown',
+      width: item.w,
+      height: item.h,
+      ports: commonPorts,
+      data: {
+        countdownValue: 60,
+        countdownColor: item.stroke,
+        bgColor: '#1e293b',
+        isRunning: true,
+      },
+      attrs: {
+        body: {
+          fill: '#1e293b',
+          stroke: item.stroke,
+          strokeWidth: 1,
         }
       }
     })
