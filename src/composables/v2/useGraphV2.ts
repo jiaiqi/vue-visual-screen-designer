@@ -19,21 +19,27 @@ import {
   registerDashboardNodes,
   registerDecorationNodes,
   registerVueNodes,
-  registerEdges
+  registerEdges,
+  registerFlowNodes
 } from '@/plugins/x6-nodes'
 
 void register
 
-// 注册标志（防止热更新重复注册）
-let pluginsRegistered = false
+// 使用全局标志，防止 v1/v2 路由切换时跨模块重复注册
 
 function ensureRegistered() {
-  if (pluginsRegistered) return
-  pluginsRegistered = true
-  registerDashboardNodes()
-  registerDecorationNodes()
-  registerVueNodes()
-  registerEdges()
+  try {
+    registerDashboardNodes()
+    registerDecorationNodes()
+    registerVueNodes()
+    registerEdges()
+    registerFlowNodes()
+  } catch (e) {
+    // 忽略 "already registered" 类型的重复注册错误
+    if (!(String(e).includes('already registered'))) {
+      console.error('[useGraphV2] 节点/边注册失败:', e)
+    }
+  }
 }
 
 /**
@@ -75,17 +81,13 @@ export function useGraphV2() {
           thickness: 1,
         },
       },
-      // 平移：按住空格或 Alt 拖拽
+      // 平移：禁用内部平移，由外部 CSS/Scroll 处理
       panning: {
-        enabled: true,
-        modifiers: ['space', 'alt'],
+        enabled: false,
       },
+      // 缩放：禁用内部缩放，由外部 CSS 处理
       mousewheel: {
-        enabled: true,
-        zoomAtMousePosition: true,
-        modifiers: ['ctrl', 'meta'],
-        minScale: 0.1,
-        maxScale: 5,
+        enabled: false,
       },
       connecting: {
         snap: { radius: 20 },

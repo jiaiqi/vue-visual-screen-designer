@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useEditorStoreV2 } from '@/stores/v2/editorStoreV2'
 import { useCanvasStoreV2 } from '@/stores/v2/canvasStoreV2'
 import { useExport } from '@/composables/useExport'
 import {
   LayoutGrid, Eye, Undo2, Redo2, Download, Trash2,
-  ZoomIn, ZoomOut, Maximize, Sun, Moon, Code,
-  ChevronDown, FileImage, FileCode2, Save
+  ZoomIn, ZoomOut, Maximize, Code,
+  ChevronDown, FileImage, FileCode2, Save, Upload,
+  Moon, Sun, PanelLeft, PanelRight,
 } from 'lucide-vue-next'
 
 const emit = defineEmits<{
@@ -19,398 +20,439 @@ const editorStore = useEditorStoreV2()
 const canvasStore = useCanvasStoreV2()
 const { exportToPNG, exportToSVG, exportToJSON, importFromJSON } = useExport()
 
-const zoomRatio = ref(100)
+const zoomRatio = computed(() => Math.round(canvasStore.viewport.zoom * 100))
 const isDark = ref(true)
 
-function updateZoom() {
-  const g = editorStore.graph
-  if (g) zoomRatio.value = Math.round(g.zoom() * 100)
-}
-
 function handleZoom(delta: number) {
-  editorStore.graph?.zoom(delta)
-  updateZoom()
+  canvasStore.setZoom(canvasStore.viewport.zoom + delta)
 }
 
 function handleZoomFit() {
-  const g = editorStore.graph
-  if (g) {
-    g.zoomToFit({ padding: 40, maxScale: 1 })
-    g.centerContent()
-    updateZoom()
-  }
-}
-
-function toggleTheme() {
-  isDark.value = !isDark.value
-  document.documentElement.setAttribute('data-theme', isDark.value ? 'dark' : 'light')
+  // 外部缩放模式下的 ZoomFit 暂设为 100%
+  canvasStore.setZoom(1)
 }
 
 function handlePreview() {
   const g = editorStore.graph
-  if (g) {
-    localStorage.setItem('v2_preview_graph_data', JSON.stringify(g.toJSON()))
-  }
+  if (g) localStorage.setItem('v2_preview_graph_data', JSON.stringify(g.toJSON()))
   router.push('/v2/preview')
 }
 
 function handleClearCanvas() {
-  if (confirm('确定清空整个画布吗？该操作不可逆转！')) {
+  if (confirm('确定清空整个画布？此操作不可撤销！')) {
     editorStore.clearCanvas()
   }
 }
 
 const fileInput = ref<HTMLInputElement>()
-function triggerImport() {
-  fileInput.value?.click()
-}
-function handleImport(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
+function handleImport(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
   if (file) importFromJSON(file)
 }
 
 onMounted(() => {
-  setTimeout(() => {
-    const g = editorStore.graph
-    if (g) {
-      updateZoom()
-      g.on('scale', updateZoom)
-    }
-  }, 100)
+  // 逻辑已迁移到 computed
+})
+
+watch(() => editorStore.graph, () => {
+  // 逻辑已集成到全局 store
 })
 
 const canUndo = computed(() => editorStore.canUndo)
 const canRedo = computed(() => editorStore.canRedo)
+const projectName = computed(() => canvasStore.config.name)
 </script>
 
 <template>
   <header class="header-v2">
-    <!-- Logo 区域 -->
-    <div class="header-logo">
-      <div class="logo-icon">
-        <LayoutGrid class="w-5 h-5 text-slate-950" />
+    <!-- 左区：Logo + 项目名 -->
+    <div class="hv2-left">
+      <div class="hv2-logo">
+        <LayoutGrid class="w-4 h-4 text-white" />
       </div>
-      <div class="logo-text">
-        <span class="project-name">{{ canvasStore.config.name }}</span>
-        <span class="version-badge">v2</span>
+      <div class="hv2-project">
+        <span class="hv2-name">{{ projectName }}</span>
+        <span class="hv2-badge">v2</span>
+      </div>
+
+      <!-- 面板折叠快捷按钮 -->
+      <div class="hv2-panel-toggle">
+        <button class="hv2-toggle-btn" :title="editorStore.isToolbarCollapsed ? '展开图元库' : '折叠图元库'"
+          @click="editorStore.toggleToolbar()">
+          <PanelLeft class="w-3.5 h-3.5" />
+        </button>
+        <button class="hv2-toggle-btn" :title="editorStore.isPropertyPanelCollapsed ? '展开属性面板' : '折叠属性面板'"
+          @click="editorStore.togglePropertyPanel()">
+          <PanelRight class="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
 
-    <!-- 主操作区 -->
-    <div class="header-actions">
+    <!-- 中区：主操作工具栏 -->
+    <div class="hv2-center">
       <!-- 撤销/重做 -->
-      <div class="action-group">
-        <button class="icon-btn" :disabled="!canUndo" title="撤销 (Ctrl+Z)" @click="editorStore.undo()">
-          <Undo2 class="w-4 h-4" />
+      <div class="hv2-group">
+        <button class="hv2-icon-btn" :disabled="!canUndo" title="撤销 (Ctrl+Z)" @click="editorStore.undo()">
+          <Undo2 class="w-3.5 h-3.5" />
         </button>
-        <button class="icon-btn" :disabled="!canRedo" title="重做 (Ctrl+Y)" @click="editorStore.redo()">
-          <Redo2 class="w-4 h-4" />
+        <button class="hv2-icon-btn" :disabled="!canRedo" title="重做 (Ctrl+Y)" @click="editorStore.redo()">
+          <Redo2 class="w-3.5 h-3.5" />
         </button>
       </div>
 
-      <div class="divider" />
+      <div class="hv2-sep" />
 
       <!-- 缩放控制 -->
-      <div class="zoom-control">
-        <button class="zoom-btn" @click="handleZoom(-0.1)" title="缩小">
+      <div class="hv2-zoom">
+        <button class="hv2-zoom-btn" @click="handleZoom(-0.1)" title="缩小">
           <ZoomOut class="w-3.5 h-3.5" />
         </button>
-        <span class="zoom-ratio">{{ zoomRatio }}%</span>
-        <button class="zoom-btn" @click="handleZoom(0.1)" title="放大">
+        <span class="hv2-zoom-val">{{ zoomRatio }}%</span>
+        <button class="hv2-zoom-btn" @click="handleZoom(0.1)" title="放大">
           <ZoomIn class="w-3.5 h-3.5" />
         </button>
-        <div class="zoom-divider" />
-        <button class="zoom-btn" @click="handleZoomFit" title="适应视图">
+        <div class="hv2-zoom-sep" />
+        <button class="hv2-zoom-btn" @click="handleZoomFit" title="适应视图">
           <Maximize class="w-3.5 h-3.5" />
         </button>
       </div>
 
-      <div class="divider" />
+      <div class="hv2-sep" />
 
-      <!-- 清空画布 -->
-      <button class="action-btn danger" @click="handleClearCanvas" title="清空画布">
-        <Trash2 class="w-4 h-4" />
+      <!-- 清空 -->
+      <button class="hv2-action danger" @click="handleClearCanvas" title="清空画布">
+        <Trash2 class="w-3.5 h-3.5" />
         <span>清空</span>
       </button>
     </div>
 
-    <!-- 右侧功能区 -->
-    <div class="header-right">
+    <!-- 右区：操作 + 导出 + 预览 -->
+    <div class="hv2-right">
       <!-- 主题切换 -->
-      <button class="icon-btn" @click="toggleTheme" :title="isDark ? '切换到亮色' : '切换到暗色'">
-        <Sun v-if="isDark" class="w-4 h-4" />
-        <Moon v-else class="w-4 h-4" />
+      <button class="hv2-icon-btn" @click="isDark = !isDark" :title="isDark ? '亮色主题' : '暗色主题'">
+        <Sun v-if="isDark" class="w-3.5 h-3.5" />
+        <Moon v-else class="w-3.5 h-3.5" />
       </button>
 
       <!-- JSON 编辑器 -->
-      <button class="icon-btn" @click="emit('open-json-editor')" title="JSON 源码">
-        <Code class="w-4 h-4" />
+      <button class="hv2-icon-btn" @click="emit('open-json-editor')" title="JSON 数据编辑">
+        <Code class="w-3.5 h-3.5" />
       </button>
 
-      <div class="divider" />
+      <div class="hv2-sep" />
 
       <!-- 导出下拉 -->
-      <div class="dropdown-group">
-        <button class="action-btn success" title="导出">
-          <Download class="w-4 h-4" />
+      <div class="hv2-dropdown">
+        <button class="hv2-action success">
+          <Download class="w-3.5 h-3.5" />
           <span>导出</span>
-          <ChevronDown class="w-3 h-3 opacity-60" />
+          <ChevronDown class="w-3 h-3 opacity-50" />
         </button>
-        <div class="dropdown-menu">
-          <button class="dropdown-item" @click="exportToPNG()">
-            <FileImage class="w-4 h-4 text-emerald-400" />
+        <div class="hv2-dropdown-menu">
+          <button class="hv2-dropdown-item" @click="exportToPNG()">
+            <FileImage class="w-3.5 h-3.5 text-emerald-400" style="flex-shrink:0" />
             <div>
-              <div>导出 PNG</div>
-              <div class="item-desc">位图（含透明通道）</div>
+              <div class="item-text">导出 PNG</div>
+              <div class="item-sub">高质量位图</div>
             </div>
           </button>
-          <button class="dropdown-item" @click="exportToSVG()">
-            <FileCode2 class="w-4 h-4 text-sky-400" />
+          <button class="hv2-dropdown-item" @click="exportToSVG()">
+            <FileCode2 class="w-3.5 h-3.5 text-sky-400" style="flex-shrink:0" />
             <div>
-              <div>导出 SVG</div>
-              <div class="item-desc">矢量图（无限放大）</div>
+              <div class="item-text">导出 SVG</div>
+              <div class="item-sub">无损矢量图</div>
             </div>
           </button>
-          <div class="dropdown-divider" />
-          <button class="dropdown-item" @click="exportToJSON()">
-            <Save class="w-4 h-4 text-indigo-400" />
+          <div class="hv2-dropdown-divider" />
+          <button class="hv2-dropdown-item" @click="exportToJSON()">
+            <Save class="w-3.5 h-3.5 text-indigo-400" style="flex-shrink:0" />
             <div>
-              <div>保存工程文件</div>
-              <div class="item-desc">JSON 格式，可再次导入</div>
+              <div class="item-text">保存工程文件</div>
+              <div class="item-sub">JSON 格式</div>
             </div>
           </button>
-          <button class="dropdown-item" @click="triggerImport()">
-            <Save class="w-4 h-4 text-amber-400" />
+          <button class="hv2-dropdown-item" @click="fileInput?.click()">
+            <Upload class="w-3.5 h-3.5 text-amber-400" style="flex-shrink:0" />
             <div>
-              <div>载入工程文件</div>
-              <div class="item-desc">从 JSON 文件恢复</div>
+              <div class="item-text">载入工程文件</div>
+              <div class="item-sub">从 JSON 文件恢复</div>
             </div>
           </button>
         </div>
       </div>
 
       <!-- 预览按钮 -->
-      <button class="action-btn primary" @click="handlePreview" title="全屏预览">
-        <Eye class="w-4 h-4" />
+      <button class="hv2-action primary" @click="handlePreview">
+        <Eye class="w-3.5 h-3.5" />
         <span>预览</span>
       </button>
     </div>
 
-    <!-- 隐藏的文件输入 -->
     <input ref="fileInput" type="file" accept=".json" style="display:none" @change="handleImport" />
   </header>
 </template>
 
 <style scoped>
 .header-v2 {
-  height: 52px;
+  height: 50px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  background: rgba(2, 6, 23, 0.95);
-  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
-  backdrop-filter: blur(12px);
+  padding: 0 14px;
+  gap: 8px;
+  background: rgba(2, 6, 23, 0.97);
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  backdrop-filter: blur(16px);
   flex-shrink: 0;
-  gap: 12px;
+  position: relative;
+  z-index: 50;
 }
 
-.header-logo {
+/* 左区 */
+.hv2-left {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  min-width: 0;
 }
 
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+.hv2-logo {
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 16px rgba(14, 165, 233, 0.3);
+  box-shadow: 0 0 16px rgba(14, 165, 233, 0.25);
+  flex-shrink: 0;
 }
 
-.logo-text {
+.hv2-project {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.project-name {
-  font-size: 14px;
+.hv2-name {
+  font-size: 13px;
   font-weight: 700;
   color: #e2e8f0;
-  max-width: 120px;
+  max-width: 110px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.version-badge {
-  font-size: 10px;
+.hv2-badge {
+  font-size: 9px;
   font-weight: 700;
   color: #6366f1;
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.28);
   border-radius: 4px;
   padding: 1px 5px;
+  letter-spacing: 0.04em;
 }
 
-.header-actions, .header-right {
+.hv2-panel-toggle {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
+  margin-left: 4px;
 }
 
-.action-group {
+.hv2-toggle-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  border: 1px solid rgba(51, 65, 85, 0.4);
+  background: rgba(30, 41, 59, 0.3);
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.hv2-toggle-btn:hover {
+  color: #94a3b8;
+  border-color: rgba(56, 189, 248, 0.2);
+  background: rgba(56, 189, 248, 0.05);
+}
+
+/* 中区 */
+.hv2-center {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  justify-content: center;
+}
+
+.hv2-group {
   display: flex;
   align-items: center;
   gap: 2px;
 }
 
-.divider {
+.hv2-sep {
   width: 1px;
-  height: 20px;
-  background: rgba(51, 65, 85, 0.6);
+  height: 18px;
+  background: rgba(51, 65, 85, 0.5);
   margin: 0 4px;
 }
 
-.icon-btn {
-  width: 32px;
-  height: 32px;
+/* 缩放控制 */
+.hv2-zoom {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 6px;
+  gap: 3px;
+  background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(51, 65, 85, 0.5);
-  background: rgba(30, 41, 59, 0.5);
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.icon-btn:hover {
-  background: rgba(51, 65, 85, 0.8);
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.3);
-}
-
-.icon-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.action-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 12px;
-  height: 32px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  border: 1px solid transparent;
-}
-
-.action-btn.primary {
-  background: rgba(14, 165, 233, 0.15);
-  color: #38bdf8;
-  border-color: rgba(14, 165, 233, 0.3);
-}
-.action-btn.primary:hover {
-  background: #0ea5e9;
-  color: #020617;
-}
-
-.action-btn.success {
-  background: rgba(34, 197, 94, 0.1);
-  color: #4ade80;
-  border-color: rgba(34, 197, 94, 0.25);
-}
-.action-btn.success:hover {
-  background: #22c55e;
-  color: #020617;
-}
-
-.action-btn.danger {
-  background: rgba(239, 68, 68, 0.1);
-  color: #f87171;
-  border-color: rgba(239, 68, 68, 0.25);
-}
-.action-btn.danger:hover {
-  background: rgba(239, 68, 68, 0.25);
-}
-
-.zoom-control {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(51, 65, 85, 0.6);
-  border-radius: 8px;
+  border-radius: 7px;
   padding: 3px 6px;
 }
 
-.zoom-btn {
+.hv2-zoom-btn {
   width: 22px;
   height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 4px;
+  border: none;
+  background: transparent;
   color: #64748b;
   cursor: pointer;
-  background: transparent;
-  border: none;
   transition: all 0.15s;
 }
-.zoom-btn:hover {
+
+.hv2-zoom-btn:hover {
   color: #38bdf8;
   background: rgba(56, 189, 248, 0.1);
 }
 
-.zoom-ratio {
+.hv2-zoom-val {
   font-size: 11px;
   font-weight: 700;
   font-family: monospace;
   color: #94a3b8;
-  min-width: 38px;
+  min-width: 36px;
   text-align: center;
 }
 
-.zoom-divider {
+.hv2-zoom-sep {
   width: 1px;
   height: 14px;
-  background: rgba(51, 65, 85, 0.6);
+  background: rgba(51, 65, 85, 0.5);
   margin: 0 2px;
 }
 
+/* 图标按钮 */
+.hv2-icon-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid rgba(51, 65, 85, 0.4);
+  background: rgba(30, 41, 59, 0.3);
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.hv2-icon-btn:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: #94a3b8;
+  border-color: rgba(51, 65, 85, 0.6);
+}
+
+.hv2-icon-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* 右区 */
+.hv2-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* 操作按钮 */
+.hv2-action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 12px;
+  height: 30px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.hv2-action.primary {
+  background: rgba(14, 165, 233, 0.12);
+  color: #38bdf8;
+  border-color: rgba(14, 165, 233, 0.25);
+}
+
+.hv2-action.primary:hover {
+  background: #0ea5e9;
+  color: #020617;
+}
+
+.hv2-action.success {
+  background: rgba(34, 197, 94, 0.08);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.hv2-action.success:hover {
+  background: #22c55e;
+  color: #020617;
+}
+
+.hv2-action.danger {
+  background: rgba(239, 68, 68, 0.08);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.hv2-action.danger:hover {
+  background: rgba(239, 68, 68, 0.18);
+}
+
 /* 下拉菜单 */
-.dropdown-group {
+.hv2-dropdown {
   position: relative;
 }
 
-.dropdown-group:hover .dropdown-menu {
+.hv2-dropdown:hover .hv2-dropdown-menu {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
 }
 
-.dropdown-menu {
+.hv2-dropdown-menu {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 220px;
-  background: #1e293b;
-  border: 1px solid rgba(51, 65, 85, 0.8);
+  width: 200px;
+  background: #0f172a;
+  border: 1px solid rgba(51, 65, 85, 0.7);
   border-radius: 12px;
   padding: 6px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03);
   opacity: 0;
   visibility: hidden;
   transform: translateY(-6px);
@@ -418,35 +460,41 @@ const canRedo = computed(() => editorStore.canRedo)
   z-index: 1000;
 }
 
-.dropdown-item {
+.hv2-dropdown-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
-  border-radius: 8px;
+  padding: 8px 10px;
+  border-radius: 7px;
   width: 100%;
   text-align: left;
-  font-size: 13px;
+  font-size: 12px;
   color: #94a3b8;
   cursor: pointer;
   background: transparent;
   border: none;
-  transition: all 0.15s;
+  transition: all 0.12s;
 }
-.dropdown-item:hover {
-  background: rgba(51, 65, 85, 0.5);
+
+.hv2-dropdown-item:hover {
+  background: rgba(51, 65, 85, 0.4);
   color: #e2e8f0;
 }
 
-.item-desc {
-  font-size: 10px;
-  color: #475569;
-  margin-top: 2px;
+.item-text {
+  font-weight: 600;
+  font-size: 12px;
 }
 
-.dropdown-divider {
+.item-sub {
+  font-size: 10px;
+  color: #475569;
+  margin-top: 1px;
+}
+
+.hv2-dropdown-divider {
   height: 1px;
-  background: rgba(51, 65, 85, 0.5);
+  background: rgba(51, 65, 85, 0.4);
   margin: 4px 0;
 }
 </style>

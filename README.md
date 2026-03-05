@@ -1,4 +1,4 @@
-# vue-fabric-editor
+# vue-visual-screen-designer
 
 This template should help get you started developing with Vue 3 in Vite.
 

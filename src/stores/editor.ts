@@ -51,9 +51,9 @@ interface EditorState {
   unit: 'px' | 'percent'
 }
 
-const GUIDE_STORAGE_KEY = 'vue-fabric-editor-guide-completed'
-const RECENT_SHAPES_KEY = 'vue-fabric-editor-recent-shapes'
-const FAVORITE_SHAPES_KEY = 'vue-fabric-editor-favorite-shapes'
+const GUIDE_STORAGE_KEY = 'vue-visual-screen-designer-guide-completed'
+const RECENT_SHAPES_KEY = 'vue-visual-screen-designer-recent-shapes'
+const FAVORITE_SHAPES_KEY = 'vue-visual-screen-designer-favorite-shapes'
 const THEME_KEY = 'theme'
 const MAX_RECENT_SHAPES = 6
 

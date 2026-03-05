@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, markRaw } from 'vue'
 import type { Graph, Node, Edge, Cell } from '@antv/x6'
-import { useCanvasStoreV2 } from './canvasStoreV2'
 
 /**
  * 编辑器模式
@@ -73,6 +72,11 @@ export const useEditorStoreV2 = defineStore('editorV2', () => {
    * 当前工具
    */
   const currentTool = ref<string>('select')
+
+  /**
+   * 当前使用的连线类型 (默认水流管道)
+   */
+  const activeEdgeType = ref<string>('water-flow')
 
   // ==================== Getters ====================
 
@@ -333,6 +337,13 @@ export const useEditorStoreV2 = defineStore('editorV2', () => {
     selectedIds.value = []
   }
 
+  /**
+   * 设置当前使用的连线类型
+   */
+  function setActiveEdgeType(type: string) {
+    activeEdgeType.value = type
+  }
+
   return {
     // State
     graph,
@@ -344,6 +355,7 @@ export const useEditorStoreV2 = defineStore('editorV2', () => {
     isPropertyPanelCollapsed,
     isConnecting,
     currentTool,
+    activeEdgeType,
 
     // Getters
     selectedNodes,
@@ -357,6 +369,7 @@ export const useEditorStoreV2 = defineStore('editorV2', () => {
     initGraph,
     setMode,
     setTool,
+    setActiveEdgeType,
     select,
     addToSelection,
     deselect,

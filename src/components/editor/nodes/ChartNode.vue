@@ -21,11 +21,10 @@ const chartStyle = ref({
 const initChart = async () => {
   await nextTick()
   if (!chartRef.value) return
-  
+
+  // 初始化时直接设置主题，但后面通过 setOption 覆盖背景
   chartInstance.value = echarts.init(chartRef.value, 'dark')
-  if (chartOption.value) {
-    chartInstance.value.setOption(chartOption.value)
-  }
+  updateChart()
 }
 
 const resizeChart = () => {
@@ -34,7 +33,11 @@ const resizeChart = () => {
 
 const updateChart = () => {
   if (chartInstance.value && chartOption.value) {
-    chartInstance.value.setOption(chartOption.value, true)
+    // 强制背景透明，保留主题其他样式
+    chartInstance.value.setOption({
+      ...chartOption.value,
+      backgroundColor: 'transparent'
+    }, true)
   }
 }
 
@@ -63,19 +66,19 @@ watch(chartOption, updateChart, { deep: true })
 onMounted(() => {
   const data = node.getData() as { chartOption?: EChartsOption }
   chartOption.value = data.chartOption || {}
-  
+
   const size = node.getSize()
   chartSize.value = size
   chartStyle.value = {
     width: `${size.width}px`,
     height: `${size.height}px`
   }
-  
+
   initChart()
-  
+
   node.on('change:data', updateData)
   node.on('change:size', updateSize)
-  
+
   window.addEventListener('resize', resizeChart)
 })
 
