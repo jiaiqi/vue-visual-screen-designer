@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { Graph } from '@antv/x6'
 import { useEditorStore } from '@/stores/editor'
 import { useExport } from '@/composables/useExport'
+import { useAutoLayout, type LayoutType } from '@/composables/useAutoLayout'
 import { useRouter } from 'vue-router'
 import {
   Undo2, Redo2, Download, LayoutGrid, ZoomIn, ZoomOut,
   Maximize, Trash2, MousePointerSquareDashed, Keyboard,
   Code, ChevronDown, FileImage, FileCode2, Eye, LayoutTemplate,
-  HelpCircle, Sun, Moon, ArrowUpFromLine, ArrowDownToLine, ArrowUp, ArrowDown
+  HelpCircle, Sun, Moon, ArrowUpFromLine, ArrowDownToLine, ArrowUp, ArrowDown,
+  GitBranch, Circle, Grid3X3, Target, Layers
 } from 'lucide-vue-next'
 
 const emit = defineEmits<{
@@ -19,6 +22,7 @@ const emit = defineEmits<{
 
 const editorStore = useEditorStore()
 const { exportToPNG, exportToSVG } = useExport()
+const { applyLayout } = useAutoLayout()
 const router = useRouter()
 
 const zoomRatio = ref(100)
@@ -119,6 +123,21 @@ function handleLayerAction(action: 'toFront' | 'toBack' | 'forward' | 'backward'
         node.zIndex = (node.zIndex ?? 0) - 1
       }
       break
+  }
+}
+
+function handleAutoLayout(type: LayoutType) {
+  const graph = editorStore.graph
+  if (!graph) return
+
+  const result = applyLayout(graph as Graph, {
+    type,
+    animate: true,
+    preventOverlap: true,
+  })
+
+  if (!result.success) {
+    console.warn('自动布局失败:', result.message)
   }
 }
 </script>
@@ -224,6 +243,65 @@ function handleLayerAction(action: 'toFront' | 'toBack' | 'forward' | 'backward'
           title="置于底层">
           <ArrowDownToLine class="w-4 h-4" />
         </button>
+      </div>
+
+      <div class="h-6 w-[1px] bg-slate-800/60 mx-1"></div>
+
+      <!-- 自动布局工具 -->
+      <div class="relative group">
+        <button
+          class="flex items-center gap-1.5 px-3 py-2 text-sm font-bold rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 hover:text-amber-300 transition-all active:scale-95 shadow-sm"
+          title="自动布局 (智能排列图元)">
+          <Layers class="w-4 h-4" />
+          <span class="hidden lg:inline">布局</span>
+          <ChevronDown class="w-3 h-3 opacity-70 group-hover:rotate-180 transition-transform duration-300" />
+        </button>
+
+        <div
+          class="absolute top-full left-0 mt-2 w-48 bg-slate-800 border border-slate-700/80 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 origin-top-left z-50 overflow-hidden">
+          <div class="p-1 flex flex-col gap-0.5">
+            <button @click="handleAutoLayout('dagre')"
+              class="flex items-center gap-2.5 px-3 py-2.5 w-full text-left rounded-lg text-sm font-medium text-slate-300 hover:bg-amber-500/20 hover:text-amber-400 transition-colors group/item">
+              <div class="w-6 h-6 rounded-md bg-slate-900 flex items-center justify-center border border-slate-700 group-hover/item:border-amber-500/30">
+                <GitBranch class="w-3.5 h-3.5 text-amber-500" />
+              </div>
+              <div class="flex flex-col">
+                <span>有向图布局</span>
+                <span class="text-[10px] text-slate-500 font-normal">适合流程图、架构图</span>
+              </div>
+            </button>
+            <button @click="handleAutoLayout('grid')"
+              class="flex items-center gap-2.5 px-3 py-2.5 w-full text-left rounded-lg text-sm font-medium text-slate-300 hover:bg-sky-500/20 hover:text-sky-400 transition-colors group/item">
+              <div class="w-6 h-6 rounded-md bg-slate-900 flex items-center justify-center border border-slate-700 group-hover/item:border-sky-500/30">
+                <Grid3X3 class="w-3.5 h-3.5 text-sky-500" />
+              </div>
+              <div class="flex flex-col">
+                <span>网格布局</span>
+                <span class="text-[10px] text-slate-500 font-normal">整齐排列所有节点</span>
+              </div>
+            </button>
+            <button @click="handleAutoLayout('circular')"
+              class="flex items-center gap-2.5 px-3 py-2.5 w-full text-left rounded-lg text-sm font-medium text-slate-300 hover:bg-violet-500/20 hover:text-violet-400 transition-colors group/item">
+              <div class="w-6 h-6 rounded-md bg-slate-900 flex items-center justify-center border border-slate-700 group-hover/item:border-violet-500/30">
+                <Circle class="w-3.5 h-3.5 text-violet-500" />
+              </div>
+              <div class="flex flex-col">
+                <span>环形布局</span>
+                <span class="text-[10px] text-slate-500 font-normal">节点围绕中心排列</span>
+              </div>
+            </button>
+            <button @click="handleAutoLayout('concentric')"
+              class="flex items-center gap-2.5 px-3 py-2.5 w-full text-left rounded-lg text-sm font-medium text-slate-300 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors group/item">
+              <div class="w-6 h-6 rounded-md bg-slate-900 flex items-center justify-center border border-slate-700 group-hover/item:border-emerald-500/30">
+                <Target class="w-3.5 h-3.5 text-emerald-500" />
+              </div>
+              <div class="flex flex-col">
+                <span>同心圆布局</span>
+                <span class="text-[10px] text-slate-500 font-normal">按连接度分层排列</span>
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="h-6 w-[1px] bg-slate-800/60 mx-1"></div>

@@ -3,6 +3,8 @@ import { ref, watch, onUnmounted, markRaw, computed } from 'vue'
 import { Cell, Edge, Node } from '@antv/x6'
 import { useEditorStore } from '@/stores/editor'
 import IconPickerDialog from '../IconPickerDialog.vue'
+import PortConfigPanel from './PortConfigPanel.vue'
+import EdgeStylePanel from './EdgeStylePanel.vue'
 import {
   NForm, NFormItem, NInput, NInputNumber, NColorPicker,
   NSwitch, NSelect, NSlider, NDivider, NGrid, NGridItem,
@@ -1101,6 +1103,18 @@ function refreshChart() {
               重置为默认样式
             </n-button>
           </div>
+        </div>
+      </n-tab-pane>
+
+      <n-tab-pane v-if="activeCell?.isNode()" name="ports" tab="连接桩">
+        <div class="overflow-y-auto max-h-[calc(100vh-160px)] custom-scrollbar">
+          <PortConfigPanel :node="activeCell as Node" @update="() => {}" />
+        </div>
+      </n-tab-pane>
+
+      <n-tab-pane v-if="activeCell?.isEdge()" name="edge" tab="边样式">
+        <div class="overflow-y-auto max-h-[calc(100vh-160px)] custom-scrollbar">
+          <EdgeStylePanel :edge="activeCell as Edge" @update="() => {}" />
         </div>
       </n-tab-pane>
     </n-tabs>
