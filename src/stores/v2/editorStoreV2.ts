@@ -299,7 +299,7 @@ export const useEditorStoreV2 = defineStore('editorV2', () => {
   /**
    * 粘贴
    */
-  function paste(offset = { x: 30, y: 30 }) {
+  function paste(offset = { dx: 30, dy: 30 }) {
     if (!graph.value || graph.value.isClipboardEmpty()) return []
     const cells = graph.value.paste({ offset })
     // 选中新粘贴的元素
