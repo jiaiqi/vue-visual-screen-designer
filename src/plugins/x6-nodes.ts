@@ -10,6 +10,8 @@ import TableNode from '@/components/editor/nodes/TableNode.vue'
 import ListNode from '@/components/editor/nodes/ListNode.vue'
 import TimelineNode from '@/components/editor/nodes/TimelineNode.vue'
 import CountDownNode from '@/components/editor/nodes/CountDownNode.vue'
+import GaugeNode from '@/components/editor/nodes/GaugeNode.vue'
+import AlertNode from '@/components/editor/nodes/AlertNode.vue'
 
 // 装饰类组件注册标志
 let decorationNodesRegistered = false
@@ -601,5 +603,21 @@ export function registerVueNodes() {
     width: 200,
     height: 80,
     component: CountDownNode,
+  })
+
+  // P2 新增：仪表盘节点
+  register({
+    shape: 'gauge-node',
+    width: 200,
+    height: 200,
+    component: GaugeNode,
+  })
+
+  // P2 新增：告警闪烁节点
+  register({
+    shape: 'alert-node',
+    width: 200,
+    height: 100,
+    component: AlertNode,
   })
 }

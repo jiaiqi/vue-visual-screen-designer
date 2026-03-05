@@ -399,34 +399,6 @@ export function useGraph() {
       }
     })
 
-    graph.on('node:added', ({ node }: { node: Node }) => {
-      applyNodeAnimation(node)
-      applyNodeStatus(node)
-      // 首次添加时触发进场动画
-      const data = node.getData() || {}
-      if (data.entranceType && data.entranceType !== 'none') {
-        playTransition(node, data.entranceType)
-      }
-    })
-
-    graph.on('node:change:data', ({ cell }: { cell: Cell }) => {
-      if (cell.isNode()) {
-        const node = cell as Node
-        applyNodeAnimation(node)
-        applyNodeStatus(node)
-      }
-    })
-
-    graph.on('node:added', ({ node }: { node: Node }) => {
-      applyNodeAnimation(node)
-      applyNodeStatus(node)
-      // 首次添加时触发进场动画
-      const data = node.getData() || {}
-      if (data.entranceType && data.entranceType !== 'none') {
-        playTransition(node, data.entranceType)
-      }
-    })
-
     graph.on('edge:removed', ({ edge }: { edge: Edge }) => {
       // 停止所有标签相关的过渡
       // X6 v3 移除了 stopTransition API

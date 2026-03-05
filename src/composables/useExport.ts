@@ -12,18 +12,17 @@ export function useExport() {
     const graph = editorStore.graph
     if (!graph) return
 
-    // 获取并使用 x6-plugin-export 并不是直接可用的行为，可以退回到通过 svg 数据转，
-    // 但鉴于 x6 生态常用 `toPNG` 所以这里通过类似能力来实现（假定已安装或有对应插件）
-    // 为了简化，由于我们并没有额外依赖 x6-plugin-export，暂时通过 `toDataURL`
     try {
+      // 读取当前画布背景色（避免硬编码）
+      const bgColor = editorStore.canvasConfig?.backgroundColor || '#0f172a'
       graph.toPNG((dataUri: string) => {
         downloadFile(dataUri, filename)
       }, {
         quality: 1,
-        backgroundColor: '#0f172a'
+        backgroundColor: bgColor
       })
-    } catch {
-      alert("由于未引入导出插件，目前暂不支持图像导出。")
+    } catch (e) {
+      console.error('[Export] PNG 导出失败，请确保 @antv/x6 Export 插件已挂载:', e)
     }
   }
 
