@@ -153,6 +153,9 @@ importers:
       tailwindcss-animate:
         specifier: 1.0.7
         version: 1.0.7(tailwindcss@3.4.17)
+      turbo:
+        specifier: ^2.8.13
+        version: 2.8.13
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
@@ -171,6 +174,506 @@ importers:
       vitest:
         specifier: ^4.0.18
         version: 4.0.18(@types/node@24.10.15)(jiti@2.6.1)(jsdom@28.1.0(@noble/hashes@1.8.0)(canvas@3.2.1))(lightningcss@1.31.1)(stylus@0.57.0)(yaml@2.8.2)
+      vue-tsc:
+        specifier: ^3.2.5
+        version: 3.2.5(typescript@5.9.3)
+
+  apps/v1-designer:
+    dependencies:
+      '@antv/x6':
+        specifier: ^3.1.6
+        version: 3.1.6
+      '@antv/x6-vue-shape':
+        specifier: ^3.0.2
+        version: 3.0.2(@antv/x6@3.1.6)(vue@3.6.0-beta.7(typescript@5.9.3))
+      '@vue-visual-screen/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@vue-visual-screen/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      echarts:
+        specifier: ^6.0.0
+        version: 6.0.0
+      fabric:
+        specifier: ^7.2.0
+        version: 7.2.0
+      localforage:
+        specifier: ^1.10.0
+        version: 1.10.0
+      lucide-vue-next:
+        specifier: ^0.575.0
+        version: 0.575.0(vue@3.6.0-beta.7(typescript@5.9.3))
+      naive-ui:
+        specifier: ^2.43.2
+        version: 2.43.2(vue@3.6.0-beta.7(typescript@5.9.3))
+      pinia:
+        specifier: ^3.0.4
+        version: 3.0.4(typescript@5.9.3)(vue@3.6.0-beta.7(typescript@5.9.3))
+      polybooljs:
+        specifier: ^1.2.2
+        version: 1.2.2
+      tailwind-merge:
+        specifier: ^3.5.0
+        version: 3.5.0
+      vooks:
+        specifier: ^0.2.12
+        version: 0.2.12(vue@3.6.0-beta.7(typescript@5.9.3))
+      vue:
+        specifier: beta
+        version: 3.6.0-beta.7(typescript@5.9.3)
+      vue-router:
+        specifier: ^5.0.3
+        version: 5.0.3(pinia@3.0.4(typescript@5.9.3)(vue@3.6.0-beta.7(typescript@5.9.3)))(vue@3.6.0-beta.7(typescript@5.9.3))
+      vueuc:
+        specifier: ^0.4.65
+        version: 0.4.65(vue@3.6.0-beta.7(typescript@5.9.3))
+    devDependencies:
+      '@iconify-json/lucide':
+        specifier: ^1.2.94
+        version: 1.2.94
+      '@iconify-json/mdi':
+        specifier: ^1.2.3
+        version: 1.2.3
+      '@iconify-json/ri':
+        specifier: ^1.2.10
+        version: 1.2.10
+      '@tsconfig/node24':
+        specifier: ^24.0.4
+        version: 24.0.4
+      '@types/fabric':
+        specifier: ^5.3.11
+        version: 5.3.11
+      '@types/node':
+        specifier: ^24.10.13
+        version: 24.10.15
+      '@vitejs/plugin-vue':
+        specifier: ^6.0.4
+        version: 6.0.4(vite@8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2))(vue@3.6.0-beta.7(typescript@5.9.3))
+      '@vitejs/plugin-vue-jsx':
+        specifier: ^5.1.4
+        version: 5.1.4(vite@8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2))(vue@3.6.0-beta.7(typescript@5.9.3))
+      '@vue/eslint-config-typescript':
+        specifier: ^14.7.0
+        version: 14.7.0(eslint-plugin-vue@10.8.0(@typescript-eslint/parser@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(eslint@10.0.2(jiti@2.6.1))(vue-eslint-parser@10.4.0(eslint@10.0.2(jiti@2.6.1))))(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3)
+      '@vue/tsconfig':
+        specifier: ^0.8.1
+        version: 0.8.1(typescript@5.9.3)(vue@3.6.0-beta.7(typescript@5.9.3))
+      autoprefixer:
+        specifier: ^10.4.27
+        version: 10.4.27(postcss@8.5.6)
+      eslint:
+        specifier: ^10.0.2
+        version: 10.0.2(jiti@2.6.1)
+      eslint-config-prettier:
+        specifier: ^10.1.8
+        version: 10.1.8(eslint@10.0.2(jiti@2.6.1))
+      eslint-plugin-oxlint:
+        specifier: ~1.50.0
+        version: 1.50.0
+      eslint-plugin-vue:
+        specifier: ~10.8.0
+        version: 10.8.0(@typescript-eslint/parser@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(eslint@10.0.2(jiti@2.6.1))(vue-eslint-parser@10.4.0(eslint@10.0.2(jiti@2.6.1)))
+      npm-run-all2:
+        specifier: ^8.0.4
+        version: 8.0.4
+      oxfmt:
+        specifier: ^0.35.0
+        version: 0.35.0
+      oxlint:
+        specifier: ~1.50.0
+        version: 1.50.0
+      postcss:
+        specifier: ^8.5.6
+        version: 8.5.6
+      shadcn-vue:
+        specifier: ^2.4.3
+        version: 2.4.3(eslint@10.0.2(jiti@2.6.1))(vue@3.6.0-beta.7(typescript@5.9.3))
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.17
+      tailwindcss-animate:
+        specifier: 1.0.7
+        version: 1.0.7(tailwindcss@3.4.17)
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      unplugin-icons:
+        specifier: ^23.0.1
+        version: 23.0.1
+      unplugin-vue-components:
+        specifier: ^31.0.0
+        version: 31.0.0(vue@3.6.0-beta.7(typescript@5.9.3))
+      vite:
+        specifier: beta
+        version: 8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2)
+      vite-plugin-vue-devtools:
+        specifier: ^8.0.6
+        version: 8.0.6(vite@8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2))(vue@3.6.0-beta.7(typescript@5.9.3))
+      vue-tsc:
+        specifier: ^3.2.5
+        version: 3.2.5(typescript@5.9.3)
+
+  apps/v2-designer:
+    dependencies:
+      '@antv/x6':
+        specifier: ^3.1.6
+        version: 3.1.6
+      '@antv/x6-vue-shape':
+        specifier: ^3.0.2
+        version: 3.0.2(@antv/x6@3.1.6)(vue@3.6.0-beta.7(typescript@5.9.3))
+      '@vue-visual-screen/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@vue-visual-screen/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@vue-visual-screen/v2-shared':
+        specifier: workspace:*
+        version: link:../../packages/v2-shared
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      echarts:
+        specifier: ^6.0.0
+        version: 6.0.0
+      fabric:
+        specifier: ^7.2.0
+        version: 7.2.0
+      localforage:
+        specifier: ^1.10.0
+        version: 1.10.0
+      lucide-vue-next:
+        specifier: ^0.575.0
+        version: 0.575.0(vue@3.6.0-beta.7(typescript@5.9.3))
+      naive-ui:
+        specifier: ^2.43.2
+        version: 2.43.2(vue@3.6.0-beta.7(typescript@5.9.3))
+      pinia:
+        specifier: ^3.0.4
+        version: 3.0.4(typescript@5.9.3)(vue@3.6.0-beta.7(typescript@5.9.3))
+      polybooljs:
+        specifier: ^1.2.2
+        version: 1.2.2
+      tailwind-merge:
+        specifier: ^3.5.0
+        version: 3.5.0
+      vooks:
+        specifier: ^0.2.12
+        version: 0.2.12(vue@3.6.0-beta.7(typescript@5.9.3))
+      vue:
+        specifier: beta
+        version: 3.6.0-beta.7(typescript@5.9.3)
+      vue-router:
+        specifier: ^5.0.3
+        version: 5.0.3(pinia@3.0.4(typescript@5.9.3)(vue@3.6.0-beta.7(typescript@5.9.3)))(vue@3.6.0-beta.7(typescript@5.9.3))
+      vueuc:
+        specifier: ^0.4.65
+        version: 0.4.65(vue@3.6.0-beta.7(typescript@5.9.3))
+    devDependencies:
+      '@iconify-json/lucide':
+        specifier: ^1.2.94
+        version: 1.2.94
+      '@iconify-json/mdi':
+        specifier: ^1.2.3
+        version: 1.2.3
+      '@iconify-json/ri':
+        specifier: ^1.2.10
+        version: 1.2.10
+      '@tsconfig/node24':
+        specifier: ^24.0.4
+        version: 24.0.4
+      '@types/fabric':
+        specifier: ^5.3.11
+        version: 5.3.11
+      '@types/node':
+        specifier: ^24.10.13
+        version: 24.10.15
+      '@vitejs/plugin-vue':
+        specifier: ^6.0.4
+        version: 6.0.4(vite@8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2))(vue@3.6.0-beta.7(typescript@5.9.3))
+      '@vitejs/plugin-vue-jsx':
+        specifier: ^5.1.4
+        version: 5.1.4(vite@8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2))(vue@3.6.0-beta.7(typescript@5.9.3))
+      '@vue/eslint-config-typescript':
+        specifier: ^14.7.0
+        version: 14.7.0(eslint-plugin-vue@10.8.0(@typescript-eslint/parser@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(eslint@10.0.2(jiti@2.6.1))(vue-eslint-parser@10.4.0(eslint@10.0.2(jiti@2.6.1))))(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3)
+      '@vue/tsconfig':
+        specifier: ^0.8.1
+        version: 0.8.1(typescript@5.9.3)(vue@3.6.0-beta.7(typescript@5.9.3))
+      autoprefixer:
+        specifier: ^10.4.27
+        version: 10.4.27(postcss@8.5.6)
+      eslint:
+        specifier: ^10.0.2
+        version: 10.0.2(jiti@2.6.1)
+      eslint-config-prettier:
+        specifier: ^10.1.8
+        version: 10.1.8(eslint@10.0.2(jiti@2.6.1))
+      eslint-plugin-oxlint:
+        specifier: ~1.50.0
+        version: 1.50.0
+      eslint-plugin-vue:
+        specifier: ~10.8.0
+        version: 10.8.0(@typescript-eslint/parser@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(eslint@10.0.2(jiti@2.6.1))(vue-eslint-parser@10.4.0(eslint@10.0.2(jiti@2.6.1)))
+      npm-run-all2:
+        specifier: ^8.0.4
+        version: 8.0.4
+      oxfmt:
+        specifier: ^0.35.0
+        version: 0.35.0
+      oxlint:
+        specifier: ~1.50.0
+        version: 1.50.0
+      postcss:
+        specifier: ^8.5.6
+        version: 8.5.6
+      shadcn-vue:
+        specifier: ^2.4.3
+        version: 2.4.3(eslint@10.0.2(jiti@2.6.1))(vue@3.6.0-beta.7(typescript@5.9.3))
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.17
+      tailwindcss-animate:
+        specifier: 1.0.7
+        version: 1.0.7(tailwindcss@3.4.17)
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      unplugin-icons:
+        specifier: ^23.0.1
+        version: 23.0.1
+      unplugin-vue-components:
+        specifier: ^31.0.0
+        version: 31.0.0(vue@3.6.0-beta.7(typescript@5.9.3))
+      vite:
+        specifier: beta
+        version: 8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2)
+      vite-plugin-vue-devtools:
+        specifier: ^8.0.6
+        version: 8.0.6(vite@8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2))(vue@3.6.0-beta.7(typescript@5.9.3))
+      vue-tsc:
+        specifier: ^3.2.5
+        version: 3.2.5(typescript@5.9.3)
+
+  apps/v2-renderer:
+    dependencies:
+      '@antv/x6':
+        specifier: ^3.1.6
+        version: 3.1.6
+      '@antv/x6-vue-shape':
+        specifier: ^3.0.2
+        version: 3.0.2(@antv/x6@3.1.6)(vue@3.6.0-beta.7(typescript@5.9.3))
+      '@vue-visual-screen/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@vue-visual-screen/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@vue-visual-screen/v2-shared':
+        specifier: workspace:*
+        version: link:../../packages/v2-shared
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      echarts:
+        specifier: ^6.0.0
+        version: 6.0.0
+      fabric:
+        specifier: ^7.2.0
+        version: 7.2.0
+      localforage:
+        specifier: ^1.10.0
+        version: 1.10.0
+      lucide-vue-next:
+        specifier: ^0.575.0
+        version: 0.575.0(vue@3.6.0-beta.7(typescript@5.9.3))
+      naive-ui:
+        specifier: ^2.43.2
+        version: 2.43.2(vue@3.6.0-beta.7(typescript@5.9.3))
+      pinia:
+        specifier: ^3.0.4
+        version: 3.0.4(typescript@5.9.3)(vue@3.6.0-beta.7(typescript@5.9.3))
+      polybooljs:
+        specifier: ^1.2.2
+        version: 1.2.2
+      tailwind-merge:
+        specifier: ^3.5.0
+        version: 3.5.0
+      vooks:
+        specifier: ^0.2.12
+        version: 0.2.12(vue@3.6.0-beta.7(typescript@5.9.3))
+      vue:
+        specifier: beta
+        version: 3.6.0-beta.7(typescript@5.9.3)
+      vue-router:
+        specifier: ^5.0.3
+        version: 5.0.3(pinia@3.0.4(typescript@5.9.3)(vue@3.6.0-beta.7(typescript@5.9.3)))(vue@3.6.0-beta.7(typescript@5.9.3))
+      vueuc:
+        specifier: ^0.4.65
+        version: 0.4.65(vue@3.6.0-beta.7(typescript@5.9.3))
+    devDependencies:
+      '@iconify-json/lucide':
+        specifier: ^1.2.94
+        version: 1.2.94
+      '@iconify-json/mdi':
+        specifier: ^1.2.3
+        version: 1.2.3
+      '@iconify-json/ri':
+        specifier: ^1.2.10
+        version: 1.2.10
+      '@tsconfig/node24':
+        specifier: ^24.0.4
+        version: 24.0.4
+      '@types/fabric':
+        specifier: ^5.3.11
+        version: 5.3.11
+      '@types/node':
+        specifier: ^24.10.13
+        version: 24.10.15
+      '@vitejs/plugin-vue':
+        specifier: ^6.0.4
+        version: 6.0.4(vite@8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2))(vue@3.6.0-beta.7(typescript@5.9.3))
+      '@vitejs/plugin-vue-jsx':
+        specifier: ^5.1.4
+        version: 5.1.4(vite@8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2))(vue@3.6.0-beta.7(typescript@5.9.3))
+      '@vue/eslint-config-typescript':
+        specifier: ^14.7.0
+        version: 14.7.0(eslint-plugin-vue@10.8.0(@typescript-eslint/parser@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(eslint@10.0.2(jiti@2.6.1))(vue-eslint-parser@10.4.0(eslint@10.0.2(jiti@2.6.1))))(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3)
+      '@vue/tsconfig':
+        specifier: ^0.8.1
+        version: 0.8.1(typescript@5.9.3)(vue@3.6.0-beta.7(typescript@5.9.3))
+      autoprefixer:
+        specifier: ^10.4.27
+        version: 10.4.27(postcss@8.5.6)
+      eslint:
+        specifier: ^10.0.2
+        version: 10.0.2(jiti@2.6.1)
+      eslint-config-prettier:
+        specifier: ^10.1.8
+        version: 10.1.8(eslint@10.0.2(jiti@2.6.1))
+      eslint-plugin-oxlint:
+        specifier: ~1.50.0
+        version: 1.50.0
+      eslint-plugin-vue:
+        specifier: ~10.8.0
+        version: 10.8.0(@typescript-eslint/parser@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(eslint@10.0.2(jiti@2.6.1))(vue-eslint-parser@10.4.0(eslint@10.0.2(jiti@2.6.1)))
+      npm-run-all2:
+        specifier: ^8.0.4
+        version: 8.0.4
+      oxfmt:
+        specifier: ^0.35.0
+        version: 0.35.0
+      oxlint:
+        specifier: ~1.50.0
+        version: 1.50.0
+      postcss:
+        specifier: ^8.5.6
+        version: 8.5.6
+      shadcn-vue:
+        specifier: ^2.4.3
+        version: 2.4.3(eslint@10.0.2(jiti@2.6.1))(vue@3.6.0-beta.7(typescript@5.9.3))
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.17
+      tailwindcss-animate:
+        specifier: 1.0.7
+        version: 1.0.7(tailwindcss@3.4.17)
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      unplugin-icons:
+        specifier: ^23.0.1
+        version: 23.0.1
+      unplugin-vue-components:
+        specifier: ^31.0.0
+        version: 31.0.0(vue@3.6.0-beta.7(typescript@5.9.3))
+      vite:
+        specifier: beta
+        version: 8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2)
+      vite-plugin-vue-devtools:
+        specifier: ^8.0.6
+        version: 8.0.6(vite@8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2))(vue@3.6.0-beta.7(typescript@5.9.3))
+      vue-tsc:
+        specifier: ^3.2.5
+        version: 3.2.5(typescript@5.9.3)
+
+  packages/core:
+    dependencies:
+      vue:
+        specifier: beta
+        version: 3.6.0-beta.7(typescript@5.9.3)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.10.13
+        version: 24.10.15
+      '@vitejs/plugin-vue':
+        specifier: ^6.0.4
+        version: 6.0.4(vite@8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2))(vue@3.6.0-beta.7(typescript@5.9.3))
+      '@vue/tsconfig':
+        specifier: ^0.8.1
+        version: 0.8.1(typescript@5.9.3)(vue@3.6.0-beta.7(typescript@5.9.3))
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vite:
+        specifier: beta
+        version: 8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2)
+      vue-tsc:
+        specifier: ^3.2.5
+        version: 3.2.5(typescript@5.9.3)
+
+  packages/ui:
+    dependencies:
+      vue:
+        specifier: beta
+        version: 3.6.0-beta.7(typescript@5.9.3)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.10.13
+        version: 24.10.15
+      '@vitejs/plugin-vue':
+        specifier: ^6.0.4
+        version: 6.0.4(vite@8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2))(vue@3.6.0-beta.7(typescript@5.9.3))
+      '@vue/tsconfig':
+        specifier: ^0.8.1
+        version: 0.8.1(typescript@5.9.3)(vue@3.6.0-beta.7(typescript@5.9.3))
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vite:
+        specifier: beta
+        version: 8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2)
+      vue-tsc:
+        specifier: ^3.2.5
+        version: 3.2.5(typescript@5.9.3)
+
+  packages/v2-shared:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.10.13
+        version: 24.10.15
+      '@vue/tsconfig':
+        specifier: ^0.8.1
+        version: 0.8.1(typescript@5.9.3)(vue@3.6.0-beta.7(typescript@5.9.3))
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vite:
+        specifier: beta
+        version: 8.0.0-beta.16(@types/node@24.10.15)(esbuild@0.27.3)(jiti@2.6.1)(stylus@0.57.0)(yaml@2.8.2)
       vue-tsc:
         specifier: ^3.2.5
         version: 3.2.5(typescript@5.9.3)
@@ -3714,6 +4217,40 @@ packages:
 
   tunnel-agent@0.6.0:
     resolution: {integrity: sha512-McnNiV1l8RYeY8tBgEpuodCC1mLUdbSN+CYBL7kJsJNInOP8UjDDEwdk6Mw60vdLLrr5NHKZhMAOSrR2NZuQ+w==}
+
+  turbo-darwin-64@2.8.13:
+    resolution: {integrity: sha512-PmOvodQNiOj77+Zwoqku70vwVjKzL34RTNxxoARjp5RU5FOj/CGiC6vcDQhNtFPUOWSAaogHF5qIka9TBhX4XA==}
+    cpu: [x64]
+    os: [darwin]
+
+  turbo-darwin-arm64@2.8.13:
+    resolution: {integrity: sha512-kI+anKcLIM4L8h+NsM7mtAUpElkCOxv5LgiQVQR8BASyDFfc8Efj5kCk3cqxuxOvIqx0sLfCX7atrHQ2kwuNJQ==}
+    cpu: [arm64]
+    os: [darwin]
+
+  turbo-linux-64@2.8.13:
+    resolution: {integrity: sha512-j29KnQhHyzdzgCykBFeBqUPS4Wj7lWMnZ8CHqytlYDap4Jy70l4RNG46pOL9+lGu6DepK2s1rE86zQfo0IOdPw==}
+    cpu: [x64]
+    os: [linux]
+
+  turbo-linux-arm64@2.8.13:
+    resolution: {integrity: sha512-OEl1YocXGZDRDh28doOUn49QwNe82kXljO1HXApjU0LapkDiGpfl3jkAlPKxEkGDSYWc8MH5Ll8S16Rf5tEBYg==}
+    cpu: [arm64]
+    os: [linux]
+
+  turbo-windows-64@2.8.13:
+    resolution: {integrity: sha512-717bVk1+Pn2Jody7OmWludhEirEe0okoj1NpRbSm5kVZz/yNN/jfjbxWC6ilimXMz7xoMT3IDfQFJsFR3PMANA==}
+    cpu: [x64]
+    os: [win32]
+
+  turbo-windows-arm64@2.8.13:
+    resolution: {integrity: sha512-R819HShLIT0Wj6zWVnIsYvSNtRNj1q9VIyaUz0P24SMcLCbQZIm1sV09F4SDbg+KCCumqD2lcaR2UViQ8SnUJA==}
+    cpu: [arm64]
+    os: [win32]
+
+  turbo@2.8.13:
+    resolution: {integrity: sha512-nyM99hwFB9/DHaFyKEqatdayGjsMNYsQ/XBNO6MITc7roncZetKb97MpHxWf3uiU+LB9c9HUlU3Jp2Ixei2k1A==}
+    hasBin: true
 
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -7783,6 +8320,33 @@ snapshots:
     dependencies:
       safe-buffer: 5.2.1
     optional: true
+
+  turbo-darwin-64@2.8.13:
+    optional: true
+
+  turbo-darwin-arm64@2.8.13:
+    optional: true
+
+  turbo-linux-64@2.8.13:
+    optional: true
+
+  turbo-linux-arm64@2.8.13:
+    optional: true
+
+  turbo-windows-64@2.8.13:
+    optional: true
+
+  turbo-windows-arm64@2.8.13:
+    optional: true
+
+  turbo@2.8.13:
+    optionalDependencies:
+      turbo-darwin-64: 2.8.13
+      turbo-darwin-arm64: 2.8.13
+      turbo-linux-64: 2.8.13
+      turbo-linux-arm64: 2.8.13
+      turbo-windows-64: 2.8.13
+      turbo-windows-arm64: 2.8.13
 
   type-check@0.4.0:
     dependencies:

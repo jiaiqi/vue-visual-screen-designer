@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>车间平面规划图编辑器</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    background: #1a1f2e;
+    color: #e0e6f0;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Top Bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+    height: 52px;
+    background: #141824;
+    border-bottom: 1px solid #2a3045;
+    flex-shrink: 0;
+    user-select: none;
+  }
+  .topbar .logo {
+    font-size: 15px;
+    font-weight: 700;
+    color: #5b9cf6;
+    letter-spacing: 1px;
+    margin-right: 8px;
+  }
+  .topbar .sep { width: 1px; height: 24px; background: #2a3045; margin: 0 4px; }
+
+  .btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    transition: all .15s;
+  }
+  .btn-ghost { background: transparent; color: #aab; border: 1px solid #2a3045; }
+  .btn-ghost:hover { background: #2a3045; color: #e0e6f0; }
+  .btn-primary { background: #5b9cf6; color: #fff; }
+  .btn-primary:hover { background: #4a8be0; }
+  .btn-danger { background: #e05555; color: #fff; }
+  .btn-danger:hover { background: #c44; }
+  .btn-icon { padding: 5px 8px; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .title-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid transparent;
+    color: #e0e6f0;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    outline: none;
+    padding: 2px 4px;
+    width: 220px;
+    transition: border-color .2s;
+  }
+  .title-input:hover, .title-input:focus { border-bottom-color: #5b9cf6; }
+
+  /* ── Main Layout ── */
+  .workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Left Panel ── */
+  .panel {
+    width: 220px;
+    background: #141824;
+    border-right: 1px solid #2a3045;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .panel-section { padding: 10px 12px 6px; font-size: 11px; color: #667; text-transform: uppercase; letter-spacing: .8px; font-weight: 600; }
+
+  .shape-palette {
+    padding: 6px 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .shape-item {
+    padding: 8px 6px;
+    border-radius: 7px;
+    border: 1px solid #2a3045;
+    cursor: grab;
+    font-size: 12px;
+    text-align: center;
+    transition: all .15s;
+    background: #1a1f2e;
+    user-select: none;
+  }
+  .shape-item:hover { border-color: #5b9cf6; background: #1e2640; transform: translateY(-1px); }
+  .shape-item:active { cursor: grabbing; }
+  .shape-item .si-icon { font-size: 18px; display: block; margin-bottom: 3px; }
+
+  .color-palette {
+    padding: 6px 12px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .color-dot {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform .15s, border-color .15s;
+  }
+  .color-dot:hover { transform: scale(1.2); }
+  .color-dot.active { border-color: #fff; }
+
+  /* ── Properties Panel ── */
+  .prop-panel {
+    padding: 8px 12px;
+    flex: 1;
+    overflow-y: auto;
+    border-top: 1px solid #2a3045;
+  }
+  .prop-row { margin-bottom: 10px; }
+  .prop-label { font-size: 11px; color: #778; margin-bottom: 4px; display: block; }
+  .prop-input {
+    width: 100%;
+    background: #1a1f2e;
+    border: 1px solid #2a3045;
+    border-radius: 5px;
+    color: #e0e6f0;
+    font-size: 13px;
+    font-family: inherit;
+    padding: 5px 8px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .prop-input:focus { border-color: #5b9cf6; }
+  .prop-row-inline { display: flex; gap: 6px; }
+  .prop-row-inline .prop-input { flex: 1; }
+
+  .color-preview {
+    width: 28px; height: 28px;
+    border-radius: 5px;
+    border: 1px solid #2a3045;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .color-preview input[type=color] {
+    position: absolute; inset: -2px; width: calc(100% + 4px); height: calc(100% + 4px);
+    opacity: 0; cursor: pointer;
+  }
+
+  /* ── Canvas Area ── */
+  .canvas-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #242938;
+    background-image:
+      linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  #mainSvg {
+    position: absolute;
+    top: 0; left: 0;
+    cursor: default;
+  }
+
+  /* Node styles */
+  .node-group { cursor: move; }
+  .node-group:hover .node-rect { filter: brightness(1.1); }
+  .node-group.selected .node-rect { stroke: #5b9cf6 !important; stroke-width: 2.5 !important; }
+  .node-label {
+    pointer-events: none;
+    font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    dominant-baseline: middle;
+    text-anchor: middle;
+  }
+
+  /* Resize handles */
+  .resize-handle { cursor: nwse-resize; fill: #5b9cf6; opacity: 0; transition: opacity .15s; }
+  .node-group.selected .resize-handle { opacity: 1; }
+  .resize-handle-e { cursor: ew-resize; }
+  .resize-handle-s { cursor: ns-resize; }
+
+  /* Arrow overlay */
+  .arrow-line { pointer-events: none; }
+
+  /* Drop ghost */
+  .drop-ghost { pointer-events: none; opacity: .5; }
+
+  /* ── Status Bar ── */
+  .statusbar {
+    height: 26px;
+    background: #141824;
+    border-top: 1px solid #2a3045;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    font-size: 11px;
+    color: #556;
+    gap: 16px;
+    flex-shrink: 0;
+    user-select: none;
+  }
+  .status-item span { color: #889; }
+
+  /* Context menu */
+  .ctx-menu {
+    position: fixed;
+    background: #1e2535;
+    border: 1px solid #2a3045;
+    border-radius: 8px;
+    padding: 4px;
+    min-width: 150px;
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  .ctx-item {
+    padding: 7px 12px;
+    border-radius: 5px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: background .1s;
+  }
+  .ctx-item:hover { background: #2a3045; }
+  .ctx-item.danger { color: #e05555; }
+  .ctx-item.danger:hover { background: rgba(224,85,85,.15); }
+  .ctx-sep { height: 1px; background: #2a3045; margin: 3px 0; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 40px; left: 50%;
+    transform: translateX(-50%);
+    background: #2a3a5e;
+    border: 1px solid #5b9cf6;
+    color: #e0e6f0;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 2000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  .toast.show { opacity: 1; }
+
+  .zoom-controls {
+    display: flex; gap: 4px; margin-left: auto;
+  }
+  .zoom-label { font-size: 12px; color: #889; padding: 5px 8px; display: flex; align-items: center; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #141824; }
+  ::-webkit-scrollbar-thumb { background: #2a3045; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="logo">🏭 车间规划</div>
+    <div class="sep"></div>
+    <input class="title-input" v-model="title" placeholder="图表名称..." />
+    <div class="sep"></div>
+    <button class="btn btn-ghost" @click="undo" :disabled="historyIndex <= 0" title="撤销 Ctrl+Z">↩ 撤销</button>
+    <button class="btn btn-ghost" @click="redo" :disabled="historyIndex >= history.length-1" title="重做 Ctrl+Y">↪ 重做</button>
+    <div class="sep"></div>
+    <button class="btn btn-ghost" @click="selectAll">全选</button>
+    <button class="btn btn-ghost" @click="clearCanvas" title="清空画布">🗑 清空</button>
+    <div class="zoom-controls">
+      <button class="btn btn-ghost btn-icon" @click="zoom(-0.1)">－</button>
+      <div class="zoom-label">{{ Math.round(scale * 100) }}%</div>
+      <button class="btn btn-ghost btn-icon" @click="zoom(0.1)">＋</button>
+      <button class="btn btn-ghost btn-icon" @click="resetZoom" title="适应窗口">⊡</button>
+    </div>
+    <div class="sep"></div>
+    <button class="btn btn-ghost" @click="loadSample">载入示例</button>
+    <button class="btn btn-primary" @click="exportPNG">📷 导出PNG</button>
+  </div>
+
+  <!-- Workspace -->
+  <div class="workspace">
+    <!-- Left Panel -->
+    <div class="panel">
+      <div class="panel-section">形状库</div>
+      <div class="shape-palette">
+        <div class="shape-item" v-for="s in shapeTypes" :key="s.type"
+          draggable="true"
+          @dragstart="onShapeDragStart($event, s)">
+          <span class="si-icon">{{ s.icon }}</span>
+          {{ s.label }}
+        </div>
+      </div>
+
+      <div class="panel-section">快捷色板</div>
+      <div class="color-palette">
+        <div class="color-dot" v-for="c in colorPalette" :key="c"
+          :style="{ background: c }"
+          :class="{ active: selectedNode && selectedNode.fillColor === c }"
+          @click="applyColor(c)"></div>
+      </div>
+
+      <div class="panel-section">属性</div>
+      <div class="prop-panel" v-if="selectedNode">
+        <div class="prop-row">
+          <label class="prop-label">标签文字</label>
+          <input class="prop-input" v-model="selectedNode.label" @input="pushHistory" />
+        </div>
+        <div class="prop-row">
+          <label class="prop-label">字体大小</label>
+          <input class="prop-input" type="number" v-model.number="selectedNode.fontSize" min="8" max="32" @change="pushHistory" />
+        </div>
+        <div class="prop-row">
+          <label class="prop-label">填充颜色</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <div class="color-preview" :style="{background: selectedNode.fillColor}">
+              <input type="color" :value="selectedNode.fillColor" @input="e => { selectedNode.fillColor = e.target.value; pushHistory() }" />
+            </div>
+            <input class="prop-input" v-model="selectedNode.fillColor" @change="pushHistory" />
+          </div>
+        </div>
+        <div class="prop-row">
+          <label class="prop-label">边框颜色</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <div class="color-preview" :style="{background: selectedNode.strokeColor}">
+              <input type="color" :value="selectedNode.strokeColor" @input="e => { selectedNode.strokeColor = e.target.value; pushHistory() }" />
+            </div>
+            <input class="prop-input" v-model="selectedNode.strokeColor" @change="pushHistory" />
+          </div>
+        </div>
+        <div class="prop-row">
+          <label class="prop-label">位置 X / Y</label>
+          <div class="prop-row-inline">
+            <input class="prop-input" type="number" v-model.number="selectedNode.x" @change="pushHistory" />
+            <input class="prop-input" type="number" v-model.number="selectedNode.y" @change="pushHistory" />
+          </div>
+        </div>
+        <div class="prop-row">
+          <label class="prop-label">宽度 / 高度</label>
+          <div class="prop-row-inline">
+            <input class="prop-input" type="number" v-model.number="selectedNode.w" min="20" @change="pushHistory" />
+            <input class="prop-input" type="number" v-model.number="selectedNode.h" min="20" @change="pushHistory" />
+          </div>
+        </div>
+        <div class="prop-row">
+          <label class="prop-label">圆角</label>
+          <input class="prop-input" type="number" v-model.number="selectedNode.rx" min="0" max="50" @change="pushHistory" />
+        </div>
+        <div class="prop-row">
+          <label class="prop-label">文字颜色</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <div class="color-preview" :style="{background: selectedNode.textColor}">
+              <input type="color" :value="selectedNode.textColor" @input="e => { selectedNode.textColor = e.target.value; pushHistory() }" />
+            </div>
+            <input class="prop-input" v-model="selectedNode.textColor" @change="pushHistory" />
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <button class="btn btn-danger" style="width:100%" @click="deleteSelected">🗑 删除节点</button>
+        </div>
+      </div>
+      <div class="prop-panel" v-else style="color:#445;font-size:12px;padding-top:12px;">
+        点击画布上的节点<br>查看并编辑属性
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-area" ref="canvasArea"
+      @dragover.prevent="onCanvasDragOver"
+      @drop="onCanvasDrop"
+      @mousedown="onCanvasMouseDown"
+      @mousemove="onCanvasMouseMove"
+      @mouseup="onCanvasMouseUp"
+      @contextmenu.prevent="onContextMenu"
+      @wheel.prevent="onWheel">
+
+      <svg :width="svgW" :height="svgH" id="mainSvg" ref="mainSvg"
+        :style="{transform: `translate(${panX}px, ${panY}px) scale(${scale})`, transformOrigin: '0 0'}">
+
+        <!-- Grid major lines (subtle) -->
+        <defs>
+          <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+            <rect width="100" height="100" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          </pattern>
+          <marker id="arrow-end" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 Z" fill="#22cc66"/>
+          </marker>
+          <marker id="arrow-both-end" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 Z" fill="#22cc66"/>
+          </marker>
+          <marker id="arrow-start" markerWidth="8" markerHeight="8" refX="2" refY="3" orient="auto-start-reverse">
+            <path d="M0,0 L0,6 L8,3 Z" fill="#22cc66"/>
+          </marker>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)"/>
+
+        <!-- Selection box -->
+        <rect v-if="selBox" :x="selBox.x" :y="selBox.y" :width="selBox.w" :height="selBox.h"
+          fill="rgba(91,156,246,0.08)" stroke="#5b9cf6" stroke-width="1" stroke-dasharray="4 2"
+          pointer-events="none"/>
+
+        <!-- Nodes -->
+        <g v-for="node in nodes" :key="node.id"
+          class="node-group"
+          :class="{ selected: selectedIds.includes(node.id) }"
+          :transform="`translate(${node.x}, ${node.y})`"
+          @mousedown.stop="onNodeMouseDown($event, node)"
+          @dblclick.stop="onNodeDblClick($event, node)"
+          @contextmenu.prevent.stop="onNodeContextMenu($event, node)">
+
+          <!-- Main rect -->
+          <rect class="node-rect"
+            :width="node.w" :height="node.h"
+            :rx="node.rx || 4"
+            :fill="node.fillColor"
+            :stroke="node.strokeColor"
+            stroke-width="1.5"
+            />
+
+          <!-- Label (multi-line support via foreignObject) -->
+          <text class="node-label"
+            :x="node.w / 2" :y="node.h / 2"
+            :font-size="node.fontSize || 13"
+            :fill="node.textColor || '#333'"
+            font-weight="500">
+            <tspan v-for="(line, i) in node.label.split('\n')" :key="i"
+              :x="node.w / 2"
+              :dy="i === 0 ? `${-(node.label.split('\n').length - 1) * (node.fontSize || 13) * 0.6}` : `${(node.fontSize || 13) * 1.2}`">
+              {{ line }}
+            </tspan>
+          </text>
+
+          <!-- Resize handles (selected only) -->
+          <template v-if="selectedIds.length === 1 && selectedIds[0] === node.id">
+            <!-- SE corner -->
+            <rect class="resize-handle"
+              :x="node.w - 6" :y="node.h - 6"
+              width="10" height="10" rx="2"
+              @mousedown.stop="onResizeStart($event, node, 'se')" />
+            <!-- E edge mid -->
+            <rect class="resize-handle resize-handle-e"
+              :x="node.w - 4" :y="node.h/2 - 5"
+              width="8" height="10" rx="2"
+              @mousedown.stop="onResizeStart($event, node, 'e')" />
+            <!-- S edge mid -->
+            <rect class="resize-handle resize-handle-s"
+              :x="node.w/2 - 5" :y="node.h - 4"
+              width="10" height="8" rx="2"
+              @mousedown.stop="onResizeStart($event, node, 's')" />
+          </template>
+        </g>
+
+        <!-- Drop ghost -->
+        <rect v-if="dropGhost" class="drop-ghost"
+          :x="dropGhost.x" :y="dropGhost.y"
+          :width="dropGhost.w" :height="dropGhost.h"
+          :fill="dropGhost.fillColor" stroke="#5b9cf6" stroke-width="2" stroke-dasharray="5 3" rx="4"/>
+      </svg>
+
+      <!-- Double-click label editor overlay -->
+      <div v-if="editingNode" :style="{
+        position: 'absolute',
+        left: editPos.x + 'px',
+        top: editPos.y + 'px',
+        width: editPos.w + 'px',
+        minHeight: editPos.h + 'px',
+        zIndex: 500
+      }">
+        <textarea
+          ref="labelEditor"
+          v-model="editingNode.label"
+          @blur="finishEdit"
+          @keydown.esc="finishEdit"
+          @keydown.enter.exact.prevent="finishEdit"
+          :style="{
+            width: '100%', minHeight: editPos.h + 'px',
+            background: 'rgba(20,24,36,0.95)',
+            border: '2px solid #5b9cf6',
+            borderRadius: '5px',
+            color: '#e0e6f0',
+            fontSize: (editingNode.fontSize || 13) + 'px',
+            fontFamily: 'Microsoft YaHei, PingFang SC, sans-serif',
+            padding: '4px 6px',
+            outline: 'none',
+            resize: 'none',
+            textAlign: 'center',
+            lineHeight: '1.4'
+          }"
+        ></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="statusbar">
+    <span>节点数: <span>{{ nodes.length }}</span></span>
+    <span>已选: <span>{{ selectedIds.length }}</span></span>
+    <span v-if="selectedNode">位置: <span>{{ Math.round(selectedNode.x) }}, {{ Math.round(selectedNode.y) }}</span></span>
+    <span v-if="selectedNode">大小: <span>{{ Math.round(selectedNode.w) }} × {{ Math.round(selectedNode.h) }}</span></span>
+    <span style="margin-left:auto">拖入形状 | 双击编辑 | 右键菜单 | Ctrl+Z 撤销</span>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="ctx-menu" v-if="ctxMenu.visible"
+    :style="{left: ctxMenu.x + 'px', top: ctxMenu.y + 'px'}"
+    @click.stop>
+    <template v-if="ctxMenu.nodeId">
+      <div class="ctx-item" @click="ctxAction('duplicate')">⧉ 复制</div>
+      <div class="ctx-item" @click="ctxAction('toFront')">⬆ 置于顶层</div>
+      <div class="ctx-item" @click="ctxAction('toBack')">⬇ 置于底层</div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item danger" @click="ctxAction('delete')">🗑 删除</div>
+    </template>
+    <template v-else>
+      <div class="ctx-item" @click="ctxAction('paste')">📋 粘贴</div>
+      <div class="ctx-item" @click="ctxAction('selectAll')">⬚ 全选</div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item" @click="ctxAction('clearCanvas')">🗑 清空画布</div>
+    </template>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" :class="{show: toast.show}">{{ toast.msg }}</div>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, nextTick, onMounted, onUnmounted } = Vue;
+
+createApp({
+  setup() {
+    // ── State ──────────────────────────────────────────────
+    const title = ref('车间平面规划图');
+    const nodes = ref([]);
+    const selectedIds = ref([]);
+    const scale = ref(1);
+    const panX = ref(0);
+    const panY = ref(0);
+    const svgW = ref(2000);
+    const svgH = ref(1400);
+
+    const canvasArea = ref(null);
+    const mainSvg = ref(null);
+    const labelEditor = ref(null);
+
+    const editingNode = ref(null);
+    const editPos = reactive({ x: 0, y: 0, w: 0, h: 0 });
+
+    const dropGhost = ref(null);
+    const draggingShape = ref(null);
+    const selBox = ref(null);
+
+    const ctxMenu = reactive({ visible: false, x: 0, y: 0, nodeId: null });
+    const toast = reactive({ show: false, msg: '', timer: null });
+
+    // drag/resize state
+    const dragState = ref(null); // { type: 'node'|'canvas'|'select', ... }
+
+    // history
+    const history = ref([]);
+    const historyIndex = ref(-1);
+
+    // clipboard
+    let clipboard = null;
+
+    let nodeIdCounter = 1;
+
+    // ── Shape types ────────────────────────────────────────
+    const shapeTypes = [
+      { type: 'machine', label: '设备', icon: '⚙', w: 80, h: 100, fillColor: '#f5c9c9', strokeColor: '#c88', textColor: '#333' },
+      { type: 'zone',    label: '功能区', icon: '▦', w: 140, h: 100, fillColor: '#b3e8d4', strokeColor: '#4a9', textColor: '#333' },
+      { type: 'storage', label: '仓储区', icon: '📦', w: 120, h: 90,  fillColor: '#c9d8f5', strokeColor: '#57a', textColor: '#333' },
+      { type: 'passage', label: '通道', icon: '↔', w: 60,  h: 60,  fillColor: '#33cc66', strokeColor: '#1a9944', textColor: '#fff', rx: 4 },
+      { type: 'room',    label: '房间', icon: '🏠', w: 150, h: 120, fillColor: '#fff9c4', strokeColor: '#bb9900', textColor: '#333' },
+      { type: 'text',    label: '文字', icon: 'T',  w: 100, h: 40,  fillColor: 'transparent', strokeColor: 'transparent', textColor: '#e0e6f0', fontSize: 15 },
+    ];
+
+    const colorPalette = [
+      '#f5c9c9','#fce8b0','#c9f5d4','#c9e8f5','#e8c9f5','#f5e8c9',
+      '#ff6b6b','#ffa94d','#51cf66','#339af0','#cc5de8','#f06595',
+      '#33cc66','#ffee33','#00cfff','#ffffff','#aabbcc','#445566',
+      'transparent',
+    ];
+
+    // ── Helpers ────────────────────────────────────────────
+    function uid() { return 'n' + (nodeIdCounter++); }
+
+    function svgCoords(clientX, clientY) {
+      const rect = canvasArea.value.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left - panX.value) / scale.value,
+        y: (clientY - rect.top  - panY.value) / scale.value,
+      };
+    }
+
+    function showToast(msg, dur = 2000) {
+      clearTimeout(toast.timer);
+      toast.msg = msg;
+      toast.show = true;
+      toast.timer = setTimeout(() => { toast.show = false; }, dur);
+    }
+
+    // ── History ────────────────────────────────────────────
+    function pushHistory() {
+      const snapshot = JSON.stringify(nodes.value);
+      // trim future
+      history.value = history.value.slice(0, historyIndex.value + 1);
+      history.value.push(snapshot);
+      historyIndex.value = history.value.length - 1;
+    }
+
+    function undo() {
+      if (historyIndex.value <= 0) return;
+      historyIndex.value--;
+      nodes.value = JSON.parse(history.value[historyIndex.value]);
+      selectedIds.value = [];
+    }
+
+    function redo() {
+      if (historyIndex.value >= history.value.length - 1) return;
+      historyIndex.value++;
+      nodes.value = JSON.parse(history.value[historyIndex.value]);
+      selectedIds.value = [];
+    }
+
+    // ── Computed ───────────────────────────────────────────
+    const selectedNode = computed(() => {
+      if (selectedIds.value.length !== 1) return null;
+      return nodes.value.find(n => n.id === selectedIds.value[0]) || null;
+    });
+
+    // ── Node operations ────────────────────────────────────
+    function createNode(shapeType, x, y) {
+      const s = shapeTypes.find(s => s.type === shapeType) || shapeTypes[0];
+      return {
+        id: uid(),
+        type: s.type,
+        x: Math.round(x),
+        y: Math.round(y),
+        w: s.w,
+        h: s.h,
+        label: s.label,
+        fillColor: s.fillColor,
+        strokeColor: s.strokeColor,
+        textColor: s.textColor || '#333',
+        fontSize: s.fontSize || 13,
+        rx: s.rx !== undefined ? s.rx : 4,
+      };
+    }
+
+    function deleteSelected() {
+      if (!selectedIds.value.length) return;
+      nodes.value = nodes.value.filter(n => !selectedIds.value.includes(n.id));
+      selectedIds.value = [];
+      pushHistory();
+    }
+
+    function selectAll() {
+      selectedIds.value = nodes.value.map(n => n.id);
+    }
+
+    function clearCanvas() {
+      if (!nodes.value.length) return;
+      if (confirm('确定清空画布？')) {
+        nodes.value = [];
+        selectedIds.value = [];
+        pushHistory();
+      }
+    }
+
+    function applyColor(c) {
+      if (!selectedNode.value) return;
+      selectedNode.value.fillColor = c;
+      pushHistory();
+    }
+
+    // ── Drag from palette ──────────────────────────────────
+    function onShapeDragStart(e, shape) {
+      draggingShape.value = shape;
+      e.dataTransfer.setData('text/plain', shape.type);
+      e.dataTransfer.effectAllowed = 'copy';
+    }
+
+    function onCanvasDragOver(e) {
+      if (!draggingShape.value) return;
+      const { x, y } = svgCoords(e.clientX, e.clientY);
+      const s = draggingShape.value;
+      dropGhost.value = { x: x - s.w/2, y: y - s.h/2, w: s.w, h: s.h, fillColor: s.fillColor };
+    }
+
+    function onCanvasDrop(e) {
+      e.preventDefault();
+      if (!draggingShape.value) return;
+      const { x, y } = svgCoords(e.clientX, e.clientY);
+      const s = draggingShape.value;
+      const node = createNode(s.type, x - s.w/2, y - s.h/2);
+      nodes.value.push(node);
+      selectedIds.value = [node.id];
+      dropGhost.value = null;
+      draggingShape.value = null;
+      pushHistory();
+    }
+
+    // ── Canvas mouse ───────────────────────────────────────
+    let selBoxStart = null;
+
+    function onCanvasMouseDown(e) {
+      if (e.button === 1 || (e.button === 0 && e.altKey)) {
+        // Pan
+        dragState.value = { type: 'pan', sx: e.clientX - panX.value, sy: e.clientY - panY.value };
+        return;
+      }
+      if (e.button === 0) {
+        selectedIds.value = [];
+        const { x, y } = svgCoords(e.clientX, e.clientY);
+        selBoxStart = { x, y };
+        dragState.value = { type: 'select', sx: x, sy: y };
+      }
+      closeCtxMenu();
+    }
+
+    function onCanvasMouseMove(e) {
+      if (!dragState.value) return;
+      const ds = dragState.value;
+
+      if (ds.type === 'pan') {
+        panX.value = e.clientX - ds.sx;
+        panY.value = e.clientY - ds.sy;
+        return;
+      }
+
+      if (ds.type === 'select') {
+        const { x, y } = svgCoords(e.clientX, e.clientY);
+        selBox.value = {
+          x: Math.min(x, selBoxStart.x),
+          y: Math.min(y, selBoxStart.y),
+          w: Math.abs(x - selBoxStart.x),
+          h: Math.abs(y - selBoxStart.y),
+        };
+        return;
+      }
+
+      if (ds.type === 'node') {
+        const dx = (e.clientX - ds.lastX) / scale.value;
+        const dy = (e.clientY - ds.lastY) / scale.value;
+        ds.lastX = e.clientX; ds.lastY = e.clientY;
+        for (const id of selectedIds.value) {
+          const n = nodes.value.find(n => n.id === id);
+          if (n) { n.x += dx; n.y += dy; }
+        }
+        return;
+      }
+
+      if (ds.type === 'resize') {
+        const dx = (e.clientX - ds.lastX) / scale.value;
+        const dy = (e.clientY - ds.lastY) / scale.value;
+        ds.lastX = e.clientX; ds.lastY = e.clientY;
+        const n = nodes.value.find(n => n.id === ds.nodeId);
+        if (!n) return;
+        if (ds.dir === 'se' || ds.dir === 'e') n.w = Math.max(20, n.w + dx);
+        if (ds.dir === 'se' || ds.dir === 's') n.h = Math.max(20, n.h + dy);
+        return;
+      }
+    }
+
+    function onCanvasMouseUp(e) {
+      if (dragState.value?.type === 'select' && selBox.value) {
+        const sb = selBox.value;
+        if (sb.w > 3 || sb.h > 3) {
+          selectedIds.value = nodes.value
+            .filter(n => n.x + n.w > sb.x && n.x < sb.x + sb.w && n.y + n.h > sb.y && n.y < sb.y + sb.h)
+            .map(n => n.id);
+        }
+        selBox.value = null;
+      }
+      if (dragState.value?.type === 'node' && dragState.value.moved) pushHistory();
+      if (dragState.value?.type === 'resize') pushHistory();
+      dragState.value = null;
+    }
+
+    // ── Node mouse ─────────────────────────────────────────
+    function onNodeMouseDown(e, node) {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      closeCtxMenu();
+
+      if (!selectedIds.value.includes(node.id)) {
+        if (e.shiftKey) {
+          selectedIds.value.push(node.id);
+        } else {
+          selectedIds.value = [node.id];
+        }
+      }
+
+      dragState.value = {
+        type: 'node',
+        lastX: e.clientX,
+        lastY: e.clientY,
+        moved: false,
+      };
+
+      const origMove = dragState.value;
+      const moveGuard = () => { if (origMove) origMove.moved = true; };
+      window.addEventListener('mousemove', moveGuard, { once: true });
+    }
+
+    // ── Resize ─────────────────────────────────────────────
+    function onResizeStart(e, node, dir) {
+      e.stopPropagation();
+      dragState.value = {
+        type: 'resize',
+        nodeId: node.id,
+        dir,
+        lastX: e.clientX,
+        lastY: e.clientY,
+      };
+    }
+
+    // ── Double-click edit ──────────────────────────────────
+    function onNodeDblClick(e, node) {
+      e.stopPropagation();
+      editingNode.value = node;
+      const rect = canvasArea.value.getBoundingClientRect();
+      editPos.x = node.x * scale.value + panX.value + rect.left - rect.left;
+      editPos.y = node.y * scale.value + panY.value + rect.top  - rect.top;
+      editPos.w = node.w * scale.value;
+      editPos.h = node.h * scale.value;
+      nextTick(() => { if (labelEditor.value) { labelEditor.value.focus(); labelEditor.value.select(); } });
+    }
+
+    function finishEdit() {
+      if (!editingNode.value) return;
+      editingNode.value = null;
+      pushHistory();
+    }
+
+    // ── Context menu ───────────────────────────────────────
+    function onContextMenu(e) {
+      ctxMenu.visible = true;
+      ctxMenu.x = e.clientX;
+      ctxMenu.y = e.clientY;
+      ctxMenu.nodeId = null;
+    }
+
+    function onNodeContextMenu(e, node) {
+      selectedIds.value = [node.id];
+      ctxMenu.visible = true;
+      ctxMenu.x = e.clientX;
+      ctxMenu.y = e.clientY;
+      ctxMenu.nodeId = node.id;
+    }
+
+    function closeCtxMenu() { ctxMenu.visible = false; }
+
+    function ctxAction(action) {
+      closeCtxMenu();
+      if (action === 'delete') { deleteSelected(); return; }
+      if (action === 'duplicate') {
+        const n = nodes.value.find(n => n.id === ctxMenu.nodeId);
+        if (!n) return;
+        const copy = { ...JSON.parse(JSON.stringify(n)), id: uid(), x: n.x + 20, y: n.y + 20 };
+        nodes.value.push(copy);
+        selectedIds.value = [copy.id];
+        pushHistory();
+        return;
+      }
+      if (action === 'toFront') {
+        const idx = nodes.value.findIndex(n => n.id === ctxMenu.nodeId);
+        if (idx < 0) return;
+        nodes.value.push(nodes.value.splice(idx, 1)[0]);
+        pushHistory();
+        return;
+      }
+      if (action === 'toBack') {
+        const idx = nodes.value.findIndex(n => n.id === ctxMenu.nodeId);
+        if (idx < 0) return;
+        nodes.value.unshift(nodes.value.splice(idx, 1)[0]);
+        pushHistory();
+        return;
+      }
+      if (action === 'paste') {
+        if (!clipboard) return;
+        const copy = { ...JSON.parse(JSON.stringify(clipboard)), id: uid(), x: clipboard.x + 20, y: clipboard.y + 20 };
+        nodes.value.push(copy);
+        selectedIds.value = [copy.id];
+        pushHistory();
+        return;
+      }
+      if (action === 'selectAll') { selectAll(); return; }
+      if (action === 'clearCanvas') { clearCanvas(); return; }
+    }
+
+    // ── Zoom & Pan ─────────────────────────────────────────
+    function zoom(delta) {
+      scale.value = Math.min(3, Math.max(0.2, scale.value + delta));
+    }
+
+    function resetZoom() {
+      scale.value = 1; panX.value = 0; panY.value = 0;
+    }
+
+    function onWheel(e) {
+      if (e.ctrlKey || e.metaKey) {
+        const delta = e.deltaY > 0 ? -0.08 : 0.08;
+        zoom(delta);
+      } else if (e.shiftKey) {
+        panX.value -= e.deltaY;
+      } else {
+        panX.value -= e.deltaX;
+        panY.value -= e.deltaY;
+      }
+    }
+
+    // ── Export PNG ─────────────────────────────────────────
+    function exportPNG() {
+      const svg = mainSvg.value;
+      const serializer = new XMLSerializer();
+      let svgStr = serializer.serializeToString(svg);
+      // embed font hint
+      svgStr = svgStr.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+      const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = svgW.value; canvas.height = svgH.value;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#f0f4f8';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        const a = document.createElement('a');
+        a.download = (title.value || '车间规划') + '.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+        showToast('✅ 图片已导出');
+      };
+      img.src = url;
+    }
+
+    // ── Load sample ────────────────────────────────────────
+    function loadSample() {
+      nodeIdCounter = 1;
+      nodes.value = [
+        // outer room border (background)
+        { id: uid(), type:'zone', x:10, y:10, w:1100, h:700, label:'', fillColor:'#ccf5e8', strokeColor:'#7cc', textColor:'#333', fontSize:13, rx:2 },
+        // Left zones
+        { id: uid(), type:'zone', x:15, y:15,  w:160, h:100, label:'碎料、拌料区', fillColor:'#f5f5f5', strokeColor:'#999', textColor:'#333', fontSize:12, rx:2 },
+        { id: uid(), type:'storage', x:15, y:145, w:175, h:160, label:'塑料粒子放置区', fillColor:'#c9ccf5', strokeColor:'#889', textColor:'#333', fontSize:12, rx:2 },
+        { id: uid(), type:'zone', x:15, y:315, w:175, h:180, label:'半成品暂放区', fillColor:'#b3f5e0', strokeColor:'#4a9', textColor:'#333', fontSize:13, rx:2 },
+        { id: uid(), type:'zone', x:15, y:510, w:175, h:185, label:'半成品装配区', fillColor:'#f5e8d0', strokeColor:'#b98', textColor:'#333', fontSize:13, rx:2 },
+        // Machines top row
+        { id: uid(), type:'machine', x:220, y:15,  w:90, h:110, label:'1号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        { id: uid(), type:'machine', x:330, y:15,  w:80, h:90,  label:'2号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        { id: uid(), type:'machine', x:430, y:15,  w:75, h:100, label:'3号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        { id: uid(), type:'machine', x:530, y:15,  w:80, h:90,  label:'4号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        { id: uid(), type:'machine', x:630, y:15,  w:75, h:90,  label:'5号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        { id: uid(), type:'machine', x:730, y:15,  w:80, h:90,  label:'6号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        { id: uid(), type:'machine', x:840, y:15,  w:75, h:90,  label:'7号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        // Machines bottom row
+        { id: uid(), type:'machine', x:840, y:560, w:75, h:90,  label:'8号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        { id: uid(), type:'machine', x:730, y:560, w:75, h:90,  label:'9号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        { id: uid(), type:'machine', x:630, y:560, w:80, h:90,  label:'10号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        { id: uid(), type:'machine', x:530, y:560, w:75, h:90,  label:'11号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        { id: uid(), type:'machine', x:430, y:560, w:80, h:90,  label:'12号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        { id: uid(), type:'machine', x:330, y:560, w:80, h:90,  label:'13号机', fillColor:'#f5d0f0', strokeColor:'#b8a', textColor:'#333', fontSize:13, rx:3 },
+        // Mold zones right
+        { id: uid(), type:'zone', x:945, y:295, w:140, h:185, label:'模具放置区', fillColor:'#b3f588', strokeColor:'#5a9', textColor:'#333', fontSize:13, rx:2 },
+        { id: uid(), type:'zone', x:1090, y:295, w:22,  h:185, label:'模具\n维修区', fillColor:'#ffe033', strokeColor:'#bb9900', textColor:'#333', fontSize:11, rx:2 },
+        // Passages
+        { id: uid(), type:'passage', x:218, y:450, w:55, h:80,  label:'通\n道', fillColor:'#22cc55', strokeColor:'#1a9944', textColor:'#fff', fontSize:13, rx:4 },
+        { id: uid(), type:'passage', x:540, y:395, w:130, h:55, label:'通　道', fillColor:'#22cc55', strokeColor:'#1a9944', textColor:'#fff', fontSize:14, rx:4 },
+        // Deburr
+        { id: uid(), type:'zone', x:328, y:555, w:85, h:100, label:'披峰\n修理区', fillColor:'#fff5cc', strokeColor:'#cc9900', textColor:'#333', fontSize:12, rx:3 },
+      ];
+      selectedIds.value = [];
+      pushHistory();
+      showToast('✅ 示例已加载');
+    }
+
+    // ── Keyboard shortcuts ─────────────────────────────────
+    function onKeyDown(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') { e.preventDefault(); selectAll(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        if (selectedNode.value) clipboard = JSON.parse(JSON.stringify(selectedNode.value));
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (clipboard) ctxAction('paste');
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
+      if (e.key === 'Escape') { selectedIds.value = []; closeCtxMenu(); }
+      // Arrow nudge
+      const STEP = e.shiftKey ? 10 : 2;
+      if (selectedIds.value.length && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        for (const id of selectedIds.value) {
+          const n = nodes.value.find(n => n.id === id);
+          if (!n) continue;
+          if (e.key === 'ArrowUp') n.y -= STEP;
+          if (e.key === 'ArrowDown') n.y += STEP;
+          if (e.key === 'ArrowLeft') n.x -= STEP;
+          if (e.key === 'ArrowRight') n.x += STEP;
+        }
+        pushHistory();
+      }
+    }
+
+    onMounted(() => {
+      window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('click', closeCtxMenu);
+      window.addEventListener('mouseup', onCanvasMouseUp);
+      pushHistory(); // initial empty state
+      loadSample();
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('click', closeCtxMenu);
+      window.removeEventListener('mouseup', onCanvasMouseUp);
+    });
+
+    return {
+      title, nodes, selectedIds, selectedNode,
+      scale, panX, panY, svgW, svgH,
+      canvasArea, mainSvg, labelEditor,
+      editingNode, editPos,
+      dropGhost, selBox,
+      ctxMenu, toast,
+      dragState,
+      history, historyIndex,
+      shapeTypes, colorPalette,
+      // methods
+      pushHistory, undo, redo,
+      deleteSelected, selectAll, clearCanvas, applyColor,
+      onShapeDragStart, onCanvasDragOver, onCanvasDrop,
+      onCanvasMouseDown, onCanvasMouseMove, onCanvasMouseUp,
+      onNodeMouseDown, onResizeStart,
+      onNodeDblClick, finishEdit,
+      onContextMenu, onNodeContextMenu, ctxAction,
+      zoom, resetZoom, onWheel,
+      exportPNG, loadSample,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
