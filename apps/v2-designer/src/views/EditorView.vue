@@ -2,19 +2,12 @@
 /**
  * EditorViewV2 — v2 编辑器主视图
  *
- * DnD 修复要点：
- *   在此顶级组件中创建 X6 Dnd 实例，传入：
- *     - target: graph（X6 Graph 实例）
- *     - dndContainer: 整个编辑器区域（mainRef）
- *   通过 provide('dnd-instance') 注入给 ToolbarV2 使用
- *
  * ui-ux-pro-max 设计规范：
  *   - Dark Dashboard 风格：深层次色阶 #020617 / #0f1629 / #1e293b
  *   - 科技蓝主色调：#0ea5e9 / #38bdf8
  *   - 玻璃态侧边栏、细腻边框、微妙光晕效果
  */
-import { ref, onMounted, watch, provide } from 'vue'
-import { Dnd } from '@antv/x6'
+import { ref } from 'vue'
 import { useEditorStoreV2 } from '@/stores/v2/editorStoreV2'
 import ToolbarV2 from '@/components/v2/editor/ToolbarV2.vue'
 import CanvasEditorV2 from '@/components/v2/editor/CanvasEditorV2.vue'
@@ -22,13 +15,6 @@ import PropertyPanelV2 from '@/components/v2/editor/PropertyPanelV2.vue'
 import HeaderV2 from '@/components/v2/editor/HeaderV2.vue'
 
 const editorStore = useEditorStoreV2()
-
-// 整个编辑器的主容器 ref，作为 DnD 的 dndContainer
-const mainRef = ref<HTMLElement>()
-
-// DnD 实例，通过 provide 传给 ToolbarV2
-const dndInstance = ref<Dnd | null>(null)
-provide('dnd-instance', dndInstance)
 
 // JSON 编辑器弹窗（简化版）
 const showJsonEditor = ref(false)
@@ -49,32 +35,6 @@ function applyJson() {
     alert('JSON 格式错误，请检查后重试')
   }
 }
-
-// 当 Graph 实例就绪时，初始化 DnD
-watch(() => editorStore.graph, (graph) => {
-  if (!graph || !mainRef.value) return
-
-  // 销毁旧实例
-  if (dndInstance.value) {
-    try { (dndInstance.value as any).dispose?.() } catch { /* noop */ }
-  }
-
-  // 创建新的 DnD 实例
-  dndInstance.value = new Dnd({
-    target: graph as any,
-    scaled: true,
-  })
-}, { immediate: true })
-
-// mainRef 挂载后，如果 graph 已存在，也触发一次初始化
-onMounted(() => {
-  if (editorStore.graph && !dndInstance.value) {
-    dndInstance.value = new Dnd({
-      target: editorStore.graph as any,
-      scaled: true,
-    })
-  }
-})
 </script>
 
 <template>
@@ -83,7 +43,7 @@ onMounted(() => {
     <HeaderV2 @open-json-editor="openJsonEditor" />
 
     <!-- 主工作区 -->
-    <main ref="mainRef" class="ev2-main">
+    <main class="ev2-main">
       <!-- 左侧图元库 -->
       <aside class="ev2-sidebar-left" :class="{ collapsed: editorStore.isToolbarCollapsed }">
         <ToolbarV2 />

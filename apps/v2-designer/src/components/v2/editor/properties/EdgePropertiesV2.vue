@@ -26,6 +26,7 @@ const edgePresets = [
 ]
 
 const currentShape = ref('fluid-pipe')
+const errorMessage = ref('')
 
 const loadEdgeConfig = () => {
   if (props.edge) {
@@ -46,6 +47,7 @@ const changeEdgeShape = (newShape: string) => {
   const graph = editorStore.graph
   if (!graph || !props.edge) return
 
+  errorMessage.value = ''
   const oldEdge = props.edge
   const source = JSON.parse(JSON.stringify(oldEdge.getSource() || {}))
   const target = JSON.parse(JSON.stringify(oldEdge.getTarget() || {}))
@@ -58,31 +60,35 @@ const changeEdgeShape = (newShape: string) => {
   const data = oldEdge.getData() ? JSON.parse(JSON.stringify(oldEdge.getData())) : {}
   const zIndex = oldEdge.getZIndex()
 
-  // !!! 至关重要：先取消选中并移除工具，清理高亮框与顶点等 DOM !!!
-  editorStore.deselect([oldEdge.id])
-  graph.unselect(oldEdge)
-  oldEdge.removeTools()
+  try {
+    // 先创建新边，确保成功后再删旧边，避免失败时连线直接丢失
+    const newEdge = graph.addEdge({
+      shape: newShape,
+      source,
+      target,
+      vertices,
+      router,
+      connector,
+      labels,
+      zIndex,
+      data,
+    })
 
-  // 销毁旧边
-  oldEdge.remove()
+    // 新边创建成功后再清理旧边
+    editorStore.deselect([oldEdge.id])
+    graph.unselect(oldEdge)
+    oldEdge.removeTools()
+    oldEdge.remove()
 
-  // 创立新边 (不再指定旧 id，让系统生成全新 id)
-  const newEdge = graph.addEdge({
-    shape: newShape,
-    source,
-    target,
-    vertices,
-    router,
-    connector,
-    labels,
-    zIndex,
-    data
-  })
-
-  // 重新对新边挂载选中态
-  editorStore.select([newEdge.id])
-  currentShape.value = newShape
-  emit('update')
+    // 重新对新边挂载选中态
+    editorStore.select([newEdge.id])
+    currentShape.value = newShape
+    emit('update')
+  } catch (error) {
+    console.error('[EdgePropertiesV2] changeEdgeShape failed:', error)
+    const message = error instanceof Error ? error.message : String(error)
+    errorMessage.value = `切换失败：${message}`
+  }
 }
 </script>
 
@@ -102,6 +108,13 @@ const changeEdgeShape = (newShape: string) => {
       <div class="help-text">
         选择上述类型后，会实时重构画布中选中的连线为目标工业动效。
       </div>
+
+      <Transition name="edge-error">
+        <div v-if="errorMessage" class="error-tip">
+          <div class="error-title">切换连线类型失败</div>
+          <div class="error-message">{{ errorMessage }}</div>
+        </div>
+      </Transition>
     </div>
   </div>
 </template>
@@ -192,5 +205,39 @@ const changeEdgeShape = (newShape: string) => {
   font-size: 11px;
   color: #64748b;
   line-height: 1.5;
+}
+
+.error-tip {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 113, 133, 0.4);
+  background: linear-gradient(135deg, rgba(70, 14, 28, 0.92), rgba(36, 10, 22, 0.92));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.error-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fecdd3;
+  margin-bottom: 4px;
+}
+
+.error-message {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #fda4af;
+  word-break: break-word;
+}
+
+.edge-error-enter-active,
+.edge-error-leave-active {
+  transition: all 0.2s ease;
+}
+
+.edge-error-enter-from,
+.edge-error-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>

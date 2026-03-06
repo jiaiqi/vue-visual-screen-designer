@@ -85,26 +85,68 @@ onMounted(async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     autoSave.mount(graph, canvasStore.config as any)
 
-    // 重写坐标转换，解决 CSS 外部缩放导致的托拽偏移
+    // 重写坐标转换，解决 CSS 外部缩放和 margin 导致的拖拽偏移
     // @ts-expect-error - 重写方法需忽略类型检查
     graph.clientToLocal = (arg1: any, arg2?: number) => {
       let clientX = 0
       let clientY = 0
 
       if (typeof arg1 === 'object' && arg1 !== null) {
-        clientX = arg1.clientX || 0
-        clientY = arg1.clientY || 0
+        // 兼容两种输入:
+        // 1) MouseEvent: { clientX, clientY }
+        // 2) X6 PointLike: { x, y } (如 Dnd.drop 阶段)
+        if ('clientX' in arg1 || 'clientY' in arg1) {
+          clientX = Number(arg1.clientX) || 0
+          clientY = Number(arg1.clientY) || 0
+        } else {
+          clientX = Number(arg1.x) || 0
+          clientY = Number(arg1.y) || 0
+        }
       } else {
         clientX = Number(arg1) || 0
         clientY = Number(arg2) || 0
+      }
+
+      // 获取画布容器的边界矩形
+      const rect = canvasRef.value ? canvasRef.value.getBoundingClientRect() : { left: 0, top: 0 }
+      const s = scale.value || canvasStore.viewport.zoom || 1
+
+      // 计算相对于画布容器左上角的位置
+      // rect.left/top 包含了 margin 和 transform 的影响
+      // 除以 scale 得到逻辑坐标
+      const localX = (clientX - rect.left) / s
+      const localY = (clientY - rect.top) / s
+
+      // console.log('[CanvasEditorV2] clientToLocal:', {
+      //   clientX, clientY,
+      //   rectLeft: rect.left, rectTop: rect.top,
+      //   scale: s,
+      //   localX, localY
+      // })
+
+      return { x: localX, y: localY }
+    }
+
+    // 同时重写 localToClient，确保双向转换正确
+    // @ts-expect-error - 重写方法需忽略类型检查
+    graph.localToClient = (arg1: any, arg2?: number) => {
+      let localX = 0
+      let localY = 0
+
+      if (typeof arg1 === 'object' && arg1 !== null) {
+        localX = arg1.x || 0
+        localY = arg1.y || 0
+      } else {
+        localX = Number(arg1) || 0
+        localY = Number(arg2) || 0
       }
 
       const rect = canvasRef.value ? canvasRef.value.getBoundingClientRect() : { left: 0, top: 0 }
       const s = scale.value || canvasStore.viewport.zoom || 1
 
       return {
-        x: (clientX - rect.left) / s,
-        y: (clientY - rect.top) / s
+        x: localX * s + rect.left,
+        y: localY * s + rect.top,
       }
     }
   }

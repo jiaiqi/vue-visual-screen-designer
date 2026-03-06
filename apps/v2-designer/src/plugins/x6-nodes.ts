@@ -1,9 +1,45 @@
 import { Graph } from '@antv/x6'
+import { register } from '@antv/x6-vue-shape'
+import CoolingFan from '@/components/v2/nodes/CoolingFan.vue'
+import StorageTank from '@/components/v2/nodes/StorageTank.vue'
+import IconNode from '@/components/v2/nodes/IconNode.vue'
+import ProgressBarNode from '@/components/v2/nodes/ProgressBarNode.vue'
+import DigitalNode from '@/components/v2/nodes/DigitalNode.vue'
+import ChartNode from '@/components/v2/nodes/ChartNode.vue'
+import TableNode from '@/components/v2/nodes/TableNode.vue'
+import ListNode from '@/components/v2/nodes/ListNode.vue'
+import TimelineNode from '@/components/v2/nodes/TimelineNode.vue'
+import CountDownNode from '@/components/v2/nodes/CountDownNode.vue'
+import GaugeNode from '@/components/v2/nodes/GaugeNode.vue'
+import AlertNode from '@/components/v2/nodes/AlertNode.vue'
 
 // 注册标志位
 let flowNodesRegistered = false
 let decorationNodesRegistered = false
 let dashboardNodesRegistered = false
+let vueNodesRegistered = false
+let edgesRegistered = false
+
+function safeRegisterVueShape(shape: string, component: unknown) {
+  try {
+    register({ shape, component: component as never })
+  } catch (error) {
+    // HMR 或路由切换时可能重复注册
+    if (!String(error).includes('already registered')) {
+      throw error
+    }
+  }
+}
+
+function safeRegisterEdge(shape: string, config: Parameters<typeof Graph.registerEdge>[1]) {
+  try {
+    Graph.registerEdge(shape, config)
+  } catch (error) {
+    if (!String(error).includes('already registered')) {
+      throw error
+    }
+  }
+}
 
 /**
  * 注册核心装饰类节点
@@ -60,6 +96,30 @@ export function registerDecorationNodes() {
     ],
   })
 
+  // 边框-渐变（兼容旧模板/旧分支代码）
+  Graph.registerNode('border-gradient', {
+    inherit: 'rect',
+    width: 300,
+    height: 200,
+    resizable: true,
+    draggable: true,
+    attrs: {
+      body: {
+        rx: 6, ry: 6,
+        stroke: '#ff6b6b',
+        strokeWidth: 2,
+        fill: 'l(0) 0:rgba(20,20,40,0.85) 1:rgba(40,10,30,0.85)',
+      },
+      header: { rx: 6, ry: 6, strokeWidth: 0, fill: 'rgba(255, 107, 107, 0.12)' },
+      headerText: { fill: '#ff8f8f', fontSize: 14, fontWeight: 'bold', refX: 15, refY: 12 },
+    },
+    markup: [
+      { tagName: 'rect', selector: 'body' },
+      { tagName: 'rect', selector: 'header' },
+      { tagName: 'text', selector: 'headerText' },
+    ],
+  })
+
   // 分割线
   Graph.registerNode('divider-h', {
     inherit: 'rect', width: 400, height: 2,
@@ -68,6 +128,31 @@ export function registerDecorationNodes() {
   Graph.registerNode('divider-v', {
     inherit: 'rect', width: 2, height: 200,
     attrs: { body: { fill: 'l(0) 0:transparent 0.5:#00f0ff 1:transparent' } },
+  })
+
+  // 装饰元素（兼容旧分支代码）
+  Graph.registerNode('decoration-corner', {
+    inherit: 'rect',
+    width: 60,
+    height: 60,
+    attrs: {
+      body: {
+        fill: 'transparent',
+        stroke: '#00f0ff',
+        strokeWidth: 2,
+      },
+    },
+  })
+  Graph.registerNode('decoration-line', {
+    inherit: 'rect',
+    width: 200,
+    height: 4,
+    attrs: {
+      body: {
+        fill: 'l(0) 0:#00f0ff 0.5:#38bdf8 1:#00f0ff',
+        strokeWidth: 0,
+      },
+    },
   })
 
   // 按钮
@@ -152,20 +237,137 @@ export function registerDashboardNodes() {
  * 注册连线相关逻辑
  */
 export function registerEdges() {
-  Graph.registerEdge('electric-line', {
-    inherit: 'edge',
-    attrs: { line: { stroke: '#1e40af', strokeWidth: 4, targetMarker: 'classic' } }
-  })
-  Graph.registerEdge('signal-line', {
-    inherit: 'edge',
-    attrs: { line: { stroke: '#10b981', strokeWidth: 2, strokeDasharray: '4, 4', targetMarker: 'classic' } }
-  })
-  // 基础 3D 管道兼容
-  Graph.registerEdge('fluid-pipe', {
+  if (edgesRegistered) return
+  edgesRegistered = true
+
+  safeRegisterEdge('water-flow', {
     inherit: 'edge',
     attrs: {
-      line: { connection: true, stroke: '#475569', strokeWidth: 10, targetMarker: null },
-      fluid: { connection: true, stroke: '#38bdf8', strokeWidth: 6, strokeDasharray: '12, 12', style: { animation: 'dash-flow 1s linear infinite' } }
+      line: {
+        stroke: '#38bdf8',
+        strokeWidth: 6,
+        fill: 'none',
+        strokeLinejoin: 'round',
+        strokeLinecap: 'round',
+        targetMarker: null,
+      },
+    },
+  })
+
+  safeRegisterEdge('electric-flow', {
+    inherit: 'edge',
+    attrs: {
+      line: {
+        stroke: '#ffab00',
+        strokeWidth: 4,
+        fill: 'none',
+        strokeLinejoin: 'round',
+        strokeLinecap: 'round',
+        strokeDasharray: '8, 6',
+        style: { filter: 'drop-shadow(0 0 4px #ffab00)' },
+        targetMarker: null,
+      },
+    },
+  })
+
+  safeRegisterEdge('arrow-flow', {
+    inherit: 'edge',
+    attrs: {
+      line: {
+        stroke: '#00e676',
+        strokeWidth: 3,
+        fill: 'none',
+        strokeLinejoin: 'round',
+        strokeLinecap: 'round',
+        strokeDasharray: '10, 6',
+        targetMarker: {
+          name: 'classic',
+          size: 8,
+        },
+      },
+    },
+  })
+
+  safeRegisterEdge('particle-flow', {
+    inherit: 'edge',
+    attrs: {
+      line: {
+        stroke: '#c084fc',
+        strokeWidth: 3,
+        fill: 'none',
+        strokeLinejoin: 'round',
+        strokeLinecap: 'round',
+        strokeDasharray: '2, 8',
+        targetMarker: null,
+      },
+    },
+  })
+
+  safeRegisterEdge('pulse-flow', {
+    inherit: 'edge',
+    attrs: {
+      line: {
+        stroke: '#ff4081',
+        strokeWidth: 3,
+        fill: 'none',
+        strokeLinejoin: 'round',
+        strokeLinecap: 'round',
+        strokeDasharray: '14, 8',
+        targetMarker: null,
+      },
+    },
+  })
+
+  safeRegisterEdge('electric-line', {
+    inherit: 'edge',
+    attrs: {
+      line: {
+        stroke: '#1e40af',
+        strokeWidth: 4,
+        fill: 'none',
+        strokeLinejoin: 'round',
+        strokeLinecap: 'round',
+        targetMarker: 'classic',
+      },
+    },
+  })
+  safeRegisterEdge('signal-line', {
+    inherit: 'edge',
+    attrs: {
+      line: {
+        stroke: '#10b981',
+        strokeWidth: 2,
+        fill: 'none',
+        strokeLinejoin: 'round',
+        strokeLinecap: 'round',
+        strokeDasharray: '4, 4',
+        targetMarker: 'classic',
+      },
+    },
+  })
+  // 基础 3D 管道兼容
+  safeRegisterEdge('fluid-pipe', {
+    inherit: 'edge',
+    attrs: {
+      line: {
+        connection: true,
+        stroke: '#475569',
+        strokeWidth: 10,
+        fill: 'none',
+        strokeLinejoin: 'round',
+        strokeLinecap: 'round',
+        targetMarker: null,
+      },
+      fluid: {
+        connection: true,
+        stroke: '#38bdf8',
+        strokeWidth: 6,
+        fill: 'none',
+        strokeLinejoin: 'round',
+        strokeLinecap: 'round',
+        strokeDasharray: '12, 12',
+        style: { animation: 'dash-flow 1s linear infinite' },
+      },
     },
     markup: [{ tagName: 'path', selector: 'line' }, { tagName: 'path', selector: 'fluid' }],
   })
@@ -177,9 +379,20 @@ export function registerEdges() {
  * 如需添加 Vue 节点，请先在 @/components/v2/nodes/ 目录下创建对应组件
  */
 export function registerVueNodes() {
-  // v2-designer 暂无 Vue 节点组件
-  // 如需添加，请使用以下模式：
-  // import { register } from '@antv/x6-vue-shape'
-  // import MyNode from '@/components/v2/nodes/MyNode.vue'
-  // register({ shape: 'my-node', component: MyNode })
+  if (vueNodesRegistered) return
+  vueNodesRegistered = true
+
+  // 完整 Vue 组件节点（与 v1 保持一致）
+  safeRegisterVueShape('cooling-fan', CoolingFan)
+  safeRegisterVueShape('storage-tank', StorageTank)
+  safeRegisterVueShape('icon-node', IconNode)
+  safeRegisterVueShape('progress-node', ProgressBarNode)
+  safeRegisterVueShape('digital-node', DigitalNode)
+  safeRegisterVueShape('chart-node', ChartNode)
+  safeRegisterVueShape('table-basic', TableNode)
+  safeRegisterVueShape('list-rank', ListNode)
+  safeRegisterVueShape('timeline-h', TimelineNode)
+  safeRegisterVueShape('countdown', CountDownNode)
+  safeRegisterVueShape('gauge-node', GaugeNode)
+  safeRegisterVueShape('alert-node', AlertNode)
 }

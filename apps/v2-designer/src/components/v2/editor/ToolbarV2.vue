@@ -6,7 +6,8 @@
  *  - ToolbarV2 内部 watch editorStore.graph，graph 就绪后创建 Dnd 实例
  *  - dndContainer 绑定到 Toolbar 自身根元素（与 v1 Toolbar 完全相同的做法）
  */
-import { ref, computed, inject } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { Dnd } from '@antv/x6'
 import { useEditorStoreV2 } from '@/stores/v2/editorStoreV2'
 import type { ChartConfig } from '@/data/chartConfigs'
 import { chartCategories } from '@/data/chartConfigs'
@@ -23,11 +24,79 @@ import {
 } from 'lucide-vue-next'
 
 const editorStore = useEditorStoreV2()
-const dnd = inject<any>('dnd-instance')
+
+// DnD 实例在 Toolbar 内部创建，与 v1 保持一致
+const dndContainerRef = ref<HTMLElement>()
+const dndRef = ref<Dnd>()
+
+// 监听 graph 就绪后创建 Dnd 实例
+// 使用 flush: 'post' 确保 DOM 已挂载
+watch(() => editorStore.graph, (graph) => {
+  console.log('[ToolbarV2] watch triggered:', {
+    hasGraph: !!graph,
+    hasContainer: !!dndContainerRef.value,
+    hasDnd: !!dndRef.value
+  })
+  if (graph && dndContainerRef.value && !dndRef.value) {
+    console.log('[ToolbarV2] Creating Dnd instance')
+
+    const dnd = new Dnd({
+      target: graph as any,
+      scaled: false,
+      // dndContainer: 设置为 Toolbar 容器，这样在 Toolbar 上放开鼠标不会放置节点
+      // 这是正确的用法 - dndContainer 是阻止放置的区域
+      dndContainer: dndContainerRef.value,
+      // draggingContainer: 拖拽过程中临时节点显示的容器，默认是 document.body
+      draggingContainer: document.body,
+      // 交给 X6 DnD 内部根据 clientToLocal 统一计算最终落点
+      getDropNode: (draggingNode: any) => draggingNode.clone(),
+    })
+
+    // 监听 Dnd 事件用于调试
+    dnd.on('drop', (args: any) => {
+      console.log('[ToolbarV2] Dnd drop event:', args)
+    })
+    dnd.on('dragend', (args: any) => {
+      console.log('[ToolbarV2] Dnd dragend event:', args)
+    })
+
+    dndRef.value = dnd
+    console.log('[ToolbarV2] Dnd instance created:', !!dndRef.value)
+  }
+}, { immediate: true, flush: 'post' })
 
 const isCollapsed = computed(() => editorStore.isToolbarCollapsed)
 const searchQuery = ref('')
 const activeCategory = ref('base')
+
+interface UiNotice {
+  id: number
+  title: string
+  message: string
+}
+
+const uiNotices = ref<UiNotice[]>([])
+let noticeSeed = 0
+
+function showErrorToast(title: string, message: string) {
+  const id = ++noticeSeed
+  uiNotices.value.push({ id, title, message })
+  if (uiNotices.value.length > 3) {
+    uiNotices.value.splice(0, uiNotices.value.length - 3)
+  }
+  window.setTimeout(() => {
+    uiNotices.value = uiNotices.value.filter(n => n.id !== id)
+  }, 4200)
+}
+
+function formatDragError(error: unknown, fallbackMessage: string) {
+  const message = error instanceof Error ? error.message : String(error)
+  const unregistered = message.match(/Node with name '([^']+)' does not exist\./)
+  if (unregistered) {
+    return `图元 "${unregistered[1]}" 未注册，已阻止本次拖拽。请刷新页面后重试，若仍失败请联系开发处理。`
+  }
+  return fallbackMessage
+}
 
 // ==================== 图元配置（与 v1 相同）====================
 const commonPorts = {
@@ -45,7 +114,7 @@ const commonPorts = {
 
 const shapeTypes = [
   { type: 'rect', label: '矩形', icon: Square, w: 120, h: 80, stroke: '#3b82f6', rx: 0 },
-  { type: 'circle', label: '圆形', icon: Circle, w: 100, h: 100, stroke: '#10b981', rx: 0 },
+  { type: 'circle111', label: '圆形', icon: Circle, w: 100, h: 100, stroke: '#10b981', rx: 0 },
   { type: 'triangle', label: '三角形', icon: Triangle, w: 100, h: 100, stroke: '#f59e0b', rx: 0 },
   { type: 'trapezoid', label: '梯形', icon: MoveHorizontal, w: 120, h: 100, stroke: '#f43f5e', rx: 0 },
   { type: 'line', label: '线段', icon: Minus, w: 100, h: 2, stroke: '#94a3b8', rx: 0 },
@@ -132,167 +201,193 @@ const filteredChartCategories = computed(() => {
 })
 
 // ==================== DnD 拖拽 ====================
+
 function startDrag(e: MouseEvent, item: typeof shapeTypes[0]) {
-  const dndInst = dnd.value
+  console.log('[ToolbarV2] startDrag called:', {
+    hasGraph: !!editorStore.graph,
+    hasDnd: !!dndRef.value,
+    itemType: item.type
+  })
   const graph = editorStore.graph
-  if (!graph || !dndInst) return
-
-  const iconName = (item as typeof iconNodes[0]).iconName
-
-  let node
-
-  if (item.type === 'icon-node') {
-    node = graph.createNode({
-      shape: 'icon-node', width: item.w, height: item.h,
-      ports: commonPorts,
-      data: { iconName: iconName || 'Database', color: item.stroke },
-    })
-  } else if (item.type === 'progress-node') {
-    node = graph.createNode({
-      shape: 'progress-node', width: item.w, height: item.h,
-      ports: commonPorts,
-      data: { progressValue: 60, progressColor: item.stroke, progressBgColor: '#1e293b', showProgressText: true },
-    })
-  } else if (item.type === 'digital-node') {
-    node = graph.createNode({
-      shape: 'digital-node', width: item.w, height: item.h,
-      ports: commonPorts,
-      data: { numberValue: 8848, textColor: item.stroke, fontSize: 28, fontWeight: 'bold', animateRoll: true },
-    })
-  } else if (item.type === 'gauge-node') {
-    node = graph.createNode({
-      shape: 'gauge-node', width: item.w, height: item.h,
-      ports: commonPorts,
-      data: { gaugeValue: 75, gaugeMax: 100, gaugeTitle: '指标', gaugeUnit: '%', gaugeColor: item.stroke },
-    })
-  } else if (item.type === 'alert-node') {
-    node = graph.createNode({
-      shape: 'alert-node', width: item.w, height: item.h,
-      ports: commonPorts,
-      data: { alertText: '告警', alertSubText: '请立即处理', alertColor: item.stroke, isAlerting: true },
-    })
-  } else if (item.type === 'text') {
-    node = graph.createNode({
-      shape: 'text', width: item.w, height: item.h,
-      ports: commonPorts,
-      attrs: { body: { fill: 'transparent', stroke: 'transparent' }, text: { text: '文本标签', fill: '#94a3b8', fontSize: 16 } },
-    })
-  } else if (item.type === 'custom_image') {
-    node = graph.createNode({
-      shape: 'image', width: item.w, height: item.h,
-      ports: commonPorts,
-      attrs: {
-        body: { fill: '#1e293b', stroke: item.stroke, strokeWidth: 2, strokeDasharray: '5 5', rx: item.rx, ry: item.rx },
-        image: { width: item.w, height: item.h },
-        label: { text: '(双击上传图片)', fill: '#94a3b8', fontSize: 11 },
-      },
-      data: { isCustomImage: true },
-    })
-  } else if (['flow-start', 'flow-end', 'flow-process', 'flow-decision'].includes(item.type)) {
-    node = graph.createNode({
-      shape: item.type, width: item.w, height: item.h,
-      ports: commonPorts,
-    })
-  } else if (['border-tech', 'border-glow', 'border-gradient'].includes(item.type)) {
-    node = graph.createNode({
-      shape: item.type, width: item.w, height: item.h,
-      data: { title: '标题' },
-      attrs: { headerText: { text: '标题' } },
-    })
-  } else if (['divider-h', 'divider-v', 'decoration-corner', 'decoration-line'].includes(item.type)) {
-    node = graph.createNode({ shape: item.type, width: item.w, height: item.h })
-  } else if (['button-primary', 'button-default'].includes(item.type)) {
-    node = graph.createNode({ shape: item.type, width: item.w, height: item.h, attrs: { text: { text: '按钮' } } })
-  } else if (item.type === 'table-basic') {
-    node = graph.createNode({
-      shape: 'table-basic', width: item.w, height: item.h,
-      ports: commonPorts,
-      data: {
-        tableTitle: '数据表格', headerData: ['列1', '列2', '列3'],
-        bodyData: [['A1', 'B1', 'C1'], ['A2', 'B2', 'C2'], ['A3', 'B3', 'C3']],
-        headerBgColor: '#1e3a5f', headerTextColor: '#60a5fa', rowBgColor: '#0f172a',
-        rowAltBgColor: '#1e293b', rowTextColor: '#94a3b8', borderColor: '#334155',
-      },
-    })
-  } else if (item.type === 'list-rank') {
-    node = graph.createNode({
-      shape: 'list-rank', width: item.w, height: item.h,
-      ports: commonPorts,
-      data: {
-        listTitle: '排名列表',
-        listData: [
-          { rank: 1, name: '项目 A', value: 100 },
-          { rank: 2, name: '项目 B', value: 90 },
-          { rank: 3, name: '项目 C', value: 80 },
-        ],
-        headerBgColor: '#1e3a5f', headerTextColor: '#60a5fa',
-        rowBgColor: '#0f172a', rowAltBgColor: '#1e293b', rowTextColor: '#94a3b8',
-      },
-    })
-  } else if (item.type === 'countdown') {
-    node = graph.createNode({
-      shape: 'countdown', width: item.w, height: item.h,
-      ports: commonPorts,
-      data: { countdownValue: 60, countdownColor: item.stroke, bgColor: '#1e293b', isRunning: true },
-    })
-  } else if (item.type === 'circle') {
-    node = graph.createNode({
-      shape: 'circle', width: item.w, height: item.h, ports: commonPorts,
-      attrs: { body: { fill: '#1e293b', stroke: item.stroke, strokeWidth: 2 }, text: { text: item.label, fill: '#e2e8f0', fontSize: 12 } },
-    })
-  } else if (item.type === 'triangle' || item.type === 'trapezoid') {
-    const pointsStr = item.type === 'triangle'
-      ? `${item.w / 2},0 ${item.w},${item.h} 0,${item.h}`
-      : `${item.w * 0.2},0 ${item.w * 0.8},0 ${item.w},${item.h} 0,${item.h}`
-    node = graph.createNode({
-      shape: 'polygon', width: item.w, height: item.h, ports: commonPorts,
-      attrs: { body: { fill: '#1e293b', stroke: item.stroke, strokeWidth: 2, refPoints: pointsStr } },
-    })
-  } else if (item.type === 'line') {
-    node = graph.createNode({
-      shape: 'rect', width: item.w, height: 3, ports: commonPorts,
-      attrs: { body: { fill: item.stroke, stroke: item.stroke, strokeWidth: 0, rx: 2 } },
-    })
-  } else if (item.type === 'arrow_single' || item.type === 'arrow_double') {
-    const { w, h } = item
-    const ah = Math.round(h / 3), aw = Math.round(h * 0.45)
-    const pathData = item.type === 'arrow_single'
-      ? `M 0,${h / 2 - ah / 2} L ${w - aw},${h / 2 - ah / 2} L ${w - aw},0 L ${w},${h / 2} L ${w - aw},${h} L ${w - aw},${h / 2 + ah / 2} L 0,${h / 2 + ah / 2} Z`
-      : `M ${aw},${h / 2 - ah / 2} L ${w - aw},${h / 2 - ah / 2} L ${w - aw},0 L ${w},${h / 2} L ${w - aw},${h} L ${w - aw},${h / 2 + ah / 2} L ${aw},${h / 2 + ah / 2} L ${aw},${h} L 0,${h / 2} L ${aw},0 Z`
-    node = graph.createNode({
-      shape: 'path', width: item.w, height: item.h, ports: commonPorts,
-      path: pathData,
-      attrs: { body: { fill: '#22c55e', stroke: '#000000', strokeWidth: 1 } },
-    })
-  } else {
-    node = graph.createNode({
-      shape: 'rect', width: item.w, height: item.h, ports: commonPorts,
-      attrs: {
-        body: { fill: '#1e293b', stroke: item.stroke, strokeWidth: 2, rx: item.rx, ry: item.rx },
-        text: { text: item.label, fill: '#e2e8f0', fontSize: 13, fontWeight: 'bold' },
-      },
-    })
+  if (!graph || !dndRef.value) {
+    console.error('[ToolbarV2] startDrag failed: graph or dnd not ready')
+    return
   }
 
-  dndInst.start(node, e)
+  const iconName = 'iconName' in item ? item.iconName : undefined
+
+  try {
+    let node
+
+    if (item.type === 'icon-node') {
+      node = graph.createNode({
+        shape: 'icon-node', width: item.w, height: item.h,
+        ports: commonPorts,
+        data: { iconName: iconName || 'Database', color: item.stroke },
+      })
+    } else if (item.type === 'progress-node') {
+      node = graph.createNode({
+        shape: 'progress-node', width: item.w, height: item.h,
+        ports: commonPorts,
+        data: { progressValue: 60, progressColor: item.stroke, progressBgColor: '#1e293b', showProgressText: true },
+      })
+    } else if (item.type === 'digital-node') {
+      node = graph.createNode({
+        shape: 'digital-node', width: item.w, height: item.h,
+        ports: commonPorts,
+        data: { numberValue: 8848, textColor: item.stroke, fontSize: 28, fontWeight: 'bold', animateRoll: true },
+      })
+    } else if (item.type === 'gauge-node') {
+      node = graph.createNode({
+        shape: 'gauge-node', width: item.w, height: item.h,
+        ports: commonPorts,
+        data: { gaugeValue: 75, gaugeMax: 100, gaugeTitle: '指标', gaugeUnit: '%', gaugeColor: item.stroke },
+      })
+    } else if (item.type === 'alert-node') {
+      node = graph.createNode({
+        shape: 'alert-node', width: item.w, height: item.h,
+        ports: commonPorts,
+        data: { alertText: '告警', alertSubText: '请立即处理', alertColor: item.stroke, isAlerting: true },
+      })
+    } else if (item.type === 'text') {
+      // text 不是有效的 shape，使用 rect 并设置透明边框
+      node = graph.createNode({
+        shape: 'rect', width: item.w, height: item.h,
+        ports: commonPorts,
+        attrs: { body: { fill: 'transparent', stroke: 'transparent' }, text: { text: '文本标签', fill: '#94a3b8', fontSize: 16 } },
+      })
+    } else if (item.type === 'custom_image') {
+      node = graph.createNode({
+        shape: 'image', width: item.w, height: item.h,
+        ports: commonPorts,
+        attrs: {
+          body: { fill: '#1e293b', stroke: item.stroke, strokeWidth: 2, strokeDasharray: '5 5', rx: item.rx, ry: item.rx },
+          image: { width: item.w, height: item.h },
+          label: { text: '(双击上传图片)', fill: '#94a3b8', fontSize: 11 },
+        },
+        data: { isCustomImage: true },
+      })
+    } else if (['flow-start', 'flow-end', 'flow-process', 'flow-decision'].includes(item.type)) {
+      node = graph.createNode({
+        shape: item.type, width: item.w, height: item.h,
+        ports: commonPorts,
+      })
+    } else if (['border-tech', 'border-glow', 'border-gradient'].includes(item.type)) {
+      node = graph.createNode({
+        shape: item.type, width: item.w, height: item.h,
+        data: { title: '标题' },
+        attrs: { headerText: { text: '标题' } },
+      })
+    } else if (['divider-h', 'divider-v', 'decoration-corner', 'decoration-line'].includes(item.type)) {
+      node = graph.createNode({ shape: item.type, width: item.w, height: item.h })
+    } else if (['button-primary', 'button-default'].includes(item.type)) {
+      node = graph.createNode({ shape: item.type, width: item.w, height: item.h, attrs: { text: { text: '按钮' } } })
+    } else if (item.type === 'table-basic') {
+      node = graph.createNode({
+        shape: 'table-basic', width: item.w, height: item.h,
+        ports: commonPorts,
+        data: {
+          tableTitle: '数据表格', headerData: ['列1', '列2', '列3'],
+          bodyData: [['A1', 'B1', 'C1'], ['A2', 'B2', 'C2'], ['A3', 'B3', 'C3']],
+          headerBgColor: '#1e3a5f', headerTextColor: '#60a5fa', rowBgColor: '#0f172a',
+          rowAltBgColor: '#1e293b', rowTextColor: '#94a3b8', borderColor: '#334155',
+        },
+      })
+    } else if (item.type === 'list-rank') {
+      node = graph.createNode({
+        shape: 'list-rank', width: item.w, height: item.h,
+        ports: commonPorts,
+        data: {
+          listTitle: '排名列表',
+          listData: [
+            { rank: 1, name: '项目 A', value: 100 },
+            { rank: 2, name: '项目 B', value: 90 },
+            { rank: 3, name: '项目 C', value: 80 },
+          ],
+          headerBgColor: '#1e3a5f', headerTextColor: '#60a5fa',
+          rowBgColor: '#0f172a', rowAltBgColor: '#1e293b', rowTextColor: '#94a3b8',
+        },
+      })
+    } else if (item.type === 'countdown') {
+      node = graph.createNode({
+        shape: 'countdown', width: item.w, height: item.h,
+        ports: commonPorts,
+        data: { countdownValue: 60, countdownColor: item.stroke, bgColor: '#1e293b', isRunning: true },
+      })
+    } else if (item.type === 'circle') {
+      node = graph.createNode({
+        shape: 'circle', width: item.w, height: item.h, ports: commonPorts,
+        attrs: { body: { fill: '#1e293b', stroke: item.stroke, strokeWidth: 2 }, text: { text: item.label, fill: '#e2e8f0', fontSize: 12 } },
+      })
+    } else if (item.type === 'triangle' || item.type === 'trapezoid') {
+      const pointsStr = item.type === 'triangle'
+        ? `${item.w / 2},0 ${item.w},${item.h} 0,${item.h}`
+        : `${item.w * 0.2},0 ${item.w * 0.8},0 ${item.w},${item.h} 0,${item.h}`
+      node = graph.createNode({
+        shape: 'polygon', width: item.w, height: item.h, ports: commonPorts,
+        attrs: { body: { fill: '#1e293b', stroke: item.stroke, strokeWidth: 2, refPoints: pointsStr } },
+      })
+    } else if (item.type === 'line') {
+      node = graph.createNode({
+        shape: 'rect', width: item.w, height: 3, ports: commonPorts,
+        attrs: { body: { fill: item.stroke, stroke: item.stroke, strokeWidth: 0, rx: 2 } },
+      })
+    } else if (item.type === 'arrow_single' || item.type === 'arrow_double') {
+      const { w, h } = item
+      const ah = Math.round(h / 3), aw = Math.round(h * 0.45)
+      const pathData = item.type === 'arrow_single'
+        ? `M 0,${h / 2 - ah / 2} L ${w - aw},${h / 2 - ah / 2} L ${w - aw},0 L ${w},${h / 2} L ${w - aw},${h} L ${w - aw},${h / 2 + ah / 2} L 0,${h / 2 + ah / 2} Z`
+        : `M ${aw},${h / 2 - ah / 2} L ${w - aw},${h / 2 - ah / 2} L ${w - aw},0 L ${w},${h / 2} L ${w - aw},${h} L ${w - aw},${h / 2 + ah / 2} L ${aw},${h / 2 + ah / 2} L ${aw},${h} L 0,${h / 2} L ${aw},0 Z`
+      node = graph.createNode({
+        shape: 'path', width: item.w, height: item.h, ports: commonPorts,
+        path: pathData,
+        attrs: { body: { fill: '#22c55e', stroke: '#000000', strokeWidth: 1 } },
+      })
+    } else {
+      node = graph.createNode({
+        shape: 'rect', width: item.w, height: item.h, ports: commonPorts,
+        attrs: {
+          body: { fill: '#1e293b', stroke: item.stroke, strokeWidth: 2, rx: item.rx, ry: item.rx },
+          text: { text: item.label, fill: '#e2e8f0', fontSize: 13, fontWeight: 'bold' },
+        },
+      })
+    }
+
+    console.log('[ToolbarV2] Calling dnd.start:', { node: !!node, event: !!e })
+    dndRef.value.start(node, e)
+    console.log('[ToolbarV2] dnd.start called')
+  } catch (error) {
+    console.error('[ToolbarV2] startDrag error:', error)
+    showErrorToast(
+      '图元拖拽失败',
+      formatDragError(error, `“${item.label}” 创建失败，请刷新页面后重试。`),
+    )
+  }
 }
 
 function startChartDrag(e: MouseEvent, chart: ChartConfig) {
   const graph = editorStore.graph
-  const dndInst = dnd.value
-  if (!graph || !dndInst) {
+  if (!graph || !dndRef.value) {
     console.error('[ToolbarV2] 图表拖拽失败: graph 或 dnd 未就绪')
     return
   }
 
-  const node = graph.createNode({
-    shape: 'chart-node', width: chart.width, height: chart.height,
-    ports: commonPorts,
-    data: { chartId: chart.id, chartOption: JSON.parse(JSON.stringify(chart.option)) },
-    attrs: { body: { fill: 'transparent', stroke: 'transparent', strokeWidth: 0 } },
-  })
+  try {
+    const node = graph.createNode({
+      shape: 'chart-node', width: chart.width, height: chart.height,
+      ports: commonPorts,
+      data: { chartId: chart.id, chartOption: JSON.parse(JSON.stringify(chart.option)) },
+      attrs: { body: { fill: 'transparent', stroke: 'transparent', strokeWidth: 0 } },
+    })
 
-  dndInst.start(node, e)
+    dndRef.value.start(node, e)
+  } catch (error) {
+    console.error('[ToolbarV2] startChartDrag error:', error)
+    showErrorToast(
+      '图表拖拽失败',
+      formatDragError(error, `图表“${chart.name}”创建失败，请刷新页面后重试。`),
+    )
+  }
 }
 
 const openChartCategories = ref<Record<string, boolean>>({
@@ -440,6 +535,15 @@ void ColumnsIcon
       </div> <!-- end toolbar-body -->
     </template> <!-- end 展开模式 -->
   </div> <!-- end toolbar-v2 -->
+
+  <Teleport to="body">
+    <TransitionGroup name="toolbar-toast" tag="div" class="toolbar-toast-stack">
+      <div v-for="notice in uiNotices" :key="notice.id" class="toolbar-toast-item">
+        <div class="toolbar-toast-title">{{ notice.title }}</div>
+        <div class="toolbar-toast-message">{{ notice.message }}</div>
+      </div>
+    </TransitionGroup>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -767,5 +871,51 @@ void ColumnsIcon
 .chart-category-header:hover {
   background: rgba(51, 65, 85, 0.3);
   color: #94a3b8;
+}
+
+.toolbar-toast-stack {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toolbar-toast-item {
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  border-radius: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(251, 113, 133, 0.4);
+  background: linear-gradient(135deg, rgba(60, 12, 24, 0.92), rgba(30, 10, 20, 0.92));
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+}
+
+.toolbar-toast-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fecdd3;
+  margin-bottom: 4px;
+}
+
+.toolbar-toast-message {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #fda4af;
+}
+
+.toolbar-toast-enter-active,
+.toolbar-toast-leave-active {
+  transition: all 0.22s ease;
+}
+
+.toolbar-toast-enter-from,
+.toolbar-toast-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
 }
 </style>

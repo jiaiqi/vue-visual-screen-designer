@@ -182,7 +182,7 @@ watch(() => canvasStore.config, () => {
           width: canvasStore.config.width + 'px',
           height: canvasStore.config.height + 'px',
           position: 'relative',
-          margin: '200px',
+          margin: '50px',
           outline: '1px solid rgba(14, 165, 233, 0.5)',
         }" />
       </div>

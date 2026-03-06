@@ -16,7 +16,7 @@ import {
   NCollapse, NCollapseItem, NTooltip
 } from 'naive-ui'
 import {
-  Type, Palette, ImageIcon, Layers,
+  Type, Palette, Move, ImageIcon, Layers,
   Play, Share2, Trash2, Plus, Eye, Lock, Unlock,
   RotateCcw, SlidersHorizontal
 } from 'lucide-vue-next'

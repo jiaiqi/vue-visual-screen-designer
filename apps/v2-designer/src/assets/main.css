@@ -1,6 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /* OLED Dark Mode (UI/UX Max) */
+  --color-bg-primary: #020617; /* 最深层画布 / 页面背景 */
+  --color-bg-secondary: #0f172a; /* 侧边栏及主要面板 */
+  --color-bg-tertiary: #1e293b; /* 输入框与次级卡片 */
+  --color-bg-quaternary: #334155; /* Hover 或占位底色 */
+
+  --color-text-primary: #f8fafc; /* 高对比度文字 (白色发光) */
+  --color-text-secondary: #e2e8f0;
+  --color-text-tertiary: #94a3b8; /* 辅助文字与次重点数据 */
+  --color-text-muted: #64748b;
+
+  --color-border-primary: #1e293b;
+  --color-border-secondary: #334155;
+
+  --color-accent-sky: #0ea5e9;
+  --color-accent-emerald: #22c55e; /* UI/UX 设定为主 CTA */
+  --color-accent-indigo: #6366f1;
+  --color-accent-rose: #f43f5e;
+
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: #334155;
+  --scrollbar-thumb-hover: #475569;
+}
+
+body {
+  font-family:
+    'Fira Sans',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-mono {
+  font-family:
+    'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace !important;
+}
 
 * {
   margin: 0;
@@ -14,4 +56,36 @@ body,
   width: 100%;
   height: 100%;
   overflow: hidden;
+}
+
+/* X6 水管与动态 Edge 专用动画 */
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+/* 连接桩交互优化：按需显示 */
+.x6-port-body {
+  opacity: 0;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: crosshair;
+}
+
+/* 鼠标悬停图元或图元被选中时，显示连接桩 */
+.x6-node:hover .x6-port-body,
+.x6-node-selected .x6-port-body {
+  opacity: 1;
+}
+
+/* 连线过程中，强制显示所有磁吸点以便吸附 */
+.x6-graph-connecting .x6-port-body {
+  opacity: 1;
+}
+
+/* X6 Snapline 对齐辅助线样式 */
+.my-snapline {
+  stroke: #f97316 !important;
+  stroke-width: 1px !important;
+  stroke-dasharray: 4px 2px !important;
 }
