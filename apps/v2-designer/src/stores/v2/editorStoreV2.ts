@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, markRaw } from 'vue'
+import type { ComputedRef, Ref } from 'vue'
 import type { Graph, Node, Edge, Cell } from '@antv/x6'
 
 /**
@@ -21,17 +22,56 @@ export interface HistoryItem {
   description: string
 }
 
+export interface EditorStoreV2State {
+  graph: Ref<Graph | null>
+  mode: Ref<EditorMode>
+  selectedIds: Ref<string[]>
+  hoveredId: Ref<string | null>
+  showMinimap: Ref<boolean>
+  isToolbarCollapsed: Ref<boolean>
+  isPropertyPanelCollapsed: Ref<boolean>
+  isConnecting: Ref<boolean>
+  currentTool: Ref<string>
+  activeEdgeType: Ref<string>
+  selectedNodes: ComputedRef<Node[]>
+  selectedEdges: ComputedRef<Edge[]>
+  selectionType: ComputedRef<SelectionType>
+  hasSelection: ComputedRef<boolean>
+  canUndo: ComputedRef<boolean>
+  canRedo: ComputedRef<boolean>
+  initGraph: (graphInstance: Graph | null) => void
+  setMode: (newMode: EditorMode) => void
+  setTool: (tool: string) => void
+  setActiveEdgeType: (type: string) => void
+  select: (ids: string | string[]) => void
+  addToSelection: (ids: string | string[]) => void
+  deselect: (ids?: string | string[]) => void
+  selectAll: () => void
+  deleteSelected: () => void
+  setHovered: (id: string | null) => void
+  toggleMinimap: () => void
+  toggleToolbar: () => void
+  togglePropertyPanel: () => void
+  undo: () => void
+  redo: () => void
+  copy: () => boolean
+  paste: (offset?: { dx: number; dy: number }) => Cell[]
+  clearCanvas: () => void
+  exportData: () => unknown
+  importData: (data: unknown) => void
+}
+
 /**
  * 编辑器 Store V2
  * 管理编辑器状态、选择、历史记录等
  */
-export const useEditorStoreV2 = defineStore('editorV2', () => {
+export const useEditorStoreV2 = defineStore('editorV2', (): EditorStoreV2State => {
   // ==================== State ====================
 
   /**
    * X6 Graph 实例
    */
-  const graph = ref<Graph | null>(null)
+  const graph: Ref<Graph | null> = ref(null)
 
   /**
    * 编辑器模式
@@ -331,9 +371,9 @@ export const useEditorStoreV2 = defineStore('editorV2', () => {
   /**
    * 导入画布数据
    */
-  function importData(data: any) {
+  function importData(data: unknown) {
     if (!graph.value) return
-    graph.value.fromJSON(data)
+    graph.value.fromJSON(data as Parameters<Graph['fromJSON']>[0])
     selectedIds.value = []
   }
 
