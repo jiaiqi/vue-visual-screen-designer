@@ -1,10 +1,22 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useWorkspaceStoreV2 } from '@/stores/v2/workspaceStoreV2'
 import type { SchemaEdge, SchemaNode, SchemaV2 } from '@vue-visual-screen/v2-shared'
 import { x6ToSchemaV2 } from '@vue-visual-screen/v2-shared'
 
 const schema = ref<SchemaV2 | null>(null)
 const loadError = ref('')
+const route = useRoute()
+const router = useRouter()
+const workspace = useWorkspaceStoreV2()
+const backRoute = computed(() => {
+  const appId = String(route.params.appId || '')
+  const pageId = String(route.params.pageId || '')
+  if (!appId || !pageId)
+    return '/apps'
+  return `/app/${appId}/page/${pageId}/editor`
+})
 
 const nodeMap = computed(() => {
   const map = new Map<string, SchemaNode>()
@@ -40,29 +52,47 @@ function edgePath(edge: SchemaEdge): string {
 }
 
 onMounted(() => {
-  try {
-    const schemaText = localStorage.getItem('v2_preview_schema_data')
-    if (schemaText) {
-      schema.value = JSON.parse(schemaText) as SchemaV2
-      return
-    }
+  void (async () => {
+    try {
+      await workspace.init()
+      const appId = String(route.params.appId || '')
+      const pageId = String(route.params.pageId || '')
 
-    const graphText = localStorage.getItem('v2_preview_graph_data')
-    if (graphText) {
-      const graphJson = JSON.parse(graphText) as Record<string, unknown>
-      schema.value = x6ToSchemaV2(graphJson, {
-        width: 1920,
-        height: 1080,
-        backgroundColor: '#0f172a',
-      })
-      return
-    }
+      if (appId && pageId) {
+        const page = workspace.findPageByRoute(appId, pageId)
+        if (page) {
+          schema.value = x6ToSchemaV2(page.graphData, {
+            width: Number((page.canvasConfig.width as number) || 1920),
+            height: Number((page.canvasConfig.height as number) || 1080),
+            backgroundColor: String((page.canvasConfig.backgroundColor as string) || '#0f172a'),
+          })
+          return
+        }
+      }
 
-    loadError.value = '未找到可预览数据，请回到设计器点击“预览”后重试。'
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    loadError.value = `预览数据解析失败：${msg}`
-  }
+      const schemaText = localStorage.getItem('v2_preview_schema_data')
+      if (schemaText) {
+        schema.value = JSON.parse(schemaText) as SchemaV2
+        return
+      }
+
+      const graphText = localStorage.getItem('v2_preview_graph_data')
+      if (graphText) {
+        const graphJson = JSON.parse(graphText) as Record<string, unknown>
+        schema.value = x6ToSchemaV2(graphJson, {
+          width: 1920,
+          height: 1080,
+          backgroundColor: '#0f172a',
+        })
+        return
+      }
+
+      loadError.value = '未找到可预览数据，请回到设计器点击“预览”后重试。'
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      loadError.value = `预览数据解析失败：${msg}`
+    }
+  })()
 })
 </script>
 
@@ -70,7 +100,7 @@ onMounted(() => {
   <div class="v2-preview">
     <header class="preview-header">
       <h1>V2 预览</h1>
-      <button class="back-btn" @click="$router.push('/')">
+      <button class="back-btn" @click="router.push(backRoute)">
         返回设计器
       </button>
     </header>

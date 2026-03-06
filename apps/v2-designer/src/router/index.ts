@@ -5,13 +5,26 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      redirect: '/apps',
+    },
+    {
+      path: '/apps',
+      name: 'apps',
+      component: () => import('../views/AppManagerView.vue'),
+    },
+    {
+      path: '/app/:appId/page/:pageId/editor',
       name: 'editor',
       component: () => import('../views/EditorView.vue'),
     },
     {
-      path: '/preview',
+      path: '/app/:appId/page/:pageId/preview',
       name: 'preview',
       component: () => import('../views/PreviewView.vue'),
+    },
+    {
+      path: '/preview',
+      redirect: '/apps',
     },
   ],
 })

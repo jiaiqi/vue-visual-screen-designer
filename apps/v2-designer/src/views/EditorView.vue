@@ -7,8 +7,12 @@
  *   - 科技蓝主色调：#0ea5e9 / #38bdf8
  *   - 玻璃态侧边栏、细腻边框、微妙光晕效果
  */
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useEditorStoreV2 } from '@/stores/v2/editorStoreV2'
+import { useCanvasStoreV2 } from '@/stores/v2/canvasStoreV2'
+import { useWorkspaceStoreV2 } from '@/stores/v2/workspaceStoreV2'
+import { useNotifier } from '@/composables/useNotifier'
 import ToolbarV2 from '@/components/v2/editor/ToolbarV2.vue'
 import CanvasEditorV2 from '@/components/v2/editor/CanvasEditorV2.vue'
 import PropertyPanelV2 from '@/components/v2/editor/PropertyPanelV2.vue'
@@ -16,10 +20,27 @@ import HeaderV2 from '@/components/v2/editor/HeaderV2.vue'
 import GlobalToast from '@/components/v2/common/GlobalToast.vue'
 
 const editorStore = useEditorStoreV2()
+const canvasStore = useCanvasStoreV2()
+const workspaceStore = useWorkspaceStoreV2()
+const notifier = useNotifier()
+const route = useRoute()
+const router = useRouter()
 
 // JSON 编辑器弹窗（简化版）
 const showJsonEditor = ref(false)
 const jsonEditorContent = ref('')
+const isBootstrapping = ref(true)
+const isHydrating = ref(false)
+
+function hydrateGraphFromActivePage() {
+  const graph = editorStore.graph
+  const page = workspaceStore.activePage
+  if (!graph || !page)
+    return
+  isHydrating.value = true
+  editorStore.importData(page.graphData)
+  isHydrating.value = false
+}
 
 function openJsonEditor() {
   const graph = editorStore.graph
@@ -36,10 +57,92 @@ function applyJson() {
     alert('JSON 格式错误，请检查后重试')
   }
 }
+
+async function syncRouteWorkspace() {
+  await workspaceStore.init()
+  const appId = String(route.params.appId || '')
+  const pageId = String(route.params.pageId || '')
+  if (!appId || !pageId) {
+    isBootstrapping.value = false
+    await router.replace('/apps')
+    return
+  }
+
+  const page = workspaceStore.findPageByRoute(appId, pageId)
+  if (!page) {
+    notifier.warning('页面不存在', '请从应用管理页重新进入编辑。')
+    isBootstrapping.value = false
+    await router.replace('/apps')
+    return
+  }
+
+  await workspaceStore.setActiveApp(appId)
+  await workspaceStore.setActivePage(pageId)
+  canvasStore.importConfig(page.canvasConfig as unknown as Parameters<typeof canvasStore.importConfig>[0])
+  hydrateGraphFromActivePage()
+  isBootstrapping.value = false
+}
+
+watch(
+  () => [route.params.appId, route.params.pageId],
+  () => {
+    void syncRouteWorkspace()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => editorStore.graph,
+  (graph, _, onCleanup) => {
+    if (!graph || !workspaceStore.activePage)
+      return
+
+    hydrateGraphFromActivePage()
+
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const persist = () => {
+      if (isHydrating.value)
+        return
+      if (timer)
+        clearTimeout(timer)
+      timer = setTimeout(() => {
+        void workspaceStore.saveCurrentPageSnapshot({
+          canvasConfig: canvasStore.exportConfig() as Record<string, unknown>,
+          graphData: graph.toJSON() as Record<string, unknown>,
+        })
+      }, 700)
+    }
+
+    graph.on('cell:added', persist)
+    graph.on('cell:removed', persist)
+    graph.on('cell:changed', persist)
+    graph.on('node:moved', persist)
+    graph.on('node:resized', persist)
+
+    onCleanup(() => {
+      if (timer)
+        clearTimeout(timer)
+      graph.off('cell:added', persist)
+      graph.off('cell:removed', persist)
+      graph.off('cell:changed', persist)
+      graph.off('node:moved', persist)
+      graph.off('node:resized', persist)
+    })
+  },
+)
+
+watch(
+  () => workspaceStore.activePageId,
+  () => {
+    hydrateGraphFromActivePage()
+  },
+)
 </script>
 
 <template>
   <div class="ev2-root">
+    <div v-if="isBootstrapping" class="booting-layer">正在加载应用页面...</div>
+
     <!-- 顶部导航栏 -->
     <HeaderV2 @open-json-editor="openJsonEditor" />
 
@@ -262,5 +365,18 @@ function applyJson() {
 .json-btn.apply:hover {
   background: #0ea5e9;
   color: #020617;
+}
+
+.booting-layer {
+  position: absolute;
+  top: 56px;
+  right: 20px;
+  z-index: 120;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  color: #94a3b8;
+  font-size: 12px;
 }
 </style>

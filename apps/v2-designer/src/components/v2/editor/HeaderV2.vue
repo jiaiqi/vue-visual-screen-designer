@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useEditorStoreV2 } from '@/stores/v2/editorStoreV2'
 import { useCanvasStoreV2 } from '@/stores/v2/canvasStoreV2'
+import { useWorkspaceStoreV2 } from '@/stores/v2/workspaceStoreV2'
 import { useEditorCommands } from '@/composables/useEditorCommands'
+import { useNotifier } from '@/composables/useNotifier'
 import { x6ToSchemaV2 } from '@vue-visual-screen/v2-shared'
 import {
   LayoutGrid, Eye, Undo2, Redo2, Download, Trash2,
@@ -17,7 +20,10 @@ const emit = defineEmits<{
 
 const editorStore = useEditorStoreV2()
 const canvasStore = useCanvasStoreV2()
+const workspaceStore = useWorkspaceStoreV2()
 const commands = useEditorCommands()
+const notifier = useNotifier()
+const router = useRouter()
 
 const zoomRatio = computed(() => Math.round(canvasStore.viewport.zoom * 100))
 const isDark = ref(true)
@@ -42,9 +48,20 @@ function handlePreview() {
       backgroundColor: canvasStore.config.backgroundColor,
     })
     localStorage.setItem('v2_preview_schema_data', JSON.stringify(schema))
+
+    void workspaceStore.saveCurrentPageSnapshot({
+      canvasConfig: canvasStore.exportConfig() as Record<string, unknown>,
+      graphData: graphJson,
+    })
   }
 
-  window.open('/preview', '_blank')
+  const appId = workspaceStore.activeAppId
+  const pageId = workspaceStore.activePageId
+  if (!appId || !pageId) {
+    notifier.warning('无法预览', '当前未选择页面，请先从应用管理进入页面编辑。')
+    return
+  }
+  window.open(`/app/${appId}/page/${pageId}/preview`, '_blank')
 }
 
 function handleClearCanvas() {
@@ -61,7 +78,34 @@ function handleImport(e: Event) {
 
 const canUndo = computed(() => editorStore.canUndo)
 const canRedo = computed(() => editorStore.canRedo)
-const projectName = computed(() => canvasStore.config.name)
+const projectName = computed(() => workspaceStore.activePage?.name || canvasStore.config.name)
+const currentPages = computed(() => workspaceStore.currentPages)
+const currentPageId = computed(() => workspaceStore.activePageId || '')
+
+async function handlePageChange(e: Event) {
+  const pageId = (e.target as HTMLSelectElement).value
+  if (!pageId) return
+  const page = workspaceStore.pages.find((item) => item.id === pageId)
+  if (!page) return
+  await workspaceStore.setActivePage(pageId)
+  await router.push(`/app/${page.appId}/page/${page.id}/editor`)
+}
+
+async function handlePublish() {
+  const g = editorStore.graph
+  if (!g) return
+  try {
+    await workspaceStore.saveCurrentPageSnapshot({
+      canvasConfig: canvasStore.exportConfig() as Record<string, unknown>,
+      graphData: g.toJSON() as Record<string, unknown>,
+    })
+    const release = await workspaceStore.publishCurrentPage('设计器发布')
+    notifier.success('发布成功', `已创建版本 ${release.version}`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '发布失败'
+    notifier.error('发布失败', message)
+  }
+}
 </script>
 
 <template>
@@ -75,6 +119,11 @@ const projectName = computed(() => canvasStore.config.name)
         <span class="hv2-name">{{ projectName }}</span>
         <span class="hv2-badge">v2</span>
       </div>
+      <select class="hv2-page-select" :value="currentPageId" @change="handlePageChange">
+        <option v-for="page in currentPages" :key="page.id" :value="page.id">
+          {{ page.name }}
+        </option>
+      </select>
 
       <!-- 面板折叠快捷按钮 -->
       <div class="hv2-panel-toggle">
@@ -141,6 +190,12 @@ const projectName = computed(() => canvasStore.config.name)
       </button>
 
       <div class="hv2-sep" />
+      <button class="hv2-action" @click="router.push('/apps')">
+        <span>应用管理</span>
+      </button>
+      <button class="hv2-action" @click="handlePublish">
+        <span>发布</span>
+      </button>
 
       <!-- 导出下拉 -->
       <div class="hv2-dropdown">
@@ -233,6 +288,17 @@ const projectName = computed(() => canvasStore.config.name)
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.hv2-page-select {
+  height: 28px;
+  max-width: 180px;
+  border-radius: 6px;
+  border: 1px solid rgba(51, 65, 85, 0.7);
+  background: rgba(15, 23, 42, 0.72);
+  color: #cbd5e1;
+  font-size: 12px;
+  padding: 0 8px;
 }
 
 .hv2-name {

@@ -64,23 +64,7 @@ onMounted(async () => {
 
   // 初始化 Graph
   initGraph(canvasRef.value)
-
-  // 尝试恢复上次保存的数据
-  const saved = await autoSave.restore()
   const graph = getGraph()
-  if (saved && graph) {
-    try {
-      if (saved.graphData) {
-        graph.fromJSON(saved.graphData as Record<string, unknown>)
-      }
-      if (saved.canvasConfig) {
-        canvasStore.updateConfig(saved.canvasConfig as Record<string, unknown>)
-        applyCanvasConfig()
-      }
-    } catch (e) {
-      console.warn('[CanvasEditorV2] 恢复数据失败:', e)
-    }
-  }
 
   if (graph) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
