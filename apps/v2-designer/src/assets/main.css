@@ -4,28 +4,70 @@
 @tailwind utilities;
 
 :root {
-  /* OLED Dark Mode (UI/UX Max) */
-  --color-bg-primary: #020617; /* 最深层画布 / 页面背景 */
-  --color-bg-secondary: #0f172a; /* 侧边栏及主要面板 */
-  --color-bg-tertiary: #1e293b; /* 输入框与次级卡片 */
-  --color-bg-quaternary: #334155; /* Hover 或占位底色 */
-
-  --color-text-primary: #f8fafc; /* 高对比度文字 (白色发光) */
+  --theme-primary: #0ea5e9;
+  --color-bg-primary: #020617;
+  --color-bg-secondary: #0f172a;
+  --color-bg-tertiary: #1e293b;
+  --color-bg-quaternary: #334155;
+  --color-text-primary: #f8fafc;
   --color-text-secondary: #e2e8f0;
-  --color-text-tertiary: #94a3b8; /* 辅助文字与次重点数据 */
+  --color-text-tertiary: #94a3b8;
   --color-text-muted: #64748b;
-
   --color-border-primary: #1e293b;
   --color-border-secondary: #334155;
-
-  --color-accent-sky: #0ea5e9;
-  --color-accent-emerald: #22c55e; /* UI/UX 设定为主 CTA */
+  --color-accent-sky: var(--theme-primary);
+  --color-accent-emerald: #22c55e;
   --color-accent-indigo: #6366f1;
   --color-accent-rose: #f43f5e;
+  --scrollbar-size: 10px;
+  --scrollbar-track: color-mix(in oklab, var(--color-bg-secondary) 88%, transparent);
+  --scrollbar-thumb: color-mix(in oklab, var(--theme-primary) 26%, var(--color-bg-quaternary));
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--theme-primary) 44%, var(--color-bg-quaternary));
+  --scrollbar-thumb-active: color-mix(in oklab, var(--theme-primary) 58%, var(--color-bg-quaternary));
+  --scrollbar-corner: color-mix(in oklab, var(--color-bg-secondary) 90%, transparent);
+  --ui-panel-bg: color-mix(in oklab, var(--color-bg-secondary) 88%, transparent);
+  --ui-panel-bg-strong: color-mix(in oklab, var(--color-bg-secondary) 96%, transparent);
+  --ui-panel-bg-soft: color-mix(in oklab, var(--color-bg-tertiary) 80%, transparent);
+  --ui-border: color-mix(in oklab, var(--color-border-secondary) 88%, transparent);
+  --ui-muted: var(--color-text-muted);
+  --ui-text: var(--color-text-primary);
+  --ui-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+  --ui-success: var(--color-accent-emerald);
+  --ui-success-bg: color-mix(in oklab, var(--color-accent-emerald) 18%, transparent);
+  --ui-success-border: color-mix(in oklab, var(--color-accent-emerald) 55%, transparent);
+  --ui-danger: var(--color-accent-rose);
+  --ui-danger-bg: color-mix(in oklab, var(--color-accent-rose) 16%, transparent);
+  --ui-danger-border: color-mix(in oklab, var(--color-accent-rose) 52%, transparent);
+  --ui-danger-text: color-mix(in oklab, var(--color-accent-rose) 80%, var(--color-text-primary));
+  --ui-warning: #f59e0b;
+  --ui-warning-bg: color-mix(in oklab, #f59e0b 18%, transparent);
+  --ui-warning-border: color-mix(in oklab, #f59e0b 56%, transparent);
+  --ui-info: var(--theme-primary);
+  --ui-info-bg: color-mix(in oklab, var(--theme-primary) 16%, transparent);
+  --ui-info-border: color-mix(in oklab, var(--theme-primary) 56%, transparent);
+  --ui-focus-ring: color-mix(in oklab, var(--theme-primary) 46%, transparent);
+  --ui-canvas-grid-dot: color-mix(in oklab, var(--color-text-primary) 9%, transparent);
+  --ui-canvas-grid-pattern: color-mix(in oklab, var(--color-text-primary) 6%, transparent);
+  --ui-snapline: color-mix(in oklab, var(--ui-warning) 88%, var(--theme-primary));
+}
 
-  --scrollbar-track: transparent;
-  --scrollbar-thumb: #334155;
-  --scrollbar-thumb-hover: #475569;
+:root[data-theme='light'] {
+  --color-bg-primary: #f5f7fb;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #f1f5f9;
+  --color-bg-quaternary: #e2e8f0;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #1e293b;
+  --color-text-tertiary: #334155;
+  --color-text-muted: #64748b;
+  --color-border-primary: #dbe3ef;
+  --color-border-secondary: #cbd5e1;
+  --scrollbar-track: color-mix(in oklab, #e2e8f0 86%, transparent);
+  --scrollbar-thumb: color-mix(in oklab, var(--theme-primary) 28%, #cbd5e1);
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--theme-primary) 48%, #94a3b8);
+  --scrollbar-thumb-active: color-mix(in oklab, var(--theme-primary) 62%, #94a3b8);
+  --scrollbar-corner: color-mix(in oklab, #e2e8f0 80%, transparent);
+  --ui-shadow: 0 12px 28px rgba(2, 6, 23, 0.12);
 }
 
 body {
@@ -36,6 +78,103 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+/* Unified scrollbar style for editor ecosystem */
+.scrollbar-theme {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.scrollbar-theme::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+.scrollbar-theme::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+.scrollbar-theme::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid var(--scrollbar-track);
+  background: linear-gradient(180deg, var(--scrollbar-thumb), color-mix(in oklab, var(--scrollbar-thumb) 85%, #000));
+}
+
+.scrollbar-theme::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--scrollbar-thumb-hover), color-mix(in oklab, var(--scrollbar-thumb-hover) 82%, #000));
+}
+
+.scrollbar-theme::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+}
+
+.scrollbar-theme::-webkit-scrollbar-corner {
+  background: var(--scrollbar-corner);
+}
+
+.scrollbar-thin {
+  --scrollbar-size: 8px;
+}
+
+/* v2 theme compatibility layer: scoped styles fallback */
+.header-v2,
+.toolbar-v2,
+.property-panel-v2,
+.canvas-properties,
+.node-properties,
+.edge-properties-v2,
+.layer-panel-v2,
+.json-modal {
+  color: var(--ui-text);
+}
+
+:root[data-theme='light'] .header-v2,
+:root[data-theme='light'] .toolbar-v2,
+:root[data-theme='light'] .property-panel-v2,
+:root[data-theme='light'] .canvas-properties,
+:root[data-theme='light'] .node-properties,
+:root[data-theme='light'] .edge-properties-v2,
+:root[data-theme='light'] .json-modal {
+  background: var(--ui-panel-bg) !important;
+  border-color: var(--ui-border) !important;
+  color: var(--ui-text) !important;
+}
+
+:root[data-theme='light'] .hv2-icon-btn,
+:root[data-theme='light'] .hv2-toggle-btn,
+:root[data-theme='light'] .tab-btn,
+:root[data-theme='light'] .collapse-btn,
+:root[data-theme='light'] .item-card,
+:root[data-theme='light'] .preset-btn,
+:root[data-theme='light'] .json-btn,
+:root[data-theme='light'] .collapsed-item {
+  background: var(--ui-panel-bg-soft) !important;
+  border-color: var(--ui-border) !important;
+  color: var(--ui-text) !important;
+}
+
+:root[data-theme='light'] .hv2-action.primary,
+:root[data-theme='light'] .btn.primary,
+:root[data-theme='light'] .release-btn,
+:root[data-theme='light'] .preset-btn.active {
+  background: color-mix(in oklab, var(--theme-primary) 16%, transparent) !important;
+  border-color: color-mix(in oklab, var(--theme-primary) 56%, transparent) !important;
+  color: var(--theme-primary) !important;
+}
+
+:root[data-theme='light'] .bg-slate-900,
+:root[data-theme='light'] .bg-slate-800,
+:root[data-theme='light'] .bg-slate-700 {
+  background-color: var(--color-bg-secondary) !important;
+}
+
+:root[data-theme='light'] .text-slate-400,
+:root[data-theme='light'] .text-slate-500 {
+  color: var(--color-text-tertiary) !important;
 }
 
 .font-mono {
@@ -85,7 +224,7 @@ body,
 
 /* X6 Snapline 对齐辅助线样式 */
 .my-snapline {
-  stroke: #f97316 !important;
+  stroke: var(--ui-snapline) !important;
   stroke-width: 1px !important;
   stroke-dasharray: 4px 2px !important;
 }

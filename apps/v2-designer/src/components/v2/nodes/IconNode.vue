@@ -8,7 +8,7 @@ const getNode = inject('getNode') as () => Node
 const node = getNode()
 
 const iconName = ref('Image')
-const color = ref('#94a3b8')
+const color = ref('var(--color-text-tertiary)')
 
 const CurrentIcon = shallowRef<Component | null>(null)
 
@@ -35,7 +35,7 @@ const updateData = () => {
   // 颜色可以从 data 中取，也可以尝试从 node.attr('body/stroke') 或 fill 中取
   // 为了独立出来，我们使用 data.color 作为主色调
   const strokeColor = node.attr('body/stroke')
-  color.value = data.color || (typeof strokeColor === 'string' ? strokeColor : undefined) || '#94a3b8'
+  color.value = data.color || (typeof strokeColor === 'string' ? strokeColor : undefined) || 'var(--color-text-tertiary)'
   updateIcon()
 }
 

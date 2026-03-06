@@ -169,7 +169,7 @@ watch(() => canvasStore.config, () => {
       :canvasWidth="canvasStore.config.width" :canvasHeight="canvasStore.config.height" />
 
     <!-- 3. 画布滚动区域 (外部缩放与平移容器) -->
-    <div class="scroll-wrapper" ref="scrollWrapperRef" @scroll="handleScroll" @wheel="handleWheel" :style="{
+    <div class="scroll-wrapper scrollbar-theme" ref="scrollWrapperRef" @scroll="handleScroll" @wheel="handleWheel" :style="{
       position: 'absolute',
       top: (state.showRuler ? thick : 0) + 'px',
       left: (state.showRuler ? thick : 0) + 'px',
@@ -190,7 +190,7 @@ watch(() => canvasStore.config, () => {
           height: canvasStore.config.height + 'px',
           position: 'relative',
           margin: '200px',
-          outline: '1px solid rgba(14, 165, 233, 0.5)',
+          outline: '1px solid var(--ui-info-border)',
         }" />
       </div>
     </div>
@@ -213,17 +213,17 @@ watch(() => canvasStore.config, () => {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--color-bg-secondary, #0f172a);
+  background: var(--color-bg-secondary);
 }
 
 .canvas-background-grid {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(45deg, rgba(255, 255, 255, 0.02) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(255, 255, 255, 0.02) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.02) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.02) 75%);
+    linear-gradient(45deg, var(--ui-canvas-grid-pattern) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--ui-canvas-grid-pattern) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--ui-canvas-grid-pattern) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--ui-canvas-grid-pattern) 75%);
   background-size: 20px 20px;
   background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
   pointer-events: none;
@@ -239,7 +239,7 @@ watch(() => canvasStore.config, () => {
 }
 
 .canvas-editor-v2-inner {
-  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.2), 0 25px 60px -10px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--theme-primary) 25%, transparent), 0 25px 60px -10px color-mix(in oklab, var(--color-bg-primary) 88%, transparent);
 }
 
 .save-indicator {
@@ -250,29 +250,29 @@ watch(() => canvasStore.config, () => {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: rgba(148, 163, 184, 0.6);
-  background: rgba(15, 23, 42, 0.8);
+  color: color-mix(in oklab, var(--color-text-tertiary) 82%, transparent);
+  background: color-mix(in oklab, var(--color-bg-secondary) 82%, transparent);
   padding: 4px 10px;
   border-radius: 20px;
-  border: 1px solid rgba(51, 65, 85, 0.5);
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 70%, transparent);
   backdrop-filter: blur(8px);
   z-index: 100;
 }
 
 .save-indicator.saved {
-  color: rgba(34, 197, 94, 0.7);
+  color: var(--ui-success);
 }
 
 .save-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(248, 113, 19, 0.8);
+  background: var(--ui-warning);
   animation: pulse 1s ease-in-out infinite;
 }
 
 .saved-dot {
-  background: rgba(34, 197, 94, 0.8);
+  background: var(--ui-success);
   animation: none;
 }
 

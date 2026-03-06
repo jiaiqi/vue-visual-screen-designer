@@ -23,6 +23,11 @@ const router = createRouter({
       component: () => import('../views/PreviewView.vue'),
     },
     {
+      path: '/app/:appId/page/:pageId/release/:releaseId',
+      name: 'release-detail',
+      component: () => import('../views/ReleaseDetailView.vue'),
+    },
+    {
       path: '/preview',
       redirect: '/apps',
     },

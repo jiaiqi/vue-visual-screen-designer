@@ -6,8 +6,8 @@ const getNode = inject('getNode') as () => Node
 const node = getNode()
 
 const countdownValue = ref(60)
-const countdownColor = ref('#f59e0b')
-const bgColor = ref('#1e293b')
+const countdownColor = ref('var(--theme-primary)')
+const bgColor = ref('var(--color-bg-tertiary)')
 const isRunning = ref(true)
 const timer = ref<number | null>(null)
 
@@ -15,8 +15,8 @@ const updateData = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = (node.getData() || {}) as any
   countdownValue.value = typeof data.countdownValue === 'number' ? data.countdownValue : 60
-  countdownColor.value = data.countdownColor || node.attr('body/stroke') || '#f59e0b'
-  bgColor.value = data.bgColor || node.attr('body/fill') || '#1e293b'
+  countdownColor.value = data.countdownColor || node.attr('body/stroke') || 'var(--theme-primary)'
+  bgColor.value = data.bgColor || node.attr('body/fill') || 'var(--color-bg-tertiary)'
   isRunning.value = data.isRunning !== false
 
   if (isRunning.value && timer.value === null) {
@@ -86,7 +86,7 @@ onUnmounted(() => {
           cy="30"
           r="26"
           fill="none"
-          stroke="#334155"
+          stroke="var(--color-border-secondary)"
           stroke-width="4"
         />
         <circle
@@ -100,7 +100,7 @@ onUnmounted(() => {
           stroke-linecap="round"
           :stroke-dasharray="163.36"
           :stroke-dashoffset="163.36 * (1 - progressPercent / 100)"
-          :style="{ filter: `drop-shadow(0 0 6px ${countdownColor}80)` }"
+          :style="{ filter: 'drop-shadow(0 0 6px color-mix(in oklab, var(--theme-primary) 45%, transparent))' }"
         />
       </svg>
       <div
@@ -112,7 +112,7 @@ onUnmounted(() => {
 
     <div
       v-if="isRunning"
-      class="countdown-label mt-1 text-[10px] text-slate-400">
+      class="countdown-label mt-1 text-[10px]">
       倒计时
     </div>
   </div>
@@ -133,5 +133,9 @@ onUnmounted(() => {
 
 .countdown-text {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.countdown-label {
+  color: var(--color-text-tertiary);
 }
 </style>

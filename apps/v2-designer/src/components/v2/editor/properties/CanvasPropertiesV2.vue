@@ -55,7 +55,7 @@ function handleImageUpload({ file }: { file: { file: File | null } }) {
 <template>
   <div v-if="config" class="canvas-properties p-4 select-none">
     <n-form label-placement="left" label-width="80" size="small">
-      <div class="flex items-center gap-2 mb-6 pb-2" style="border-bottom: 1px solid rgba(14, 165, 233, 0.3);">
+      <div class="flex items-center gap-2 mb-6 pb-2" style="border-bottom: 1px solid color-mix(in oklab, var(--theme-primary) 45%, transparent);">
         <span class="text-xs font-bold uppercase tracking-widest" style="color: var(--color-accent-sky);">画布 (V2)</span>
       </div>
 
@@ -96,12 +96,12 @@ function handleImageUpload({ file }: { file: { file: File | null } }) {
           <n-upload accept="image/*" :show-file-list="false" @before-upload="handleImageUpload">
             <div
               class="upload-area border-2 border-dashed rounded-lg h-32 flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden group"
-              style="border-color: var(--color-border-primary); background-color: rgba(30, 41, 59, 0.1);">
+              style="border-color: var(--color-border-primary); background-color: color-mix(in oklab, var(--color-bg-tertiary) 70%, transparent);">
               <template v-if="config.backgroundImage">
                 <img :src="config.backgroundImage" class="w-full h-full object-contain p-2" />
                 <div
                   class="absolute inset-0 flex items-center justify-center transition-opacity opacity-0 group-hover:opacity-100"
-                  style="background-color: rgba(0, 0, 0, 0.4);">
+                  style="background-color: color-mix(in oklab, var(--color-bg-primary) 45%, transparent);">
                   <n-text class="text-white text-[10px]">点击更换图片</n-text>
                 </div>
               </template>
@@ -166,14 +166,14 @@ function handleImageUpload({ file }: { file: { file: File | null } }) {
 
 :deep(.n-form-item-label) {
   font-size: 11px !important;
-  color: #94a3b8 !important;
+  color: var(--color-text-tertiary) !important;
 }
 
 :deep(.n-input),
 :deep(.n-input-number),
 :deep(.n-select) {
   --n-border-radius: 4px !important;
-  background-color: #0f172a !important;
+  background-color: var(--color-bg-secondary) !important;
 }
 
 .upload-area {
@@ -183,12 +183,12 @@ function handleImageUpload({ file }: { file: { file: File | null } }) {
 :deep(.n-collapse-item__header-main) {
   font-size: 11px !important;
   font-weight: bold;
-  color: #64748b;
+  color: var(--ui-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
 
 :deep(.n-collapse-item) {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--ui-border);
 }
 </style>

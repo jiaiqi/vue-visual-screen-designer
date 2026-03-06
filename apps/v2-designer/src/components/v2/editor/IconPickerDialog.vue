@@ -117,7 +117,7 @@ const selectIcon = (iconName: string) => {
               <div @click="selectIcon(name)" :class="[
                 'group flex flex-col items-center justify-center p-3 rounded-lg border transition-all cursor-pointer',
                 props.currentIcon === name
-                  ? 'bg-sky-500/10 border-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.3)]'
+                  ? 'icon-card-active'
                   : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-800 hover:border-slate-500 hover:scale-105'
               ]">
                 <!-- 这里我们从图标库按名字直接抽取出对应的 component -->
@@ -156,5 +156,11 @@ const selectIcon = (iconName: string) => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.icon-card-active {
+  background: var(--ui-info-bg);
+  border-color: var(--ui-info-border);
+  box-shadow: 0 0 15px color-mix(in oklab, var(--theme-primary) 30%, transparent);
 }
 </style>

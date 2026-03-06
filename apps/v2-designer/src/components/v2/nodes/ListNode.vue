@@ -6,12 +6,12 @@ const getNode = inject('getNode') as () => Node
 const node = getNode()
 
 const listTitle = ref('排名列表')
-const headerBgColor = ref('#1e3a5f')
-const headerTextColor = ref('#60a5fa')
-const rowBgColor = ref('#0f172a')
-const rowAltBgColor = ref('#1e293b')
-const rowTextColor = ref('#94a3b8')
-const borderColor = ref('#334155')
+const headerBgColor = ref('var(--color-bg-tertiary)')
+const headerTextColor = ref('var(--theme-primary)')
+const rowBgColor = ref('var(--color-bg-secondary)')
+const rowAltBgColor = ref('var(--color-bg-tertiary)')
+const rowTextColor = ref('var(--color-text-tertiary)')
+const borderColor = ref('var(--color-border-secondary)')
 const showBorder = ref(true)
 
 const listData = ref([
@@ -25,12 +25,12 @@ const listData = ref([
 const updateData = () => {
   const data = node.getData() || {} as any
   listTitle.value = data.listTitle || '排名列表'
-  headerBgColor.value = data.headerBgColor || '#1e3a5f'
-  headerTextColor.value = data.headerTextColor || '#60a5fa'
-  rowBgColor.value = data.rowBgColor || '#0f172a'
-  rowAltBgColor.value = data.rowAltBgColor || '#1e293b'
-  rowTextColor.value = data.rowTextColor || '#94a3b8'
-  borderColor.value = data.borderColor || '#334155'
+  headerBgColor.value = data.headerBgColor || 'var(--color-bg-tertiary)'
+  headerTextColor.value = data.headerTextColor || 'var(--theme-primary)'
+  rowBgColor.value = data.rowBgColor || 'var(--color-bg-secondary)'
+  rowAltBgColor.value = data.rowAltBgColor || 'var(--color-bg-tertiary)'
+  rowTextColor.value = data.rowTextColor || 'var(--color-text-tertiary)'
+  borderColor.value = data.borderColor || 'var(--color-border-secondary)'
   showBorder.value = data.showBorder !== false
   listData.value = data.listData || [
     { rank: 1, name: '项目 A', value: 100 },

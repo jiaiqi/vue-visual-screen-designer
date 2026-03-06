@@ -46,27 +46,44 @@ const Icons = {
   SlidersHorizontal: markRaw(SlidersHorizontal),
 }
 
+function cssColor(varName: string, fallback: string): string {
+  if (typeof window === 'undefined')
+    return fallback
+  const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim()
+  return value || fallback
+}
+
+const defaultStroke = cssColor('--theme-primary', 'var(--theme-primary)')
+const defaultFill = cssColor('--color-bg-tertiary', 'var(--color-bg-tertiary)')
+const defaultText = cssColor('--color-text-secondary', 'var(--color-text-secondary)')
+
 const presetColors = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
-  '#8b5cf6', '#06b6d4', '#ec4899', '#64748b',
+  defaultStroke,
+  cssColor('--color-accent-emerald', 'var(--color-accent-emerald)'),
+  cssColor('--ui-warning', 'var(--ui-warning)'),
+  cssColor('--color-accent-rose', 'var(--color-accent-rose)'),
+  cssColor('--color-accent-indigo', 'var(--color-accent-indigo)'),
+  cssColor('--color-accent-sky', 'var(--color-accent-sky)'),
+  cssColor('--theme-primary', 'var(--theme-primary)'),
+  cssColor('--color-text-muted', 'var(--color-text-muted)'),
 ]
 
 const formData = ref({
   id: '',
   text: '',
-  fill: '#1e293b',
-  stroke: '#3b82f6',
+  fill: defaultFill,
+  stroke: defaultStroke,
   width: 0,
   height: 0,
   x: 0,
   y: 0,
   rx: 4,
   fontSize: 14,
-  textColor: '#e2e8f0',
+  textColor: defaultText,
   iconName: '',
   progressValue: 50,
-  progressColor: '#3b82f6',
-  progressBgColor: '#1e293b',
+  progressColor: defaultStroke,
+  progressBgColor: defaultFill,
   showProgressText: true,
   numberValue: 0,
   numberFormat: 'none',
@@ -113,10 +130,10 @@ function syncDataFromCell(cell: Cell) {
 
   formData.value.id = cell.id
   formData.value.text = (cell.attr('text/text') as string) || ''
-  formData.value.textColor = (cell.attr('text/fill') as string) || '#e2e8f0'
+  formData.value.textColor = (cell.attr('text/fill') as string) || defaultText
   formData.value.fontSize = Number(cell.attr('text/fontSize') || 14)
-  formData.value.fill = (cell.attr('body/fill') as string) || '#1e293b'
-  formData.value.stroke = (cell.attr('body/stroke') as string) || '#3b82f6'
+  formData.value.fill = (cell.attr('body/fill') as string) || defaultFill
+  formData.value.stroke = (cell.attr('body/stroke') as string) || defaultStroke
   formData.value.rx = Number(cell.attr('body/rx') || 0)
 
   const data = cell.getData() || {}
@@ -125,8 +142,8 @@ function syncDataFromCell(cell: Cell) {
 
   if (cell.shape === 'progress-node') {
     formData.value.progressValue = typeof data.progressValue === 'number' ? data.progressValue : 50
-    formData.value.progressColor = data.progressColor || '#3b82f6'
-    formData.value.progressBgColor = data.progressBgColor || '#1e293b'
+    formData.value.progressColor = data.progressColor || defaultStroke
+    formData.value.progressBgColor = data.progressBgColor || defaultFill
     formData.value.showProgressText = data.showProgressText !== false
   }
 
@@ -253,7 +270,7 @@ function toggleSliderMode(key: string) {
 <template>
   <div v-if="cell" class="node-properties h-full flex flex-col">
     <n-tabs type="line" justify-content="space-evenly" size="small"
-      class="shrink-0 bg-slate-900 border-b border-slate-800">
+      class="shrink-0 tabs-header">
       <n-tab-pane name="style" tab="外观">
         <div class="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-160px)] custom-scrollbar">
           <n-form label-placement="top" size="small">
@@ -359,11 +376,11 @@ function toggleSliderMode(key: string) {
                     </n-form-item>
                   </n-grid-item>
                 </n-grid>
-                <div class="flex items-center justify-between mt-4 p-2 bg-slate-800/50 rounded">
+                <div class="flex items-center justify-between mt-4 p-2 lock-card rounded">
                   <div class="flex items-center gap-2">
                     <n-icon :component="formData.isLocked ? Icons.Lock : Icons.Unlock"
-                      :class="formData.isLocked ? 'text-amber-500' : 'text-slate-400'" />
-                    <span class="text-xs text-slate-400">{{ formData.isLocked ? '已锁定位置' : '未锁定位置' }}</span>
+                      :class="formData.isLocked ? 'lock-icon-on' : 'lock-icon-off'" />
+                    <span class="text-xs lock-hint">{{ formData.isLocked ? '已锁定位置' : '未锁定位置' }}</span>
                   </div>
                   <n-switch :value="formData.isLocked" @update:value="v => handleUpdate('isLocked', v)" size="small" />
                 </div>
@@ -439,13 +456,34 @@ function toggleSliderMode(key: string) {
 <style scoped>
 .node-properties {
   height: 100%;
-  background-color: #0f172a;
+  background-color: var(--color-bg-secondary);
+}
+
+.tabs-header {
+  background: var(--ui-panel-bg-strong);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.lock-card {
+  background: color-mix(in oklab, var(--color-bg-tertiary) 58%, transparent);
+}
+
+.lock-icon-on {
+  color: var(--ui-warning);
+}
+
+.lock-icon-off {
+  color: var(--color-text-tertiary);
+}
+
+.lock-hint {
+  color: var(--color-text-tertiary);
 }
 
 .section-header {
   font-size: 10px;
   font-weight: 800;
-  color: #475569;
+  color: var(--ui-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: 12px;
@@ -454,7 +492,7 @@ function toggleSliderMode(key: string) {
 :deep(.n-form-item-label) {
   font-size: 10px !important;
   font-weight: 700;
-  color: #94a3b8 !important;
+  color: var(--color-text-tertiary) !important;
   padding-bottom: 4px;
 }
 
@@ -463,7 +501,7 @@ function toggleSliderMode(key: string) {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--color-bg-tertiary);
   border-radius: 10px;
 }
 
@@ -472,17 +510,17 @@ function toggleSliderMode(key: string) {
 }
 
 :deep(.n-collapse-item) {
-  background: rgba(30, 41, 59, 0.3);
+  background: color-mix(in oklab, var(--color-bg-tertiary) 70%, transparent);
   border-radius: 6px;
   margin-bottom: 8px;
-  border: 1px solid rgba(71, 85, 105, 0.3);
+  border: 1px solid var(--ui-border);
 }
 
 :deep(.n-collapse-item__header) {
   padding: 10px 12px;
   font-size: 11px;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }

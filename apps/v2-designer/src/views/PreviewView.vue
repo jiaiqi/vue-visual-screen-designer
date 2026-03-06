@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkspaceStoreV2 } from '@/stores/v2/workspaceStoreV2'
+import { useThemeStoreV2 } from '@/stores/v2/themeStoreV2'
 import type { SchemaEdge, SchemaNode, SchemaV2 } from '@vue-visual-screen/v2-shared'
 import { x6ToSchemaV2 } from '@vue-visual-screen/v2-shared'
 
@@ -10,6 +11,14 @@ const loadError = ref('')
 const route = useRoute()
 const router = useRouter()
 const workspace = useWorkspaceStoreV2()
+const themeStore = useThemeStoreV2()
+const isDark = computed(() => themeStore.mode === 'dark')
+const globalThemeColor = computed({
+  get: () => themeStore.primaryColor,
+  set: (value: string) => {
+    void themeStore.setPrimaryColor(value)
+  },
+})
 const backRoute = computed(() => {
   const appId = String(route.params.appId || '')
   const pageId = String(route.params.pageId || '')
@@ -54,6 +63,7 @@ function edgePath(edge: SchemaEdge): string {
 onMounted(() => {
   void (async () => {
     try {
+      await themeStore.init()
       await workspace.init()
       const appId = String(route.params.appId || '')
       const pageId = String(route.params.pageId || '')
@@ -94,18 +104,28 @@ onMounted(() => {
     }
   })()
 })
+
+function toggleTheme() {
+  void themeStore.toggleMode()
+}
 </script>
 
 <template>
   <div class="v2-preview">
     <header class="preview-header">
       <h1>V2 预览</h1>
-      <button class="back-btn" @click="router.push(backRoute)">
-        返回设计器
-      </button>
+      <div class="preview-header-actions">
+        <button class="back-btn" @click="toggleTheme">
+          {{ isDark ? '浅色' : '深色' }}
+        </button>
+        <input v-model="globalThemeColor" class="theme-color" type="color" title="主题色" />
+        <button class="back-btn" @click="router.push(backRoute)">
+          返回设计器
+        </button>
+      </div>
     </header>
 
-    <div class="preview-canvas-wrap">
+    <div class="preview-canvas-wrap scrollbar-theme">
       <div v-if="loadError" class="canvas-placeholder">
         <h2>无法预览</h2>
         <p>{{ loadError }}</p>
@@ -154,18 +174,24 @@ onMounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #020617;
+  background: var(--color-bg-primary);
 }
 
 .preview-header {
   height: 56px;
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border-secondary) 90%, transparent);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 14px;
-  color: #e2e8f0;
+  color: var(--color-text-primary);
+}
+
+.preview-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .preview-header h1 {
@@ -177,10 +203,19 @@ onMounted(() => {
   height: 30px;
   padding: 0 12px;
   border-radius: 6px;
-  border: 1px solid rgba(14, 165, 233, 0.35);
-  background: rgba(14, 165, 233, 0.12);
-  color: #38bdf8;
+  border: 1px solid color-mix(in oklab, var(--theme-primary) 56%, transparent);
+  background: color-mix(in oklab, var(--theme-primary) 16%, transparent);
+  color: var(--theme-primary);
   cursor: pointer;
+}
+
+.theme-color {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 90%, transparent);
+  background: transparent;
+  padding: 2px;
 }
 
 .preview-canvas-wrap {

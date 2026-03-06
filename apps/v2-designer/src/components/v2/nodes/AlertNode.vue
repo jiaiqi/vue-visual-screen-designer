@@ -19,8 +19,8 @@ const data = computed(() => {
   return {
     text: d.alertText ?? '！告警',
     subText: d.alertSubText ?? '请立即处理',
-    color: d.alertColor ?? '#ef4444',
-    bgColor: d.alertBgColor ?? 'rgba(239,68,68,0.1)',
+    color: d.alertColor ?? 'var(--theme-primary)',
+    bgColor: d.alertBgColor ?? 'color-mix(in oklab, var(--theme-primary) 12%, transparent)',
     interval: d.flashInterval ?? 800,
     isAlerting: d.isAlerting !== false,
   }
@@ -61,7 +61,7 @@ onUnmounted(() => stopFlash())
   >
     <div class="alert-icon">⚠</div>
     <div class="alert-text">{{ data.text }}</div>
-    <div class="alert-sub" :style="{ color: data.color + 'aa' }">{{ data.subText }}</div>
+    <div class="alert-sub">{{ data.subText }}</div>
   </div>
 </template>
 
@@ -95,5 +95,6 @@ onUnmounted(() => stopFlash())
 .alert-sub {
   font-size: 11px;
   text-align: center;
+  color: color-mix(in oklab, currentColor 70%, transparent);
 }
 </style>

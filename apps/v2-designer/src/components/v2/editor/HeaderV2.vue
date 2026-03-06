@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useEditorStoreV2 } from '@/stores/v2/editorStoreV2'
 import { useCanvasStoreV2 } from '@/stores/v2/canvasStoreV2'
 import { useWorkspaceStoreV2 } from '@/stores/v2/workspaceStoreV2'
+import { useThemeStoreV2 } from '@/stores/v2/themeStoreV2'
 import { useEditorCommands } from '@/composables/useEditorCommands'
 import { useNotifier } from '@/composables/useNotifier'
 import { x6ToSchemaV2 } from '@vue-visual-screen/v2-shared'
@@ -21,12 +22,19 @@ const emit = defineEmits<{
 const editorStore = useEditorStoreV2()
 const canvasStore = useCanvasStoreV2()
 const workspaceStore = useWorkspaceStoreV2()
+const themeStore = useThemeStoreV2()
 const commands = useEditorCommands()
 const notifier = useNotifier()
 const router = useRouter()
 
 const zoomRatio = computed(() => Math.round(canvasStore.viewport.zoom * 100))
-const isDark = ref(true)
+const isDark = computed(() => themeStore.mode === 'dark')
+const themeColor = computed({
+  get: () => themeStore.primaryColor,
+  set: (value: string) => {
+    void themeStore.setPrimaryColor(value)
+  },
+})
 
 function handleZoom(delta: number) {
   commands.zoomBy(delta)
@@ -106,6 +114,10 @@ async function handlePublish() {
     notifier.error('发布失败', message)
   }
 }
+
+function handleToggleTheme() {
+  void themeStore.toggleMode()
+}
 </script>
 
 <template>
@@ -179,10 +191,11 @@ async function handlePublish() {
     <!-- 右区：操作 + 导出 + 预览 -->
     <div class="hv2-right">
       <!-- 主题切换 -->
-      <button class="hv2-icon-btn" @click="isDark = !isDark" :title="isDark ? '亮色主题' : '暗色主题'">
+      <button class="hv2-icon-btn" @click="handleToggleTheme" :title="isDark ? '亮色主题' : '暗色主题'">
         <Sun v-if="isDark" class="w-3.5 h-3.5" />
         <Moon v-else class="w-3.5 h-3.5" />
       </button>
+      <input v-model="themeColor" class="hv2-color" type="color" title="主题色" />
 
       <!-- JSON 编辑器 -->
       <button class="hv2-icon-btn" @click="emit('open-json-editor')" title="JSON 数据编辑">
@@ -206,14 +219,14 @@ async function handlePublish() {
         </button>
         <div class="hv2-dropdown-menu">
           <button class="hv2-dropdown-item" @click="commands.exportToPNG()">
-            <FileImage class="w-3.5 h-3.5 text-emerald-400" style="flex-shrink:0" />
+            <FileImage class="w-3.5 h-3.5 menu-icon menu-success" style="flex-shrink:0" />
             <div>
               <div class="item-text">导出 PNG</div>
               <div class="item-sub">高质量位图</div>
             </div>
           </button>
           <button class="hv2-dropdown-item" @click="commands.exportToSVG()">
-            <FileCode2 class="w-3.5 h-3.5 text-sky-400" style="flex-shrink:0" />
+            <FileCode2 class="w-3.5 h-3.5 menu-icon menu-info" style="flex-shrink:0" />
             <div>
               <div class="item-text">导出 SVG</div>
               <div class="item-sub">无损矢量图</div>
@@ -221,14 +234,14 @@ async function handlePublish() {
           </button>
           <div class="hv2-dropdown-divider" />
           <button class="hv2-dropdown-item" @click="commands.exportToJSON()">
-            <Save class="w-3.5 h-3.5 text-indigo-400" style="flex-shrink:0" />
+            <Save class="w-3.5 h-3.5 menu-icon menu-accent" style="flex-shrink:0" />
             <div>
               <div class="item-text">保存工程文件</div>
               <div class="item-sub">JSON 格式</div>
             </div>
           </button>
           <button class="hv2-dropdown-item" @click="fileInput?.click()">
-            <Upload class="w-3.5 h-3.5 text-amber-400" style="flex-shrink:0" />
+            <Upload class="w-3.5 h-3.5 menu-icon menu-warning" style="flex-shrink:0" />
             <div>
               <div class="item-text">载入工程文件</div>
               <div class="item-sub">从 JSON 文件恢复</div>
@@ -255,8 +268,8 @@ async function handlePublish() {
   align-items: center;
   padding: 0 14px;
   gap: 8px;
-  background: rgba(2, 6, 23, 0.97);
-  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  background: color-mix(in oklab, var(--color-bg-secondary) 92%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border-secondary) 90%, transparent);
   backdrop-filter: blur(16px);
   flex-shrink: 0;
   position: relative;
@@ -275,12 +288,16 @@ async function handlePublish() {
 .hv2-logo {
   width: 30px;
   height: 30px;
-  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+  background: linear-gradient(
+    135deg,
+    var(--theme-primary) 0%,
+    color-mix(in oklab, var(--theme-primary) 62%, var(--color-accent-indigo)) 100%
+  );
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 16px rgba(14, 165, 233, 0.25);
+  box-shadow: 0 0 16px color-mix(in oklab, var(--theme-primary) 35%, transparent);
   flex-shrink: 0;
 }
 
@@ -294,9 +311,9 @@ async function handlePublish() {
   height: 28px;
   max-width: 180px;
   border-radius: 6px;
-  border: 1px solid rgba(51, 65, 85, 0.7);
-  background: rgba(15, 23, 42, 0.72);
-  color: #cbd5e1;
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 90%, transparent);
+  background: color-mix(in oklab, var(--color-bg-tertiary) 90%, transparent);
+  color: var(--color-text-secondary);
   font-size: 12px;
   padding: 0 8px;
 }
@@ -304,7 +321,7 @@ async function handlePublish() {
 .hv2-name {
   font-size: 13px;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--color-text-primary);
   max-width: 110px;
   white-space: nowrap;
   overflow: hidden;
@@ -314,9 +331,9 @@ async function handlePublish() {
 .hv2-badge {
   font-size: 9px;
   font-weight: 700;
-  color: #6366f1;
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.28);
+  color: color-mix(in oklab, var(--theme-primary) 75%, var(--color-accent-indigo));
+  background: color-mix(in oklab, var(--theme-primary) 12%, transparent);
+  border: 1px solid color-mix(in oklab, var(--theme-primary) 40%, transparent);
   border-radius: 4px;
   padding: 1px 5px;
   letter-spacing: 0.04em;
@@ -336,17 +353,17 @@ async function handlePublish() {
   align-items: center;
   justify-content: center;
   border-radius: 5px;
-  border: 1px solid rgba(51, 65, 85, 0.4);
-  background: rgba(30, 41, 59, 0.3);
-  color: #475569;
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 62%, transparent);
+  background: color-mix(in oklab, var(--color-bg-tertiary) 38%, transparent);
+  color: var(--ui-muted);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .hv2-toggle-btn:hover {
-  color: #94a3b8;
-  border-color: rgba(56, 189, 248, 0.2);
-  background: rgba(56, 189, 248, 0.05);
+  color: var(--color-text-tertiary);
+  border-color: var(--ui-info-border);
+  background: var(--ui-info-bg);
 }
 
 /* 中区 */
@@ -367,7 +384,7 @@ async function handlePublish() {
 .hv2-sep {
   width: 1px;
   height: 18px;
-  background: rgba(51, 65, 85, 0.5);
+  background: color-mix(in oklab, var(--color-border-secondary) 70%, transparent);
   margin: 0 4px;
 }
 
@@ -376,8 +393,8 @@ async function handlePublish() {
   display: flex;
   align-items: center;
   gap: 3px;
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(51, 65, 85, 0.5);
+  background: color-mix(in oklab, var(--color-bg-secondary) 70%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 72%, transparent);
   border-radius: 7px;
   padding: 3px 6px;
 }
@@ -391,21 +408,21 @@ async function handlePublish() {
   border-radius: 4px;
   border: none;
   background: transparent;
-  color: #64748b;
+  color: var(--color-text-muted);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .hv2-zoom-btn:hover {
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.1);
+  color: var(--theme-primary);
+  background: var(--ui-info-bg);
 }
 
 .hv2-zoom-val {
   font-size: 11px;
   font-weight: 700;
   font-family: monospace;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   min-width: 36px;
   text-align: center;
 }
@@ -413,7 +430,7 @@ async function handlePublish() {
 .hv2-zoom-sep {
   width: 1px;
   height: 14px;
-  background: rgba(51, 65, 85, 0.5);
+  background: color-mix(in oklab, var(--color-border-secondary) 70%, transparent);
   margin: 0 2px;
 }
 
@@ -425,17 +442,17 @@ async function handlePublish() {
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  border: 1px solid rgba(51, 65, 85, 0.4);
-  background: rgba(30, 41, 59, 0.3);
-  color: #64748b;
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 62%, transparent);
+  background: color-mix(in oklab, var(--color-bg-tertiary) 38%, transparent);
+  color: var(--color-text-muted);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .hv2-icon-btn:hover {
-  background: rgba(51, 65, 85, 0.5);
-  color: #94a3b8;
-  border-color: rgba(51, 65, 85, 0.6);
+  background: color-mix(in oklab, var(--color-bg-tertiary) 58%, transparent);
+  color: var(--color-text-tertiary);
+  border-color: color-mix(in oklab, var(--color-border-secondary) 80%, transparent);
 }
 
 .hv2-icon-btn:disabled {
@@ -468,35 +485,45 @@ async function handlePublish() {
 }
 
 .hv2-action.primary {
-  background: rgba(14, 165, 233, 0.12);
-  color: #38bdf8;
-  border-color: rgba(14, 165, 233, 0.25);
+  background: color-mix(in oklab, var(--theme-primary) 18%, transparent);
+  color: var(--theme-primary);
+  border-color: color-mix(in oklab, var(--theme-primary) 34%, transparent);
 }
 
 .hv2-action.primary:hover {
-  background: #0ea5e9;
-  color: #020617;
+  background: var(--theme-primary);
+  color: var(--color-bg-primary);
+}
+
+.hv2-color {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 90%, transparent);
+  background: transparent;
+  padding: 2px;
+  cursor: pointer;
 }
 
 .hv2-action.success {
-  background: rgba(34, 197, 94, 0.08);
-  color: #4ade80;
-  border-color: rgba(34, 197, 94, 0.2);
+  background: color-mix(in oklab, var(--theme-primary) 14%, transparent);
+  color: var(--theme-primary);
+  border-color: color-mix(in oklab, var(--theme-primary) 40%, transparent);
 }
 
 .hv2-action.success:hover {
-  background: #22c55e;
-  color: #020617;
+  background: var(--theme-primary);
+  color: var(--color-bg-primary);
 }
 
 .hv2-action.danger {
-  background: rgba(239, 68, 68, 0.08);
-  color: #f87171;
-  border-color: rgba(239, 68, 68, 0.2);
+  background: var(--ui-danger-bg);
+  color: var(--ui-danger-text);
+  border-color: var(--ui-danger-border);
 }
 
 .hv2-action.danger:hover {
-  background: rgba(239, 68, 68, 0.18);
+  background: color-mix(in oklab, var(--ui-danger-bg) 88%, var(--color-bg-secondary));
 }
 
 /* 下拉菜单 */
@@ -515,11 +542,11 @@ async function handlePublish() {
   top: calc(100% + 8px);
   right: 0;
   width: 200px;
-  background: #0f172a;
-  border: 1px solid rgba(51, 65, 85, 0.7);
+  background: var(--color-bg-secondary);
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 85%, transparent);
   border-radius: 12px;
   padding: 6px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  box-shadow: var(--ui-shadow), 0 0 0 1px color-mix(in oklab, var(--color-text-primary) 6%, transparent);
   opacity: 0;
   visibility: hidden;
   transform: translateY(-6px);
@@ -536,7 +563,7 @@ async function handlePublish() {
   width: 100%;
   text-align: left;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   cursor: pointer;
   background: transparent;
   border: none;
@@ -544,8 +571,8 @@ async function handlePublish() {
 }
 
 .hv2-dropdown-item:hover {
-  background: rgba(51, 65, 85, 0.4);
-  color: #e2e8f0;
+  background: color-mix(in oklab, var(--color-bg-quaternary) 55%, transparent);
+  color: var(--color-text-primary);
 }
 
 .item-text {
@@ -555,13 +582,33 @@ async function handlePublish() {
 
 .item-sub {
   font-size: 10px;
-  color: #475569;
+  color: var(--ui-muted);
   margin-top: 1px;
 }
 
 .hv2-dropdown-divider {
   height: 1px;
-  background: rgba(51, 65, 85, 0.4);
+  background: color-mix(in oklab, var(--color-bg-quaternary) 55%, transparent);
   margin: 4px 0;
+}
+
+.menu-icon {
+  color: var(--color-text-tertiary);
+}
+
+.menu-success {
+  color: var(--ui-success);
+}
+
+.menu-info {
+  color: var(--theme-primary);
+}
+
+.menu-accent {
+  color: var(--color-accent-indigo);
+}
+
+.menu-warning {
+  color: var(--ui-warning);
 }
 </style>

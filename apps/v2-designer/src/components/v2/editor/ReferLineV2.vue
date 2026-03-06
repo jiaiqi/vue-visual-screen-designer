@@ -44,7 +44,7 @@ const handleRulerClick = (type: 'h' | 'v', e: MouseEvent) => {
 
 .refer-line {
   position: absolute;
-  background-color: #22c55e;
+  background-color: var(--ui-success);
   z-index: 100;
   pointer-events: auto;
 }
@@ -66,8 +66,8 @@ const handleRulerClick = (type: 'h' | 'v', e: MouseEvent) => {
 .line-label {
   position: absolute;
   font-size: 10px;
-  color: #22c55e;
-  background: rgba(15, 23, 42, 0.8);
+  color: var(--ui-success);
+  background: color-mix(in oklab, var(--color-bg-secondary) 80%, transparent);
   padding: 0 2px;
 }
 

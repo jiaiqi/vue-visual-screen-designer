@@ -24,12 +24,22 @@ const data = computed(() => {
     max: d.gaugeMax ?? 100,
     title: d.gaugeTitle ?? '指标',
     unit: d.gaugeUnit ?? '%',
-    color: d.gaugeColor ?? '#0ea5e9',
+    color: d.gaugeColor ?? 'var(--theme-primary)',
   }
 })
 
+function resolveCssColor(input: string): string {
+  if (!input.startsWith('var(')) return input
+  if (typeof window === 'undefined') return 'rgb(14, 165, 233)'
+  const varName = input.slice(4, -1).trim()
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || 'rgb(14, 165, 233)'
+}
+
 function buildOption() {
   const { value, max, title, unit, color } = data.value
+  const resolvedColor = resolveCssColor(color)
+  const mutedTrack = resolveCssColor('var(--color-border-secondary)')
+  const mutedText = resolveCssColor('var(--color-text-muted)')
 
   return {
     backgroundColor: 'transparent',
@@ -46,8 +56,8 @@ function buildOption() {
           lineStyle: {
             width: 10,
             color: [
-              [value / max, color],
-              [1, 'rgba(51,65,85,0.5)'],
+              [value / max, resolvedColor],
+              [1, mutedTrack],
             ],
           },
         },
@@ -57,12 +67,12 @@ function buildOption() {
         pointer: {
           length: '60%',
           width: 4,
-          itemStyle: { color },
+          itemStyle: { color: resolvedColor },
         },
         detail: {
           valueAnimation: true,
           formatter: `{value}${unit}`,
-          color,
+          color: resolvedColor,
           fontSize: 18,
           fontWeight: 'bold',
           offsetCenter: [0, '30%'],
@@ -70,7 +80,7 @@ function buildOption() {
         title: {
           offsetCenter: [0, '60%'],
           fontSize: 12,
-          color: '#94a3b8',
+          color: mutedText,
           text: title,
         },
         data: [{ value }],

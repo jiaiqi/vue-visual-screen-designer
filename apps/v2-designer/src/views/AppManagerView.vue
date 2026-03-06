@@ -2,11 +2,13 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkspaceStoreV2 } from '@/stores/v2/workspaceStoreV2'
+import { useThemeStoreV2 } from '@/stores/v2/themeStoreV2'
 import { useNotifier } from '@/composables/useNotifier'
 import GlobalToast from '@/components/v2/common/GlobalToast.vue'
 
 const router = useRouter()
 const workspace = useWorkspaceStoreV2()
+const themeStore = useThemeStoreV2()
 const notifier = useNotifier()
 
 const appSearch = ref('')
@@ -39,6 +41,11 @@ const filteredApps = computed(() => {
 const selectedApp = computed(() => workspace.activeApp)
 const selectedPages = computed(() => workspace.currentPages)
 const selectedReleases = computed(() => workspace.currentReleases)
+const pageNameMap = computed(() => {
+  const map = new Map<string, string>()
+  workspace.pages.forEach((page) => map.set(page.id, page.name))
+  return map
+})
 
 const appForm = reactive({
   name: '',
@@ -53,6 +60,13 @@ const currentEditorRoute = computed(() => {
   if (!workspace.activeAppId || !workspace.activePageId)
     return '/apps'
   return `/app/${workspace.activeAppId}/page/${workspace.activePageId}/editor`
+})
+const isDark = computed(() => themeStore.mode === 'dark')
+const globalThemeColor = computed({
+  get: () => themeStore.primaryColor,
+  set: (value: string) => {
+    void themeStore.setPrimaryColor(value)
+  },
 })
 
 function formatTime(value: string) {
@@ -96,6 +110,7 @@ watch(() => workspace.currentPages, () => {
 }, { deep: true })
 
 onMounted(async () => {
+  await themeStore.init()
   await workspace.init()
   if (!workspace.activeAppId && workspace.apps[0]) {
     await workspace.setActiveApp(workspace.apps[0].id)
@@ -103,6 +118,10 @@ onMounted(async () => {
   hydrateAppForm()
   hydratePageDrafts()
 })
+
+function toggleTheme() {
+  void themeStore.toggleMode()
+}
 
 async function createApp() {
   const app = await workspace.createApp(appCreate.name, appCreate.description)
@@ -171,6 +190,19 @@ async function removePage(pageId: string) {
   }
 }
 
+async function movePage(pageId: string, direction: 'up' | 'down') {
+  await workspace.movePage(pageId, direction)
+}
+
+async function duplicatePage(pageId: string) {
+  try {
+    const page = await workspace.duplicatePage(pageId)
+    notifier.success('页面已复制', `已创建 ${page.name}`)
+  } catch (error) {
+    notifier.error('复制失败', error instanceof Error ? error.message : '复制失败')
+  }
+}
+
 async function openEditor(pageId: string) {
   const app = selectedApp.value
   if (!app) return
@@ -193,6 +225,22 @@ async function publishFromManager(pageId: string) {
   releaseNote.value = ''
   notifier.success('发布成功', `已创建 ${release.version}`)
 }
+
+async function rollbackRelease(releaseId: string) {
+  try {
+    const page = await workspace.rollbackRelease(releaseId)
+    notifier.success('回滚成功', `已恢复到页面 ${page.name}`)
+  } catch (error) {
+    notifier.error('回滚失败', error instanceof Error ? error.message : '回滚失败')
+  }
+}
+
+async function openReleaseDetail(releaseId: string) {
+  const release = workspace.releases.find((item) => item.id === releaseId)
+  if (!release)
+    return
+  await router.push(`/app/${release.appId}/page/${release.pageId}/release/${release.id}`)
+}
 </script>
 
 <template>
@@ -203,6 +251,10 @@ async function publishFromManager(pageId: string) {
         <p>一个应用可管理多个页面、首页路由、发布记录和元数据。</p>
       </div>
       <div class="topbar-actions">
+        <button class="btn ghost" @click="toggleTheme">
+          {{ isDark ? '浅色' : '深色' }}
+        </button>
+        <input v-model="globalThemeColor" class="theme-color" type="color" title="全局主题色" />
         <button class="btn ghost" @click="router.push(currentEditorRoute)">
           返回编辑器
         </button>
@@ -222,7 +274,7 @@ async function publishFromManager(pageId: string) {
           </button>
         </div>
         <input v-model="appSearch" class="search" placeholder="搜索应用 / 负责人 / 标签" />
-        <div class="app-list">
+        <div class="app-list scrollbar-theme scrollbar-thin">
           <button
             v-for="app in filteredApps"
             :key="app.id"
@@ -240,7 +292,7 @@ async function publishFromManager(pageId: string) {
         </div>
       </aside>
 
-      <main class="detail-column">
+      <main class="detail-column scrollbar-theme">
         <template v-if="selectedApp">
           <section class="summary-cards">
             <article class="card">
@@ -312,7 +364,7 @@ async function publishFromManager(pageId: string) {
               </div>
             </div>
 
-            <div class="page-table">
+            <div class="page-table scrollbar-theme">
               <div class="row head">
                 <span>页面名称</span>
                 <span>路径</span>
@@ -337,6 +389,9 @@ async function publishFromManager(pageId: string) {
                 </span>
                 <span class="time">{{ formatTime(page.updatedAt) }}</span>
                 <span class="actions">
+                  <button class="mini" @click="movePage(page.id, 'up')">上移</button>
+                  <button class="mini" @click="movePage(page.id, 'down')">下移</button>
+                  <button class="mini" @click="duplicatePage(page.id)">复制</button>
                   <button class="mini" @click="savePageMeta(page.id)">保存</button>
                   <button class="mini" @click="openEditor(page.id)">编辑</button>
                   <button class="mini" @click="openPreview(page.id)">预览</button>
@@ -366,8 +421,10 @@ async function publishFromManager(pageId: string) {
             <ul class="release-list">
               <li v-for="release in selectedReleases.slice(0, 12)" :key="release.id">
                 <strong>{{ release.version }}</strong>
-                <span>{{ release.note }}</span>
+                <span>{{ pageNameMap.get(release.pageId) || '未知页面' }} · {{ release.note }}</span>
                 <small>{{ formatTime(release.createdAt) }}</small>
+                <button class="mini" @click="openReleaseDetail(release.id)">详情</button>
+                <button class="mini" @click="rollbackRelease(release.id)">回滚</button>
               </li>
             </ul>
           </section>
@@ -382,10 +439,10 @@ async function publishFromManager(pageId: string) {
 .manager-root {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 0% 0%, rgba(14, 165, 233, 0.16), transparent 35%),
-    radial-gradient(circle at 95% 5%, rgba(34, 197, 94, 0.12), transparent 30%),
-    #020617;
-  color: #e2e8f0;
+    radial-gradient(circle at 0% 0%, color-mix(in oklab, var(--theme-primary) 24%, transparent), transparent 35%),
+    radial-gradient(circle at 95% 5%, var(--ui-success-bg), transparent 30%),
+    var(--color-bg-primary);
+  color: var(--color-text-primary);
   padding: 16px;
 }
 
@@ -396,6 +453,21 @@ async function publishFromManager(pageId: string) {
   margin-bottom: 14px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-color {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 90%, transparent);
+  background: transparent;
+  padding: 2px;
+}
+
 .headline h1 {
   margin: 0;
   font-size: 24px;
@@ -404,7 +476,7 @@ async function publishFromManager(pageId: string) {
 
 .headline p {
   margin: 6px 0 0;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 13px;
 }
 
@@ -421,9 +493,9 @@ async function publishFromManager(pageId: string) {
 }
 
 .app-column {
-  border: 1px solid rgba(51, 65, 85, 0.65);
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 88%, transparent);
   border-radius: 14px;
-  background: rgba(15, 23, 42, 0.75);
+  background: color-mix(in oklab, var(--color-bg-secondary) 84%, transparent);
   backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
@@ -443,8 +515,8 @@ async function publishFromManager(pageId: string) {
 }
 
 .panel {
-  border: 1px solid rgba(51, 65, 85, 0.65);
-  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 88%, transparent);
+  background: color-mix(in oklab, var(--color-bg-secondary) 88%, transparent);
   padding: 12px;
 }
 
@@ -470,7 +542,7 @@ async function publishFromManager(pageId: string) {
   padding: 10px;
   display: grid;
   gap: 8px;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.45);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border-secondary) 72%, transparent);
 }
 
 .search {
@@ -490,18 +562,18 @@ async function publishFromManager(pageId: string) {
   gap: 10px;
   align-items: center;
   width: 100%;
-  border: 1px solid rgba(51, 65, 85, 0.6);
-  background: rgba(2, 6, 23, 0.55);
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 78%, transparent);
+  background: color-mix(in oklab, var(--color-bg-primary) 56%, transparent);
   border-radius: 10px;
   padding: 8px;
-  color: #e2e8f0;
+  color: var(--color-text-secondary);
   text-align: left;
   cursor: pointer;
 }
 
 .app-item.active {
-  border-color: rgba(14, 165, 233, 0.75);
-  box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.35);
+  border-color: var(--ui-info-border);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--theme-primary) 35%, transparent);
 }
 
 .dot {
@@ -521,14 +593,14 @@ async function publishFromManager(pageId: string) {
 
 .meta small {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
 }
 
 .count {
   font-size: 11px;
-  color: #38bdf8;
-  background: rgba(14, 165, 233, 0.12);
-  border: 1px solid rgba(14, 165, 233, 0.35);
+  color: var(--theme-primary);
+  background: var(--ui-info-bg);
+  border: 1px solid var(--ui-info-border);
   border-radius: 999px;
   padding: 2px 8px;
 }
@@ -540,15 +612,15 @@ async function publishFromManager(pageId: string) {
 }
 
 .card {
-  border: 1px solid rgba(51, 65, 85, 0.65);
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 78%, transparent);
   border-radius: 12px;
-  background: rgba(15, 23, 42, 0.82);
+  background: color-mix(in oklab, var(--color-bg-secondary) 82%, transparent);
   padding: 12px;
 }
 
 .card p {
   margin: 0;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 12px;
 }
 
@@ -575,11 +647,11 @@ async function publishFromManager(pageId: string) {
 
 .form-grid span {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
 }
 
 .page-table {
-  border: 1px solid rgba(51, 65, 85, 0.4);
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 65%, transparent);
   border-radius: 10px;
   overflow: auto;
 }
@@ -590,18 +662,18 @@ async function publishFromManager(pageId: string) {
   gap: 8px;
   align-items: center;
   padding: 8px;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border-secondary) 52%, transparent);
 }
 
 .row.head {
-  background: rgba(30, 41, 59, 0.55);
+  background: color-mix(in oklab, var(--color-bg-tertiary) 62%, transparent);
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
 }
 
 .row .time {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
 }
 
 .actions {
@@ -613,23 +685,24 @@ async function publishFromManager(pageId: string) {
 .mini {
   height: 28px;
   border-radius: 7px;
-  border: 1px solid rgba(51, 65, 85, 0.8);
-  background: rgba(30, 41, 59, 0.8);
-  color: #e2e8f0;
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 85%, transparent);
+  background: color-mix(in oklab, var(--color-bg-tertiary) 80%, transparent);
+  color: var(--color-text-secondary);
   padding: 0 10px;
   cursor: pointer;
   font-size: 12px;
 }
 
 .mini.on {
-  color: #22c55e;
-  border-color: rgba(34, 197, 94, 0.7);
-  background: rgba(34, 197, 94, 0.12);
+  color: var(--ui-success);
+  border-color: var(--ui-success-border);
+  background: var(--ui-success-bg);
 }
 
 .mini.danger {
-  color: #f87171;
-  border-color: rgba(239, 68, 68, 0.6);
+  color: var(--ui-danger-text);
+  border-color: var(--ui-danger-border);
+  background: var(--ui-danger-bg);
 }
 
 .release-grid {
@@ -642,9 +715,9 @@ async function publishFromManager(pageId: string) {
 .release-btn {
   height: 30px;
   border-radius: 8px;
-  border: 1px solid rgba(34, 197, 94, 0.5);
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
+  border: 1px solid color-mix(in oklab, var(--theme-primary) 56%, transparent);
+  background: color-mix(in oklab, var(--theme-primary) 16%, transparent);
+  color: var(--theme-primary);
   padding: 0 10px;
   cursor: pointer;
 }
@@ -659,10 +732,10 @@ async function publishFromManager(pageId: string) {
 
 .release-list li {
   display: grid;
-  grid-template-columns: 64px 1fr auto;
+  grid-template-columns: 64px 1fr auto auto;
   gap: 8px;
   padding: 8px;
-  border: 1px solid rgba(51, 65, 85, 0.4);
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 62%, transparent);
   border-radius: 8px;
   font-size: 12px;
 }
@@ -672,9 +745,9 @@ textarea,
 select {
   height: 34px;
   border-radius: 8px;
-  border: 1px solid rgba(51, 65, 85, 0.8);
-  background: rgba(15, 23, 42, 0.75);
-  color: #e2e8f0;
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 90%, transparent);
+  background: color-mix(in oklab, var(--color-bg-tertiary) 90%, transparent);
+  color: var(--color-text-primary);
   padding: 0 10px;
 }
 
@@ -686,33 +759,33 @@ textarea {
 .btn {
   height: 34px;
   border-radius: 8px;
-  border: 1px solid rgba(51, 65, 85, 0.8);
-  background: rgba(30, 41, 59, 0.8);
-  color: #e2e8f0;
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 90%, transparent);
+  background: color-mix(in oklab, var(--color-bg-tertiary) 90%, transparent);
+  color: var(--color-text-primary);
   padding: 0 12px;
   cursor: pointer;
 }
 
 .btn.primary {
-  border-color: rgba(14, 165, 233, 0.6);
-  background: rgba(14, 165, 233, 0.18);
-  color: #38bdf8;
+  border-color: color-mix(in oklab, var(--theme-primary) 58%, transparent);
+  background: color-mix(in oklab, var(--theme-primary) 18%, transparent);
+  color: var(--theme-primary);
 }
 
 .btn.success {
-  border-color: rgba(34, 197, 94, 0.6);
-  background: rgba(34, 197, 94, 0.18);
-  color: #4ade80;
+  border-color: var(--ui-success-border);
+  background: var(--ui-success-bg);
+  color: var(--ui-success);
 }
 
 .btn.danger {
-  border-color: rgba(239, 68, 68, 0.6);
-  background: rgba(239, 68, 68, 0.18);
-  color: #f87171;
+  border-color: var(--ui-danger-border);
+  background: var(--ui-danger-bg);
+  color: var(--ui-danger-text);
 }
 
 .btn.ghost {
-  background: rgba(15, 23, 42, 0.6);
+  background: color-mix(in oklab, var(--color-bg-secondary) 62%, transparent);
 }
 
 @media (max-width: 1200px) {

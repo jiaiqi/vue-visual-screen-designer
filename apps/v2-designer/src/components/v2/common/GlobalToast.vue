@@ -45,9 +45,13 @@ const typeClassMap: Record<string, string> = {
   max-width: calc(100vw - 28px);
   border-radius: 12px;
   padding: 12px 14px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.93), rgba(8, 15, 30, 0.93));
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 60%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--color-bg-secondary) 94%, transparent),
+    color-mix(in oklab, var(--color-bg-primary) 92%, transparent)
+  );
+  box-shadow: var(--ui-shadow);
   backdrop-filter: blur(10px);
 }
 
@@ -60,28 +64,32 @@ const typeClassMap: Record<string, string> = {
 .global-toast-message {
   font-size: 12px;
   line-height: 1.45;
-  color: #cbd5e1;
+  color: var(--color-text-secondary);
 }
 
 .is-info .global-toast-title {
-  color: #7dd3fc;
+  color: var(--ui-info);
 }
 
 .is-success .global-toast-title {
-  color: #86efac;
+  color: var(--ui-success);
 }
 
 .is-warning .global-toast-title {
-  color: #fcd34d;
+  color: var(--ui-warning);
 }
 
 .is-error {
-  border-color: rgba(251, 113, 133, 0.4);
-  background: linear-gradient(135deg, rgba(60, 12, 24, 0.92), rgba(30, 10, 20, 0.92));
+  border-color: var(--ui-danger-border);
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--ui-danger-bg) 78%, var(--color-bg-secondary)),
+    color-mix(in oklab, var(--ui-danger-bg) 62%, var(--color-bg-secondary))
+  );
 }
 
 .is-error .global-toast-title {
-  color: #fecdd3;
+  color: var(--ui-danger-text);
 }
 
 .global-toast-enter-active,

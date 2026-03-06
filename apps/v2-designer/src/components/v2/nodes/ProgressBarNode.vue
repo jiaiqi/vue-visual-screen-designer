@@ -7,8 +7,8 @@ const node = getNode()
 
 // 进度条属性
 const progressValue = ref(50)
-const progressColor = ref('#3b82f6')
-const progressBgColor = ref('#1e293b')
+const progressColor = ref('var(--theme-primary)')
+const progressBgColor = ref('var(--color-bg-tertiary)')
 const showProgressText = ref(true)
 
 // 同步节点数据
@@ -16,8 +16,8 @@ const updateData = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = (node.getData() || {}) as any
   progressValue.value = typeof data.progressValue === 'number' ? data.progressValue : 50
-  progressColor.value = data.progressColor || node.attr('body/stroke') || '#3b82f6'
-  progressBgColor.value = data.progressBgColor || node.attr('body/fill') || '#1e293b'
+  progressColor.value = data.progressColor || node.attr('body/stroke') || 'var(--theme-primary)'
+  progressBgColor.value = data.progressBgColor || node.attr('body/fill') || 'var(--color-bg-tertiary)'
   showProgressText.value = data.showProgressText !== false // 默认为 true
 }
 
@@ -52,14 +52,14 @@ onUnmounted(() => {
     <div class="progress-bar absolute left-0 top-0 bottom-0 transition-all duration-300 ease-out" :style="{
       width: `${Math.max(0, Math.min(100, progressValue))}%`,
       backgroundColor: progressColor,
-      boxShadow: `0 0 10px ${progressColor}80`
+      boxShadow: '0 0 10px color-mix(in oklab, var(--theme-primary) 45%, transparent)'
     }">
     </div>
 
     <!-- 百分比居中文本 -->
     <div v-if="showProgressText"
       class="progress-text absolute inset-0 flex items-center justify-center text-xs font-bold tracking-wider z-10"
-      :style="{ color: progressValue > 45 ? '#ffffff' : progressColor }">
+      :style="{ color: progressValue > 45 ? 'var(--color-text-primary)' : progressColor }">
       {{ progressValue.toFixed(0) }}%
     </div>
   </div>

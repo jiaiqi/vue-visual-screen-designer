@@ -1,4 +1,62 @@
 declare module '@vue-visual-screen/v2-shared' {
+  export type AppStatusDto = 'draft' | 'testing' | 'online' | 'archived'
+  export type PageStatusDto = 'draft' | 'published'
+
+  export interface AppDto {
+    id: string
+    name: string
+    description: string
+    owner: string
+    status: AppStatusDto
+    tags: string[]
+    themeColor: string
+    homePageId: string | null
+    createdAt: string
+    updatedAt: string
+  }
+
+  export interface PageDto {
+    id: string
+    appId: string
+    name: string
+    path: string
+    status: PageStatusDto
+    order: number
+    isHome: boolean
+    createdAt: string
+    updatedAt: string
+    canvasConfig: Record<string, unknown>
+    graphData: Record<string, unknown>
+  }
+
+  export interface ReleaseDto {
+    id: string
+    appId: string
+    pageId: string
+    version: string
+    note: string
+    createdAt: string
+    schema: unknown
+    canvasConfig: Record<string, unknown>
+    graphData: Record<string, unknown>
+  }
+
+  export interface WorkspaceSnapshotDto {
+    apps: AppDto[]
+    pages: PageDto[]
+    releases: ReleaseDto[]
+    activeAppId: string | null
+    activePageId: string | null
+  }
+
+  export interface SaveWorkspaceSnapshotRequestDto {
+    snapshot: WorkspaceSnapshotDto
+  }
+
+  export interface WorkspaceSnapshotResponseDto {
+    snapshot: WorkspaceSnapshotDto | null
+  }
+
   export interface SchemaNode {
     id: string
     type: string

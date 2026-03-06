@@ -34,11 +34,11 @@ const props = withDefaults(defineProps<Props>(), {
   showReferLine: true,
   lockLine: false,
   palette: () => ({
-    bgColor: 'rgba(2, 6, 23, 0.9)',
-    longfgColor: '#475569',
-    shortfgColor: '#334155',
-    fontColor: '#94a3b8',
-    lineColor: '#22c55e'
+    bgColor: 'var(--ui-panel-bg-strong)',
+    longfgColor: 'var(--color-text-muted)',
+    shortfgColor: 'var(--color-border-secondary)',
+    fontColor: 'var(--color-text-tertiary)',
+    lineColor: 'var(--ui-success)',
   })
 })
 
@@ -149,8 +149,8 @@ onUnmounted(() => {
       </div>
       <!-- 角落控制 -->
       <div class="ruler-corner" @click="emit('update:lockLine', !lockLine)">
-        <Unlock v-if="!lockLine" class="w-3 h-3 text-slate-500" />
-        <Lock v-else class="w-3 h-3 text-slate-500" />
+        <Unlock v-if="!lockLine" class="w-3 h-3 lock-switch-icon" />
+        <Lock v-else class="w-3 h-3 lock-switch-icon" />
       </div>
 
       <!-- 工具栏 -->
@@ -213,21 +213,21 @@ onUnmounted(() => {
 .ruler-corner {
   position: absolute;
   pointer-events: auto;
-  background: rgba(2, 6, 23, 0.95);
+  background: color-mix(in oklab, var(--ui-panel-bg-strong) 96%, transparent);
 }
 
 .ruler-h {
   top: 0;
   height: var(--thick);
   cursor: ns-resize;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid var(--ui-border);
 }
 
 .ruler-v {
   left: 0;
   width: var(--thick);
   cursor: ew-resize;
-  border-right: 1px solid #1e293b;
+  border-right: 1px solid var(--ui-border);
 }
 
 .ruler-corner {
@@ -240,13 +240,17 @@ onUnmounted(() => {
   justify-content: center;
   cursor: pointer;
   z-index: 10;
-  border-right: 1px solid #1e293b;
-  border-bottom: 1px solid #1e293b;
+  border-right: 1px solid var(--ui-border);
+  border-bottom: 1px solid var(--ui-border);
 }
 
 .lock-icon {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
+}
+
+.lock-switch-icon {
+  color: var(--color-text-tertiary);
 }
 
 .ruler-toolbar {
@@ -265,10 +269,15 @@ onUnmounted(() => {
   width: 24px;
   height: 24px;
   border-radius: 4px;
-  border: 1px solid rgba(51, 65, 85, 0.5);
-  background: rgba(30, 41, 59, 0.9);
-  color: #94a3b8;
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 72%, transparent);
+  background: color-mix(in oklab, var(--color-bg-tertiary) 88%, transparent);
+  color: var(--color-text-tertiary);
   cursor: pointer;
+}
+
+.tool-btn:hover {
+  border-color: var(--ui-info-border);
+  color: var(--theme-primary);
 }
 
 .lines-container {
@@ -314,8 +323,8 @@ onUnmounted(() => {
 
 .preview-line {
   position: absolute;
-  background-color: #4ade80;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+  background-color: var(--ui-success);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--ui-success) 50%, transparent);
 }
 
 .preview-line.horizontal {
@@ -332,8 +341,8 @@ onUnmounted(() => {
 
 .pos-label {
   position: absolute;
-  background: #22c55e;
-  color: white;
+  background: var(--ui-success);
+  color: var(--color-bg-primary);
   font-size: 10px;
   padding: 1px 4px;
   border-radius: 2px;

@@ -27,6 +27,35 @@ import {
 const editorStore = useEditorStoreV2()
 const notifier = useNotifier()
 
+const tokenColors = {
+  primary: 'var(--theme-primary)',
+  success: 'var(--ui-success)',
+  warning: 'var(--ui-warning)',
+  danger: 'var(--ui-danger)',
+  accent: 'var(--color-accent-indigo)',
+  accentSky: 'var(--color-accent-sky)',
+  muted: 'var(--color-text-tertiary)',
+  subtle: 'var(--color-text-muted)',
+  transparent: 'transparent',
+}
+
+const nodeDefaults = {
+  bg: 'var(--color-bg-tertiary)',
+  text: 'var(--color-text-secondary)',
+  mutedText: 'var(--color-text-tertiary)',
+  panel: 'var(--color-bg-secondary)',
+}
+
+function resolveCssColor(input: string): string {
+  if (!input.startsWith('var('))
+    return input
+  if (typeof window === 'undefined')
+    return input
+  const varName = input.slice(4, -1).trim()
+  const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim()
+  return value || input
+}
+
 // DnD 实例在 Toolbar 内部创建，与 v1 保持一致
 const dndContainerRef = ref<HTMLElement>()
 const dndRef = ref<Dnd>()
@@ -87,10 +116,10 @@ function formatDragError(error: unknown, fallbackMessage: string) {
 // ==================== 图元配置（与 v1 相同）====================
 const commonPorts = {
   groups: {
-    top: { position: 'top', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
-    right: { position: 'right', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
-    bottom: { position: 'bottom', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
-    left: { position: 'left', attrs: { circle: { r: 4, magnet: true, stroke: '#3b82f6', fill: '#0f172a', strokeWidth: 2 } } },
+    top: { position: 'top', attrs: { circle: { r: 4, magnet: true, stroke: tokenColors.primary, fill: nodeDefaults.panel, strokeWidth: 2 } } },
+    right: { position: 'right', attrs: { circle: { r: 4, magnet: true, stroke: tokenColors.primary, fill: nodeDefaults.panel, strokeWidth: 2 } } },
+    bottom: { position: 'bottom', attrs: { circle: { r: 4, magnet: true, stroke: tokenColors.primary, fill: nodeDefaults.panel, strokeWidth: 2 } } },
+    left: { position: 'left', attrs: { circle: { r: 4, magnet: true, stroke: tokenColors.primary, fill: nodeDefaults.panel, strokeWidth: 2 } } },
   },
   items: [
     { id: 'port_top', group: 'top' }, { id: 'port_right', group: 'right' },
@@ -99,57 +128,57 @@ const commonPorts = {
 }
 
 const shapeTypes = [
-  { type: 'rect', label: '矩形', icon: Square, w: 120, h: 80, stroke: '#3b82f6', rx: 0 },
-  { type: 'circle', label: '圆形', icon: Circle, w: 100, h: 100, stroke: '#10b981', rx: 0 },
-  { type: 'triangle', label: '三角形', icon: Triangle, w: 100, h: 100, stroke: '#f59e0b', rx: 0 },
-  { type: 'trapezoid', label: '梯形', icon: MoveHorizontal, w: 120, h: 100, stroke: '#f43f5e', rx: 0 },
-  { type: 'line', label: '线段', icon: Minus, w: 100, h: 2, stroke: '#94a3b8', rx: 0 },
-  { type: 'text', label: '文字', icon: Type, w: 100, h: 40, stroke: 'transparent', rx: 0 },
-  { type: 'custom_image', label: '图片', icon: ImageIcon, w: 100, h: 100, stroke: '#d946ef', rx: 4 },
-  { type: 'progress-node', label: '进度条', icon: AlignLeft, w: 200, h: 24, stroke: '#3b82f6', rx: 0 },
-  { type: 'digital-node', label: '数字看板', icon: Hash, w: 160, h: 48, stroke: '#10b981', rx: 0 },
-  { type: 'arrow_single', label: '单向箭头', icon: ArrowRight, w: 120, h: 40, stroke: '#10b981', rx: 0 },
-  { type: 'arrow_double', label: '双向箭头', icon: MoveHorizontal, w: 140, h: 40, stroke: '#10b981', rx: 0 },
+  { type: 'rect', label: '矩形', icon: Square, w: 120, h: 80, stroke: tokenColors.primary, rx: 0 },
+  { type: 'circle', label: '圆形', icon: Circle, w: 100, h: 100, stroke: tokenColors.success, rx: 0 },
+  { type: 'triangle', label: '三角形', icon: Triangle, w: 100, h: 100, stroke: tokenColors.warning, rx: 0 },
+  { type: 'trapezoid', label: '梯形', icon: MoveHorizontal, w: 120, h: 100, stroke: tokenColors.danger, rx: 0 },
+  { type: 'line', label: '线段', icon: Minus, w: 100, h: 2, stroke: tokenColors.muted, rx: 0 },
+  { type: 'text', label: '文字', icon: Type, w: 100, h: 40, stroke: tokenColors.transparent, rx: 0 },
+  { type: 'custom_image', label: '图片', icon: ImageIcon, w: 100, h: 100, stroke: tokenColors.accent, rx: 4 },
+  { type: 'progress-node', label: '进度条', icon: AlignLeft, w: 200, h: 24, stroke: tokenColors.primary, rx: 0 },
+  { type: 'digital-node', label: '数字看板', icon: Hash, w: 160, h: 48, stroke: tokenColors.success, rx: 0 },
+  { type: 'arrow_single', label: '单向箭头', icon: ArrowRight, w: 120, h: 40, stroke: tokenColors.success, rx: 0 },
+  { type: 'arrow_double', label: '双向箭头', icon: MoveHorizontal, w: 140, h: 40, stroke: tokenColors.success, rx: 0 },
   // 大屏容器
-  { type: 'dashboard-container', label: '大屏卡片', icon: LayoutDashboard, w: 400, h: 300, stroke: '#0ea5e9', rx: 6 },
+  { type: 'dashboard-container', label: '大屏卡片', icon: LayoutDashboard, w: 400, h: 300, stroke: tokenColors.primary, rx: 6 },
   // 边框
-  { type: 'border-tech', label: '边框-科技', icon: Box, w: 300, h: 200, stroke: '#00f0ff', rx: 4 },
-  { type: 'border-glow', label: '边框-发光', icon: Sparkles, w: 300, h: 200, stroke: '#ff00ff', rx: 8 },
+  { type: 'border-tech', label: '边框-科技', icon: Box, w: 300, h: 200, stroke: tokenColors.accentSky, rx: 4 },
+  { type: 'border-glow', label: '边框-发光', icon: Sparkles, w: 300, h: 200, stroke: tokenColors.accent, rx: 8 },
   // 分割线
-  { type: 'divider-h', label: '分割线-H', icon: AlignHorizontalJustifyCenter, w: 400, h: 2, stroke: '#00f0ff', rx: 0 },
-  { type: 'divider-v', label: '分割线-V', icon: AlignVerticalJustifyCenter, w: 2, h: 200, stroke: '#00f0ff', rx: 0 },
+  { type: 'divider-h', label: '分割线-H', icon: AlignHorizontalJustifyCenter, w: 400, h: 2, stroke: tokenColors.accentSky, rx: 0 },
+  { type: 'divider-v', label: '分割线-V', icon: AlignVerticalJustifyCenter, w: 2, h: 200, stroke: tokenColors.accentSky, rx: 0 },
   // 按钮
-  { type: 'button-primary', label: '主要按钮', icon: Box, w: 120, h: 40, stroke: '#0066ff', rx: 6 },
-  { type: 'button-default', label: '默认按钮', icon: MinusSquare, w: 120, h: 40, stroke: '#64748b', rx: 6 },
+  { type: 'button-primary', label: '主要按钮', icon: Box, w: 120, h: 40, stroke: tokenColors.primary, rx: 6 },
+  { type: 'button-default', label: '默认按钮', icon: MinusSquare, w: 120, h: 40, stroke: tokenColors.subtle, rx: 6 },
   // 表格 & 列表
-  { type: 'table-basic', label: '表格', icon: Table, w: 400, h: 200, stroke: '#3b82f6', rx: 0 },
-  { type: 'list-rank', label: '排行榜', icon: ListOrdered, w: 300, h: 200, stroke: '#8b5cf6', rx: 0 },
-  { type: 'timeline-h', label: '时间轴-横', icon: Calendar, w: 500, h: 80, stroke: '#06b6d4', rx: 0 },
-  { type: 'countdown', label: '倒计时', icon: Timer, w: 200, h: 80, stroke: '#f59e0b', rx: 0 },
+  { type: 'table-basic', label: '表格', icon: Table, w: 400, h: 200, stroke: tokenColors.primary, rx: 0 },
+  { type: 'list-rank', label: '排行榜', icon: ListOrdered, w: 300, h: 200, stroke: tokenColors.accent, rx: 0 },
+  { type: 'timeline-h', label: '时间轴-横', icon: Calendar, w: 500, h: 80, stroke: tokenColors.accentSky, rx: 0 },
+  { type: 'countdown', label: '倒计时', icon: Timer, w: 200, h: 80, stroke: tokenColors.warning, rx: 0 },
   // P2 新增
-  { type: 'gauge-node', label: '仪表盘', icon: Gauge, w: 200, h: 200, stroke: '#0ea5e9', rx: 0 },
-  { type: 'alert-node', label: '告警闪烁', icon: Activity, w: 200, h: 100, stroke: '#ef4444', rx: 0 },
+  { type: 'gauge-node', label: '仪表盘', icon: Gauge, w: 200, h: 200, stroke: tokenColors.primary, rx: 0 },
+  { type: 'alert-node', label: '告警闪烁', icon: Activity, w: 200, h: 100, stroke: tokenColors.danger, rx: 0 },
 ]
 
 const iconNodes = [
-  { type: 'icon-node', iconName: 'Database', label: '数据库', icon: Database, w: 48, h: 48, stroke: '#3b82f6' },
-  { type: 'icon-node', iconName: 'Server', label: '服务器', icon: Server, w: 48, h: 48, stroke: '#10b981' },
-  { type: 'icon-node', iconName: 'Cpu', label: '处理器', icon: Cpu, w: 48, h: 48, stroke: '#f59e0b' },
-  { type: 'icon-node', iconName: 'Cloud', label: '云/虚机', icon: Cloud, w: 48, h: 48, stroke: '#0ea5e9' },
-  { type: 'icon-node', iconName: 'Monitor', label: '监控大屏', icon: Monitor, w: 48, h: 48, stroke: '#8b5cf6' },
-  { type: 'icon-node', iconName: 'HardDrive', label: '磁盘阵列', icon: HardDrive, w: 48, h: 48, stroke: '#64748b' },
-  { type: 'icon-node', iconName: 'Wifi', label: '无线网关', icon: Wifi, w: 48, h: 48, stroke: '#14b8a6' },
-  { type: 'icon-node', iconName: 'Activity', label: '探针诊断', icon: Activity, w: 48, h: 48, stroke: '#ef4444' },
-  { type: 'icon-node', iconName: 'Terminal', label: '终端接驳', icon: Terminal, w: 48, h: 48, stroke: '#22c55e' },
-  { type: 'icon-node', iconName: 'Shield', label: '安全网关', icon: Shield, w: 48, h: 48, stroke: '#eab308' },
+  { type: 'icon-node', iconName: 'Database', label: '数据库', icon: Database, w: 48, h: 48, stroke: tokenColors.primary },
+  { type: 'icon-node', iconName: 'Server', label: '服务器', icon: Server, w: 48, h: 48, stroke: tokenColors.success },
+  { type: 'icon-node', iconName: 'Cpu', label: '处理器', icon: Cpu, w: 48, h: 48, stroke: tokenColors.warning },
+  { type: 'icon-node', iconName: 'Cloud', label: '云/虚机', icon: Cloud, w: 48, h: 48, stroke: tokenColors.primary },
+  { type: 'icon-node', iconName: 'Monitor', label: '监控大屏', icon: Monitor, w: 48, h: 48, stroke: tokenColors.accent },
+  { type: 'icon-node', iconName: 'HardDrive', label: '磁盘阵列', icon: HardDrive, w: 48, h: 48, stroke: tokenColors.subtle },
+  { type: 'icon-node', iconName: 'Wifi', label: '无线网关', icon: Wifi, w: 48, h: 48, stroke: tokenColors.accentSky },
+  { type: 'icon-node', iconName: 'Activity', label: '探针诊断', icon: Activity, w: 48, h: 48, stroke: tokenColors.danger },
+  { type: 'icon-node', iconName: 'Terminal', label: '终端接驳', icon: Terminal, w: 48, h: 48, stroke: tokenColors.success },
+  { type: 'icon-node', iconName: 'Shield', label: '安全网关', icon: Shield, w: 48, h: 48, stroke: tokenColors.warning },
 ]
 
 // 流程图节点
 const flowNodes = [
-  { type: 'flow-start', label: '开始节点', icon: Circle, w: 120, h: 50, stroke: '#22c55e' },
-  { type: 'flow-end', label: '结束节点', icon: Circle, w: 60, h: 60, stroke: '#ef4444' },
-  { type: 'flow-process', label: '处理过程', icon: Square, w: 140, h: 60, stroke: '#6366f1' },
-  { type: 'flow-decision', label: '判断条件', icon: GripVertical, w: 100, h: 70, stroke: '#f97316' },
+  { type: 'flow-start', label: '开始节点', icon: Circle, w: 120, h: 50, stroke: tokenColors.success },
+  { type: 'flow-end', label: '结束节点', icon: Circle, w: 60, h: 60, stroke: tokenColors.danger },
+  { type: 'flow-process', label: '处理过程', icon: Square, w: 140, h: 60, stroke: tokenColors.accent },
+  { type: 'flow-decision', label: '判断条件', icon: GripVertical, w: 100, h: 70, stroke: tokenColors.warning },
 ]
 
 const categoryIconMap: Record<string, unknown> = {
@@ -201,6 +230,11 @@ function startDrag(e: MouseEvent, item: typeof shapeTypes[0]) {
   }
 
   const iconName = 'iconName' in item ? item.iconName : undefined
+  const strokeColor = resolveCssColor(item.stroke)
+  const nodeBg = resolveCssColor(nodeDefaults.bg)
+  const textColor = resolveCssColor(nodeDefaults.text)
+  const mutedTextColor = resolveCssColor(nodeDefaults.mutedText)
+  const successColor = resolveCssColor(tokenColors.success)
 
   try {
     let node
@@ -209,47 +243,47 @@ function startDrag(e: MouseEvent, item: typeof shapeTypes[0]) {
       node = graph.createNode({
         shape: 'icon-node', width: item.w, height: item.h,
         ports: commonPorts,
-        data: { iconName: iconName || 'Database', color: item.stroke },
+        data: { iconName: iconName || 'Database', color: strokeColor },
       })
     } else if (item.type === 'progress-node') {
       node = graph.createNode({
         shape: 'progress-node', width: item.w, height: item.h,
         ports: commonPorts,
-        data: { progressValue: 60, progressColor: item.stroke, progressBgColor: '#1e293b', showProgressText: true },
+        data: { progressValue: 60, progressColor: strokeColor, progressBgColor: nodeBg, showProgressText: true },
       })
     } else if (item.type === 'digital-node') {
       node = graph.createNode({
         shape: 'digital-node', width: item.w, height: item.h,
         ports: commonPorts,
-        data: { numberValue: 8848, textColor: item.stroke, fontSize: 28, fontWeight: 'bold', animateRoll: true },
+        data: { numberValue: 8848, textColor: strokeColor, fontSize: 28, fontWeight: 'bold', animateRoll: true },
       })
     } else if (item.type === 'gauge-node') {
       node = graph.createNode({
         shape: 'gauge-node', width: item.w, height: item.h,
         ports: commonPorts,
-        data: { gaugeValue: 75, gaugeMax: 100, gaugeTitle: '指标', gaugeUnit: '%', gaugeColor: item.stroke },
+        data: { gaugeValue: 75, gaugeMax: 100, gaugeTitle: '指标', gaugeUnit: '%', gaugeColor: strokeColor },
       })
     } else if (item.type === 'alert-node') {
       node = graph.createNode({
         shape: 'alert-node', width: item.w, height: item.h,
         ports: commonPorts,
-        data: { alertText: '告警', alertSubText: '请立即处理', alertColor: item.stroke, isAlerting: true },
+        data: { alertText: '告警', alertSubText: '请立即处理', alertColor: strokeColor, isAlerting: true },
       })
     } else if (item.type === 'text') {
       // text 不是有效的 shape，使用 rect 并设置透明边框
       node = graph.createNode({
         shape: 'rect', width: item.w, height: item.h,
         ports: commonPorts,
-        attrs: { body: { fill: 'transparent', stroke: 'transparent' }, text: { text: '文本标签', fill: '#94a3b8', fontSize: 16 } },
+        attrs: { body: { fill: 'transparent', stroke: 'transparent' }, text: { text: '文本标签', fill: mutedTextColor, fontSize: 16 } },
       })
     } else if (item.type === 'custom_image') {
       node = graph.createNode({
         shape: 'image', width: item.w, height: item.h,
         ports: commonPorts,
         attrs: {
-          body: { fill: '#1e293b', stroke: item.stroke, strokeWidth: 2, strokeDasharray: '5 5', rx: item.rx, ry: item.rx },
+          body: { fill: nodeBg, stroke: strokeColor, strokeWidth: 2, strokeDasharray: '5 5', rx: item.rx, ry: item.rx },
           image: { width: item.w, height: item.h },
-          label: { text: '(双击上传图片)', fill: '#94a3b8', fontSize: 11 },
+          label: { text: '(双击上传图片)', fill: mutedTextColor, fontSize: 11 },
         },
         data: { isCustomImage: true },
       })
@@ -275,8 +309,12 @@ function startDrag(e: MouseEvent, item: typeof shapeTypes[0]) {
         data: {
           tableTitle: '数据表格', headerData: ['列1', '列2', '列3'],
           bodyData: [['A1', 'B1', 'C1'], ['A2', 'B2', 'C2'], ['A3', 'B3', 'C3']],
-          headerBgColor: '#1e3a5f', headerTextColor: '#60a5fa', rowBgColor: '#0f172a',
-          rowAltBgColor: '#1e293b', rowTextColor: '#94a3b8', borderColor: '#334155',
+          headerBgColor: resolveCssColor('var(--color-bg-quaternary)'),
+          headerTextColor: resolveCssColor('var(--theme-primary)'),
+          rowBgColor: resolveCssColor('var(--color-bg-secondary)'),
+          rowAltBgColor: resolveCssColor('var(--color-bg-tertiary)'),
+          rowTextColor: resolveCssColor('var(--color-text-tertiary)'),
+          borderColor: resolveCssColor('var(--color-border-secondary)'),
         },
       })
     } else if (item.type === 'list-rank') {
@@ -290,20 +328,23 @@ function startDrag(e: MouseEvent, item: typeof shapeTypes[0]) {
             { rank: 2, name: '项目 B', value: 90 },
             { rank: 3, name: '项目 C', value: 80 },
           ],
-          headerBgColor: '#1e3a5f', headerTextColor: '#60a5fa',
-          rowBgColor: '#0f172a', rowAltBgColor: '#1e293b', rowTextColor: '#94a3b8',
+          headerBgColor: resolveCssColor('var(--color-bg-quaternary)'),
+          headerTextColor: resolveCssColor('var(--theme-primary)'),
+          rowBgColor: resolveCssColor('var(--color-bg-secondary)'),
+          rowAltBgColor: resolveCssColor('var(--color-bg-tertiary)'),
+          rowTextColor: resolveCssColor('var(--color-text-tertiary)'),
         },
       })
     } else if (item.type === 'countdown') {
       node = graph.createNode({
         shape: 'countdown', width: item.w, height: item.h,
         ports: commonPorts,
-        data: { countdownValue: 60, countdownColor: item.stroke, bgColor: '#1e293b', isRunning: true },
+        data: { countdownValue: 60, countdownColor: strokeColor, bgColor: nodeBg, isRunning: true },
       })
     } else if (item.type === 'circle') {
       node = graph.createNode({
         shape: 'circle', width: item.w, height: item.h, ports: commonPorts,
-        attrs: { body: { fill: '#1e293b', stroke: item.stroke, strokeWidth: 2 }, text: { text: item.label, fill: '#e2e8f0', fontSize: 12 } },
+        attrs: { body: { fill: nodeBg, stroke: strokeColor, strokeWidth: 2 }, text: { text: item.label, fill: textColor, fontSize: 12 } },
       })
     } else if (item.type === 'triangle' || item.type === 'trapezoid') {
       const pointsStr = item.type === 'triangle'
@@ -311,12 +352,12 @@ function startDrag(e: MouseEvent, item: typeof shapeTypes[0]) {
         : `${item.w * 0.2},0 ${item.w * 0.8},0 ${item.w},${item.h} 0,${item.h}`
       node = graph.createNode({
         shape: 'polygon', width: item.w, height: item.h, ports: commonPorts,
-        attrs: { body: { fill: '#1e293b', stroke: item.stroke, strokeWidth: 2, refPoints: pointsStr } },
+        attrs: { body: { fill: nodeBg, stroke: strokeColor, strokeWidth: 2, refPoints: pointsStr } },
       })
     } else if (item.type === 'line') {
       node = graph.createNode({
         shape: 'rect', width: item.w, height: 3, ports: commonPorts,
-        attrs: { body: { fill: item.stroke, stroke: item.stroke, strokeWidth: 0, rx: 2 } },
+        attrs: { body: { fill: strokeColor, stroke: strokeColor, strokeWidth: 0, rx: 2 } },
       })
     } else if (item.type === 'arrow_single' || item.type === 'arrow_double') {
       const { w, h } = item
@@ -327,14 +368,14 @@ function startDrag(e: MouseEvent, item: typeof shapeTypes[0]) {
       node = graph.createNode({
         shape: 'path', width: item.w, height: item.h, ports: commonPorts,
         path: pathData,
-        attrs: { body: { fill: '#22c55e', stroke: '#000000', strokeWidth: 1 } },
+        attrs: { body: { fill: successColor, stroke: resolveCssColor('var(--color-bg-primary)'), strokeWidth: 1 } },
       })
     } else {
       node = graph.createNode({
         shape: 'rect', width: item.w, height: item.h, ports: commonPorts,
         attrs: {
-          body: { fill: '#1e293b', stroke: item.stroke, strokeWidth: 2, rx: item.rx, ry: item.rx },
-          text: { text: item.label, fill: '#e2e8f0', fontSize: 13, fontWeight: 'bold' },
+          body: { fill: nodeBg, stroke: strokeColor, strokeWidth: 2, rx: item.rx, ry: item.rx },
+          text: { text: item.label, fill: textColor, fontSize: 13, fontWeight: 'bold' },
         },
       })
     }
@@ -406,11 +447,11 @@ void ColumnsIcon
           <PanelLeft class="w-5 h-5" />
         </button>
       </div>
-      <div class="collapsed-list">
+      <div class="collapsed-list scrollbar-theme scrollbar-thin">
         <div v-for="item in shapeTypes.slice(0, 16)" :key="item.type" class="collapsed-item"
           @mousedown="startDrag($event, item)" :title="item.label">
           <component :is="item.icon" class="w-5 h-5"
-            :style="{ color: item.stroke !== 'transparent' ? item.stroke : '#94a3b8' }" />
+            :style="{ color: item.stroke !== 'transparent' ? item.stroke : 'var(--color-text-tertiary)' }" />
         </div>
       </div>
     </template>
@@ -436,10 +477,10 @@ void ColumnsIcon
         <!-- 左侧分类标签 -->
         <nav class="category-nav">
           <button v-for="cat in [
-            { key: 'base', label: '基础', icon: Square, color: '#38bdf8' },
-            { key: 'icons', label: '架构', icon: Database, color: '#818cf8' },
-            { key: 'charts', label: '图表', icon: BarChart, color: '#a78bfa' },
-            { key: 'flow', label: '流程', icon: GitBranch, color: '#34d399' },
+            { key: 'base', label: '基础', icon: Square, color: 'var(--theme-primary)' },
+            { key: 'icons', label: '架构', icon: Database, color: 'var(--color-accent-indigo)' },
+            { key: 'charts', label: '图表', icon: BarChart, color: 'var(--color-accent-indigo)' },
+            { key: 'flow', label: '流程', icon: GitBranch, color: 'var(--ui-success)' },
           ]" :key="cat.key" class="cat-btn" :class="{ active: activeCategory === cat.key }"
             :style="activeCategory === cat.key ? { '--cat-color': cat.color } : {}" @click="activeCategory = cat.key">
             <component :is="cat.icon" class="w-4 h-4" />
@@ -448,7 +489,7 @@ void ColumnsIcon
         </nav>
 
         <!-- 右侧图元网格 -->
-        <div class="items-panel">
+        <div class="items-panel scrollbar-theme scrollbar-thin">
 
           <!-- 基础图元 -->
           <template v-if="activeCategory === 'base'">
@@ -457,7 +498,7 @@ void ColumnsIcon
               <div v-for="item in filteredShapeTypes" :key="item.type" class="item-card"
                 @mousedown="startDrag($event, item)">
                 <component :is="item.icon" class="item-icon"
-                  :style="{ color: item.stroke !== 'transparent' ? item.stroke : '#94a3b8' }" />
+                  :style="{ color: item.stroke !== 'transparent' ? item.stroke : 'var(--color-text-tertiary)' }" />
                 <span class="item-label">{{ item.label }}</span>
                 <button class="fav-btn" :class="{ 'is-fav': isFavorite(item) }" @click="toggleFavorite($event, item)">
                   <Star class="w-2.5 h-2.5" :fill="isFavorite(item) ? 'currentColor' : 'none'" />
@@ -469,7 +510,7 @@ void ColumnsIcon
             <div class="items-grid">
               <div v-for="item in shapeTypes.slice(5, 7)" :key="item.type" class="item-card"
                 @mousedown="startDrag($event, item)">
-                <component :is="item.icon" class="item-icon" style="color: #94a3b8" />
+                <component :is="item.icon" class="item-icon" style="color: var(--color-text-tertiary)" />
                 <span class="item-label">{{ item.label }}</span>
               </div>
             </div>
@@ -491,7 +532,7 @@ void ColumnsIcon
           <template v-if="activeCategory === 'charts'">
             <template v-for="cat in filteredChartCategories" :key="cat.id">
               <div class="chart-category-header" @click="openChartCategories[cat.id] = !openChartCategories[cat.id]">
-                <component :is="categoryIconMap[cat.id] || BarChart" class="w-3.5 h-3.5 text-violet-400" />
+                <component :is="categoryIconMap[cat.id] || BarChart" class="w-3.5 h-3.5 chart-accent-icon" />
                 <span>{{ cat.name }}</span>
                 <ChevronDown class="w-3 h-3 ml-auto transition-transform"
                   :class="openChartCategories[cat.id] ? 'rotate-180' : ''" />
@@ -499,7 +540,7 @@ void ColumnsIcon
               <div v-if="openChartCategories[cat.id]" class="items-grid">
                 <div v-for="chart in cat.charts" :key="chart.id" class="item-card"
                   @mousedown="startChartDrag($event, chart)">
-                  <component :is="categoryIconMap[cat.id] || BarChart" class="item-icon text-violet-400" />
+                  <component :is="categoryIconMap[cat.id] || BarChart" class="item-icon chart-accent-icon" />
                   <span class="item-label">{{ chart.name }}</span>
                 </div>
               </div>
@@ -528,7 +569,7 @@ void ColumnsIcon
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: rgba(2, 6, 23, 0.7);
+  background: var(--ui-panel-bg);
   /* 半透明呈现毛玻璃 */
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -536,7 +577,7 @@ void ColumnsIcon
   overflow: hidden;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--ui-shadow);
 }
 
 .toolbar-collapsed {
@@ -552,7 +593,7 @@ void ColumnsIcon
   padding: 12px;
   display: flex;
   justify-content: center;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+  border-bottom: 1px solid var(--ui-border);
 }
 
 .collapsed-list {
@@ -571,15 +612,15 @@ void ColumnsIcon
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  border: 1px solid rgba(51, 65, 85, 0.4);
-  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid var(--ui-border);
+  background: var(--ui-panel-bg-soft);
   cursor: grab;
   transition: all 0.15s;
 }
 
 .collapsed-item:hover {
-  background: rgba(56, 189, 248, 0.1);
-  border-color: rgba(56, 189, 248, 0.3);
+  background: color-mix(in oklab, var(--theme-primary) 14%, transparent);
+  border-color: color-mix(in oklab, var(--theme-primary) 45%, transparent);
   transform: translateX(2px);
 }
 
@@ -589,14 +630,14 @@ void ColumnsIcon
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+  border-bottom: 1px solid var(--ui-border);
   flex-shrink: 0;
 }
 
 .toolbar-title {
   font-size: 11px;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -610,21 +651,21 @@ void ColumnsIcon
   border-radius: 6px;
   border: none;
   background: transparent;
-  color: #64748b;
+  color: var(--ui-muted);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .collapse-btn:hover {
-  background: rgba(51, 65, 85, 0.5);
-  color: #94a3b8;
+  background: color-mix(in oklab, var(--color-bg-quaternary) 70%, transparent);
+  color: var(--color-text-tertiary);
 }
 
 /* 搜索栏 */
 .search-bar {
   position: relative;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border-secondary) 52%, transparent);
   flex-shrink: 0;
 }
 
@@ -635,13 +676,13 @@ void ColumnsIcon
   transform: translateY(-50%);
   width: 13px;
   height: 13px;
-  color: #475569;
+  color: var(--color-text-muted);
 }
 
 .search-input {
   width: 100%;
   padding: 6px 10px 6px 28px;
-  background: rgba(15, 23, 42, 0.5);
+  background: color-mix(in oklab, var(--color-bg-secondary) 80%, transparent);
   /* 沉浸式输入底色 */
   border: 1px solid var(--color-border-secondary);
   border-radius: 6px;
@@ -657,9 +698,9 @@ void ColumnsIcon
 }
 
 .search-input:focus {
-  border-color: rgba(34, 197, 94, 0.5);
+  border-color: color-mix(in oklab, var(--theme-primary) 45%, transparent);
   /* 聚集焦点：翠绿色微光 */
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.2);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--theme-primary) 35%, transparent);
 }
 
 /* 主体布局 */
@@ -673,8 +714,8 @@ void ColumnsIcon
 .category-nav {
   width: 52px;
   flex-shrink: 0;
-  background: rgba(2, 6, 23, 0.6);
-  border-right: 1px solid rgba(51, 65, 85, 0.3);
+  background: color-mix(in oklab, var(--color-bg-primary) 86%, transparent);
+  border-right: 1px solid var(--ui-border);
   display: flex;
   flex-direction: column;
   padding: 8px 0;
@@ -690,7 +731,7 @@ void ColumnsIcon
   padding: 10px 4px;
   font-size: 9px;
   font-weight: 600;
-  color: #475569;
+  color: var(--color-text-muted);
   border: none;
   background: transparent;
   cursor: pointer;
@@ -700,14 +741,14 @@ void ColumnsIcon
 }
 
 .cat-btn:hover {
-  color: #94a3b8;
-  background: rgba(51, 65, 85, 0.2);
+  color: var(--color-text-tertiary);
+  background: color-mix(in oklab, var(--color-bg-quaternary) 45%, transparent);
 }
 
 .cat-btn.active {
-  color: var(--cat-color, #38bdf8);
-  background: rgba(56, 189, 248, 0.08);
-  border-left-color: var(--cat-color, #38bdf8);
+  color: var(--cat-color, var(--theme-primary));
+  background: color-mix(in oklab, var(--theme-primary) 12%, transparent);
+  border-left-color: var(--cat-color, var(--theme-primary));
 }
 
 /* 右侧图元面板 */
@@ -722,14 +763,14 @@ void ColumnsIcon
 }
 
 .items-panel::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--color-bg-tertiary);
   border-radius: 4px;
 }
 
 .group-label {
   font-size: 10px;
   font-weight: 600;
-  color: #334155;
+  color: var(--ui-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin: 0 0 8px 2px;
@@ -753,22 +794,22 @@ void ColumnsIcon
   padding: 8px 4px;
   border-radius: 8px;
   border: 1px solid var(--color-border-secondary);
-  background: rgba(15, 23, 42, 0.4);
+  background: color-mix(in oklab, var(--color-bg-secondary) 72%, transparent);
   /* 透明度增加，毛玻璃穿透 */
   backdrop-filter: blur(4px);
   cursor: grab;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 60px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--color-bg-primary) 22%, transparent);
 }
 
 .item-card:hover {
-  border-color: rgba(34, 197, 94, 0.4);
-  background: rgba(34, 197, 94, 0.05);
+  border-color: color-mix(in oklab, var(--theme-primary) 42%, transparent);
+  background: color-mix(in oklab, var(--theme-primary) 10%, transparent);
   /* 用户指南指导的翡翠色强调 */
   transform: translateY(-2px) scale(1.02);
   /* Bento Grid 微动反馈 */
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(34, 197, 94, 0.05);
+  box-shadow: 0 8px 16px color-mix(in oklab, var(--color-bg-primary) 32%, transparent), inset 0 0 10px color-mix(in oklab, var(--theme-primary) 12%, transparent);
 }
 
 .item-card:active {
@@ -783,7 +824,7 @@ void ColumnsIcon
 
 .item-label {
   font-size: 9px;
-  color: #64748b;
+  color: var(--ui-muted);
   text-align: center;
   line-height: 1.2;
   white-space: nowrap;
@@ -794,7 +835,7 @@ void ColumnsIcon
 }
 
 .item-card:hover .item-label {
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
 }
 
 /* 收藏按钮 */
@@ -810,7 +851,7 @@ void ColumnsIcon
   border: none;
   background: transparent;
   cursor: pointer;
-  color: #334155;
+  color: var(--ui-muted);
   opacity: 0;
   transition: all 0.15s;
   border-radius: 3px;
@@ -821,13 +862,13 @@ void ColumnsIcon
 }
 
 .fav-btn:hover {
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
+  color: color-mix(in oklab, var(--theme-primary) 72%, var(--ui-warning));
+  background: color-mix(in oklab, var(--theme-primary) 12%, transparent);
 }
 
 .fav-btn.is-fav {
   opacity: 1;
-  color: #fbbf24;
+  color: color-mix(in oklab, var(--theme-primary) 72%, var(--ui-warning));
 }
 
 /* 图表分类 */
@@ -840,14 +881,18 @@ void ColumnsIcon
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--ui-muted);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .chart-category-header:hover {
-  background: rgba(51, 65, 85, 0.3);
-  color: #94a3b8;
+  background: color-mix(in oklab, var(--color-bg-tertiary) 52%, transparent);
+  color: var(--color-text-tertiary);
+}
+
+.chart-accent-icon {
+  color: var(--color-accent-indigo);
 }
 
 </style>

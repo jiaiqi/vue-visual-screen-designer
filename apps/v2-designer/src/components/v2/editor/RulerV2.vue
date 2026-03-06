@@ -18,14 +18,23 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   palette: () => ({
-    bgColor: 'rgba(2, 6, 23, 0.9)',
-    longfgColor: '#475569',
-    shortfgColor: '#334155',
-    fontColor: '#94a3b8'
+    bgColor: 'var(--ui-panel-bg-strong)',
+    longfgColor: 'var(--color-text-muted)',
+    shortfgColor: 'var(--color-border-secondary)',
+    fontColor: 'var(--color-text-tertiary)',
   })
 })
 
 const canvasRef = ref<HTMLCanvasElement>()
+
+function resolveCssColor(input: string): string {
+  if (!input.startsWith('var('))
+    return input
+  if (typeof window === 'undefined')
+    return 'rgb(100, 116, 139)'
+  const varName = input.slice(4, -1).trim()
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || 'rgb(100, 116, 139)'
+}
 
 const draw = () => {
   const canvas = canvasRef.value
@@ -39,12 +48,12 @@ const draw = () => {
 
   // 清空画布
   ctx.clearRect(0, 0, w, h)
-  ctx.fillStyle = palette.bgColor!
+  ctx.fillStyle = resolveCssColor(palette.bgColor!)
   ctx.fillRect(0, 0, w, h)
 
   ctx.beginPath()
-  ctx.strokeStyle = palette.longfgColor!
-  ctx.fillStyle = palette.fontColor!
+  ctx.strokeStyle = resolveCssColor(palette.longfgColor!)
+  ctx.fillStyle = resolveCssColor(palette.fontColor!)
   ctx.font = '10px sans-serif'
   ctx.textBaseline = 'middle'
 

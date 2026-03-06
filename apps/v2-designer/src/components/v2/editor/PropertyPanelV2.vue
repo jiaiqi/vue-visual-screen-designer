@@ -94,7 +94,7 @@ void canvasStore
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: rgba(2, 6, 23, 0.7);
+  background: var(--ui-panel-bg);
   /* 半透明呈现毛玻璃 */
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -102,7 +102,7 @@ void canvasStore
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   overflow: hidden;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
+  box-shadow: -4px 0 24px color-mix(in oklab, var(--color-bg-primary) 22%, transparent);
 }
 
 .collapse-trigger {
@@ -117,18 +117,18 @@ void canvasStore
   border-radius: 8px;
   color: var(--color-text-muted);
   cursor: pointer;
-  background: rgba(30, 41, 59, 0.3);
+  background: var(--ui-panel-bg-soft);
   border: 1px solid transparent;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .collapse-trigger button:hover {
-  background: rgba(51, 65, 85, 0.6);
-  border-color: rgba(71, 85, 105, 0.5);
+  background: color-mix(in oklab, var(--color-bg-quaternary) 70%, transparent);
+  border-color: var(--ui-border);
   color: var(--color-text-primary);
   transform: scale(1.05);
   /* 添加微缩放动画 */
-  box-shadow: 0 0 10px rgba(100, 116, 139, 0.2);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--color-text-muted) 20%, transparent);
 }
 
 .panel-tabs {
@@ -138,7 +138,7 @@ void canvasStore
   padding: 10px 12px;
   border-bottom: 1px solid var(--color-border-primary);
   flex-shrink: 0;
-  background: rgba(15, 23, 42, 0.4);
+  background: var(--ui-panel-bg-soft);
 }
 
 .tab-btn {
@@ -158,14 +158,14 @@ void canvasStore
 
 .tab-btn:hover {
   color: var(--color-text-secondary);
-  background: rgba(51, 65, 85, 0.3);
+  background: color-mix(in oklab, var(--color-bg-quaternary) 50%, transparent);
 }
 
 .tab-btn.active {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.2);
-  color: var(--color-accent-emerald);
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.1);
+  background: color-mix(in oklab, var(--theme-primary) 14%, transparent);
+  border-color: color-mix(in oklab, var(--theme-primary) 45%, transparent);
+  color: var(--theme-primary);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--ui-success) 16%, transparent);
 }
 
 .collapse-btn {
@@ -174,14 +174,14 @@ void canvasStore
   border-radius: 6px;
   border: none;
   cursor: pointer;
-  color: #475569;
+  color: var(--ui-muted);
   background: transparent;
   transition: all 0.15s;
 }
 
 .collapse-btn:hover {
-  color: #94a3b8;
-  background: rgba(51, 65, 85, 0.4);
+  color: var(--color-text-tertiary);
+  background: color-mix(in oklab, var(--color-bg-quaternary) 60%, transparent);
 }
 
 .panel-content {

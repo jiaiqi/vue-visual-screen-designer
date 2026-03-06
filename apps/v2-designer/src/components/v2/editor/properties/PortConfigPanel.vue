@@ -35,10 +35,13 @@ const positionIconMap = {
 }
 
 const typeColorMap = {
-  input: '#10b981',
-  output: '#3b82f6',
-  both: '#8b5cf6',
+  input: 'var(--color-accent-emerald)',
+  output: 'var(--theme-primary)',
+  both: 'var(--color-accent-indigo)',
 }
+
+const defaultPortFill = 'var(--color-bg-secondary)'
+const defaultPortStroke = 'var(--theme-primary)'
 
 const loadPorts = () => {
   const nodePorts = props.node.getPorts()
@@ -52,8 +55,8 @@ const loadPorts = () => {
         group: port.group || 'top',
         position: (port.group as PortConfig['position']) || 'top',
         type: 'both',
-        fill: '#0f172a',
-        stroke: '#3b82f6',
+        fill: defaultPortFill,
+        stroke: defaultPortStroke,
         radius: 4,
         magnet: true,
       })
@@ -62,10 +65,10 @@ const loadPorts = () => {
 
   if (portConfigs.length === 0) {
     portConfigs.push(
-      { id: 'port_top', group: 'top', position: 'top', type: 'both', fill: '#0f172a', stroke: '#3b82f6', radius: 4, magnet: true },
-      { id: 'port_right', group: 'right', position: 'right', type: 'both', fill: '#0f172a', stroke: '#3b82f6', radius: 4, magnet: true },
-      { id: 'port_bottom', group: 'bottom', position: 'bottom', type: 'both', fill: '#0f172a', stroke: '#3b82f6', radius: 4, magnet: true },
-      { id: 'port_left', group: 'left', position: 'left', type: 'both', fill: '#0f172a', stroke: '#3b82f6', radius: 4, magnet: true }
+      { id: 'port_top', group: 'top', position: 'top', type: 'both', fill: defaultPortFill, stroke: defaultPortStroke, radius: 4, magnet: true },
+      { id: 'port_right', group: 'right', position: 'right', type: 'both', fill: defaultPortFill, stroke: defaultPortStroke, radius: 4, magnet: true },
+      { id: 'port_bottom', group: 'bottom', position: 'bottom', type: 'both', fill: defaultPortFill, stroke: defaultPortStroke, radius: 4, magnet: true },
+      { id: 'port_left', group: 'left', position: 'left', type: 'both', fill: defaultPortFill, stroke: defaultPortStroke, radius: 4, magnet: true }
     )
   }
 
@@ -80,8 +83,8 @@ const addPort = () => {
     group: 'top',
     position: 'top',
     type: 'both',
-    fill: '#0f172a',
-    stroke: '#3b82f6',
+    fill: defaultPortFill,
+    stroke: defaultPortStroke,
     radius: 4,
     magnet: true,
   }
@@ -139,10 +142,10 @@ const applyPorts = () => {
 
 const resetToDefault = () => {
   ports.value = [
-    { id: 'port_top', group: 'top', position: 'top', type: 'both', fill: '#0f172a', stroke: '#3b82f6', radius: 4, magnet: true },
-    { id: 'port_right', group: 'right', position: 'right', type: 'both', fill: '#0f172a', stroke: '#3b82f6', radius: 4, magnet: true },
-    { id: 'port_bottom', group: 'bottom', position: 'bottom', type: 'both', fill: '#0f172a', stroke: '#3b82f6', radius: 4, magnet: true },
-    { id: 'port_left', group: 'left', position: 'left', type: 'both', fill: '#0f172a', stroke: '#3b82f6', radius: 4, magnet: true }
+    { id: 'port_top', group: 'top', position: 'top', type: 'both', fill: defaultPortFill, stroke: defaultPortStroke, radius: 4, magnet: true },
+    { id: 'port_right', group: 'right', position: 'right', type: 'both', fill: defaultPortFill, stroke: defaultPortStroke, radius: 4, magnet: true },
+    { id: 'port_bottom', group: 'bottom', position: 'bottom', type: 'both', fill: defaultPortFill, stroke: defaultPortStroke, radius: 4, magnet: true },
+    { id: 'port_left', group: 'left', position: 'left', type: 'both', fill: defaultPortFill, stroke: defaultPortStroke, radius: 4, magnet: true }
   ]
   applyPorts()
 }
@@ -151,17 +154,17 @@ const resetToDefault = () => {
 <template>
   <div class="port-config-panel">
     <div class="panel-header">
-      <h4 class="text-xs font-semibold text-slate-300 mb-3">连接桩配置</h4>
+      <h4 class="panel-title mb-3">连接桩配置</h4>
       <div class="flex gap-1">
         <button
           @click="addPort"
-          class="p-1.5 rounded hover:bg-slate-700 transition-colors text-slate-400 hover:text-sky-400"
+          class="icon-btn"
           title="添加连接桩">
           <Plus class="w-3.5 h-3.5" />
         </button>
         <button
           @click="resetToDefault"
-          class="p-1.5 rounded hover:bg-slate-700 transition-colors text-slate-400 hover:text-amber-400"
+          class="icon-btn warning"
           title="重置为默认">
           <Circle class="w-3.5 h-3.5" />
         </button>
@@ -172,13 +175,13 @@ const resetToDefault = () => {
       <div
         v-for="(port, index) in ports"
         :key="port.id"
-        class="port-item p-2 rounded-lg bg-slate-800/50 border border-slate-700/50">
+        class="port-item p-2 rounded-lg">
 
         <div class="flex items-center justify-between mb-2">
-          <span class="text-[10px] text-slate-500 font-mono">{{ port.id }}</span>
+          <span class="port-id">{{ port.id }}</span>
           <button
             @click="removePort(index)"
-            class="p-1 rounded hover:bg-red-500/20 transition-colors text-slate-500 hover:text-red-400"
+            class="icon-btn danger p-1"
             title="删除">
             <Trash2 class="w-3 h-3" />
           </button>
@@ -186,11 +189,11 @@ const resetToDefault = () => {
 
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="text-[10px] text-slate-500 block mb-1">位置</label>
+            <label class="field-label block mb-1">位置</label>
             <select
               :value="port.position"
               @change="updatePort(index, 'position', ($event.target as HTMLSelectElement).value)"
-              class="w-full px-2 py-1 text-xs rounded bg-slate-900 border border-slate-700 text-slate-300 focus:border-sky-500 focus:outline-none">
+              class="field-input w-full px-2 py-1 text-xs rounded">
               <option v-for="pos in portPositions" :key="pos" :value="pos">
                 {{ pos === 'top' ? '上' : pos === 'right' ? '右' : pos === 'bottom' ? '下' : '左' }}
               </option>
@@ -198,11 +201,11 @@ const resetToDefault = () => {
           </div>
 
           <div>
-            <label class="text-[10px] text-slate-500 block mb-1">类型</label>
+            <label class="field-label block mb-1">类型</label>
             <select
               :value="port.type"
               @change="updatePort(index, 'type', ($event.target as HTMLSelectElement).value)"
-              class="w-full px-2 py-1 text-xs rounded bg-slate-900 border border-slate-700 text-slate-300 focus:border-sky-500 focus:outline-none">
+              class="field-input w-full px-2 py-1 text-xs rounded">
               <option v-for="type in portTypes" :key="type" :value="type">
                 {{ type === 'input' ? '输入' : type === 'output' ? '输出' : '双向' }}
               </option>
@@ -210,49 +213,49 @@ const resetToDefault = () => {
           </div>
 
           <div>
-            <label class="text-[10px] text-slate-500 block mb-1">边框色</label>
+            <label class="field-label block mb-1">边框色</label>
             <input
               type="color"
               :value="port.stroke"
               @input="updatePort(index, 'stroke', ($event.target as HTMLInputElement).value)"
-              class="w-full h-6 rounded cursor-pointer bg-slate-900 border border-slate-700" />
+              class="field-input w-full h-6 rounded cursor-pointer" />
           </div>
 
           <div>
-            <label class="text-[10px] text-slate-500 block mb-1">填充色</label>
+            <label class="field-label block mb-1">填充色</label>
             <input
               type="color"
               :value="port.fill"
               @input="updatePort(index, 'fill', ($event.target as HTMLInputElement).value)"
-              class="w-full h-6 rounded cursor-pointer bg-slate-900 border border-slate-700" />
+              class="field-input w-full h-6 rounded cursor-pointer" />
           </div>
 
           <div>
-            <label class="text-[10px] text-slate-500 block mb-1">半径</label>
+            <label class="field-label block mb-1">半径</label>
             <input
               type="range"
               :value="port.radius"
               @input="updatePort(index, 'radius', Number(($event.target as HTMLInputElement).value))"
               min="2"
               max="10"
-              class="w-full accent-sky-500" />
+              class="w-full slider-theme" />
           </div>
 
           <div class="flex items-center">
             <label class="flex items-center gap-1.5 cursor-pointer">
-              <input
-                type="checkbox"
-                :checked="port.magnet"
-                @change="updatePort(index, 'magnet', ($event.target as HTMLInputElement).checked)"
-                class="accent-sky-500" />
-              <span class="text-[10px] text-slate-500">可连接</span>
+                <input
+                  type="checkbox"
+                  :checked="port.magnet"
+                  @change="updatePort(index, 'magnet', ($event.target as HTMLInputElement).checked)"
+                  class="checkbox-theme" />
+              <span class="field-label">可连接</span>
             </label>
           </div>
         </div>
       </div>
     </div>
 
-    <div v-if="ports.length === 0" class="text-center py-4 text-slate-500 text-xs">
+    <div v-if="ports.length === 0" class="text-center py-4 empty-text text-xs">
       暂无连接桩，点击上方按钮添加
     </div>
   </div>
@@ -261,6 +264,7 @@ const resetToDefault = () => {
 <style scoped>
 .port-config-panel {
   padding: 8px;
+  color: var(--color-text-secondary);
 }
 
 .panel-header {
@@ -279,7 +283,74 @@ const resetToDefault = () => {
 }
 
 .port-list::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: var(--scrollbar-thumb);
   border-radius: 2px;
+}
+
+.panel-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.icon-btn {
+  padding: 6px;
+  border-radius: 6px;
+  color: var(--color-text-tertiary);
+  transition: all 0.18s ease;
+}
+
+.icon-btn:hover {
+  background: var(--ui-panel-bg-soft);
+  color: var(--theme-primary);
+}
+
+.icon-btn.warning:hover {
+  color: var(--ui-warning);
+}
+
+.icon-btn.danger:hover {
+  background: var(--ui-danger-bg);
+  color: var(--ui-danger-text);
+}
+
+.port-item {
+  background: color-mix(in oklab, var(--color-bg-tertiary) 56%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border-secondary) 62%, transparent);
+}
+
+.port-id {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-family: 'Fira Code', monospace;
+}
+
+.field-label {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
+.field-input {
+  background: var(--ui-panel-bg-strong);
+  border: 1px solid var(--ui-border);
+  color: var(--color-text-secondary);
+  outline: none;
+}
+
+.field-input:focus {
+  border-color: var(--ui-info-border);
+  box-shadow: 0 0 0 2px var(--ui-focus-ring);
+}
+
+.slider-theme {
+  accent-color: var(--theme-primary);
+}
+
+.checkbox-theme {
+  accent-color: var(--theme-primary);
+}
+
+.empty-text {
+  color: var(--color-text-tertiary);
 }
 </style>

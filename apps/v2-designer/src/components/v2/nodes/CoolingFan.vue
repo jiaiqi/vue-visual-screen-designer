@@ -8,15 +8,15 @@ const getNode = inject<() => unknown>('getNode')
 
 <template>
   <div
-    class="w-full h-full bg-slate-800 rounded-lg border border-slate-700 shadow-[0_8px_30px_rgb(0,0,0,0.5)] flex items-center justify-center relative overflow-hidden group">
+    class="fan-root w-full h-full rounded-lg border flex items-center justify-center relative overflow-hidden group">
     <!-- 发光环境背景 -->
-    <div class="absolute inset-0 bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors"></div>
+    <div class="fan-glow-bg absolute inset-0 transition-colors"></div>
 
     <!-- 旋转风扇主体 -->
     <div
-      class="relative w-14 h-14 rounded-full border border-slate-700 flex items-center justify-center bg-slate-900 shadow-inner">
+      class="fan-wheel relative w-14 h-14 rounded-full border flex items-center justify-center shadow-inner">
       <div
-        class="w-12 h-12 text-[#65d979] flex items-center justify-center origin-center drop-shadow-[0_0_8px_rgba(101,217,121,0.6)]">
+        class="fan-wheel-icon w-12 h-12 flex items-center justify-center origin-center">
         <!-- 用户提供的三叶风扇 SVG -->
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" class="w-full h-full">
           <!-- 底盘 -->
@@ -35,20 +35,58 @@ const getNode = inject<() => unknown>('getNode')
     </div>
 
     <!-- 硬件状态指示标示 -->
-    <div class="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
+    <div class="status-dot absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full"
       style="animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>
 
     <!-- 机器铭牌与数据仪表 -->
     <div
-      class="absolute top-1 left-2 text-[9px] font-mono text-slate-400 font-bold tracking-widest leading-none select-none">
+      class="label-id absolute top-1 left-2 text-[9px] font-mono font-bold tracking-widest leading-none select-none">
       FAN-01</div>
     <div
-      class="absolute bottom-1 left-2 text-[10px] text-emerald-400 font-mono font-bold select-none drop-shadow-[0_0_2px_rgba(16,185,129,0.8)]">
+      class="label-rpm absolute bottom-1 left-2 text-[10px] font-mono font-bold select-none">
       1200 RPM</div>
   </div>
 </template>
 
 <style scoped>
+.fan-root {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-secondary);
+  box-shadow: var(--ui-shadow);
+}
+
+.fan-wheel {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-secondary);
+}
+
+.fan-glow-bg {
+  background: color-mix(in oklab, var(--ui-success) 8%, transparent);
+}
+
+.group:hover .fan-glow-bg {
+  background: color-mix(in oklab, var(--ui-success) 14%, transparent);
+}
+
+.fan-wheel-icon {
+  color: color-mix(in oklab, var(--ui-success) 82%, #ffffff);
+  filter: drop-shadow(0 0 8px color-mix(in oklab, var(--ui-success) 60%, transparent));
+}
+
+.status-dot {
+  background: var(--ui-success);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--ui-success) 70%, transparent);
+}
+
+.label-id {
+  color: var(--color-text-tertiary);
+}
+
+.label-rpm {
+  color: var(--ui-success);
+  filter: drop-shadow(0 0 2px color-mix(in oklab, var(--ui-success) 75%, transparent));
+}
+
 @keyframes pulse {
 
   0%,

@@ -23,10 +23,10 @@ const data = computed(() => {
 const flowType = computed(() => data.value.flowType || 'process')
 
 const colorMap = {
-  start: { bg: 'rgba(34,197,94,0.15)', border: '#22c55e', text: '#4ade80' },
-  end: { bg: 'rgba(239,68,68,0.15)', border: '#ef4444', text: '#f87171' },
-  process: { bg: 'rgba(99,102,241,0.15)', border: '#6366f1', text: '#a5b4fc' },
-  decision: { bg: 'rgba(249,115,22,0.15)', border: '#f97316', text: '#fb923c' },
+  start: { bg: 'color-mix(in oklab, var(--theme-primary) 14%, transparent)', border: 'var(--theme-primary)', text: 'var(--theme-primary)' },
+  end: { bg: 'var(--ui-danger-bg)', border: 'var(--ui-danger)', text: 'var(--ui-danger-text)' },
+  process: { bg: 'color-mix(in oklab, var(--theme-primary) 12%, transparent)', border: 'var(--theme-primary)', text: 'var(--color-text-primary)' },
+  decision: { bg: 'var(--ui-warning-bg)', border: 'var(--ui-warning)', text: 'var(--ui-warning)' },
 }
 
 const colors = computed(() => colorMap[flowType.value] || colorMap.process)

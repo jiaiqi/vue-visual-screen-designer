@@ -172,7 +172,7 @@ watch(
             <span>JSON 数据编辑器</span>
             <button class="json-modal-close" @click="showJsonEditor = false">✕</button>
           </div>
-          <textarea v-model="jsonEditorContent" class="json-modal-editor" spellcheck="false" />
+          <textarea v-model="jsonEditorContent" class="json-modal-editor scrollbar-theme" spellcheck="false" />
           <div class="json-modal-footer">
             <button class="json-btn cancel" @click="showJsonEditor = false">取消</button>
             <button class="json-btn apply" @click="applyJson">应用</button>
@@ -192,17 +192,8 @@ watch(
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #020617;
+  background: var(--color-bg-primary);
   font-family: 'Inter', system-ui, sans-serif;
-  /* 全局 CSS 变量 */
-  --color-bg-primary: #020617;
-  --color-bg-secondary: #0f172a;
-  --color-bg-tertiary: #1e293b;
-  --color-border: rgba(51, 65, 85, 0.5);
-  --color-accent: #0ea5e9;
-  --color-accent-soft: rgba(14, 165, 233, 0.15);
-  --color-text-primary: #e2e8f0;
-  --color-text-muted: #64748b;
 }
 
 /* ===== 主工作区 ===== */
@@ -222,7 +213,7 @@ watch(
   z-index: 10;
   width: 260px;
   /* 玻璃态侧边栏 */
-  background: rgba(15, 22, 41, 0.95);
+  background: color-mix(in oklab, var(--color-bg-secondary) 94%, transparent);
   backdrop-filter: blur(12px);
   box-shadow: 2px 0 20px rgba(0, 0, 0, 0.4);
 }
@@ -237,8 +228,8 @@ watch(
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(14, 165, 233, 0.04) 0%, transparent 65%),
-    #020617;
+    radial-gradient(ellipse 80% 60% at 50% 0%, color-mix(in oklab, var(--theme-primary) 12%, transparent) 0%, transparent 65%),
+    var(--color-bg-primary);
 }
 
 /* ===== 右侧属性面板 ===== */
@@ -249,7 +240,7 @@ watch(
   overflow: hidden;
   z-index: 10;
   width: 300px;
-  background: rgba(15, 22, 41, 0.95);
+  background: color-mix(in oklab, var(--color-bg-secondary) 94%, transparent);
   backdrop-filter: blur(12px);
   box-shadow: -2px 0 20px rgba(0, 0, 0, 0.4);
 }

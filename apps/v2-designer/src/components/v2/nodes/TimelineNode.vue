@@ -7,9 +7,9 @@ const node = getNode()
 
 const timelineType = ref<'horizontal' | 'vertical'>('horizontal')
 const timelineNodes = ref<Array<{ id: string; label: string; time: string }>>([])
-const lineColor = ref('#3b82f6')
-const bgColor = ref('#1e293b')
-const nodeColor = ref('#3b82f6')
+const lineColor = ref('var(--theme-primary)')
+const bgColor = ref('var(--color-bg-tertiary)')
+const nodeColor = ref('var(--theme-primary)')
 
 const updateData = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -20,9 +20,9 @@ const updateData = () => {
     { id: '2', label: '阶段二', time: '10:00' },
     { id: '3', label: '阶段三', time: '11:00' },
   ]
-  lineColor.value = data.lineColor || node.attr('body/stroke') || '#3b82f6'
-  bgColor.value = data.bgColor || node.attr('body/fill') || '#1e293b'
-  nodeColor.value = data.nodeColor || data.lineColor || node.attr('body/stroke') || '#3b82f6'
+  lineColor.value = data.lineColor || node.attr('body/stroke') || 'var(--theme-primary)'
+  bgColor.value = data.bgColor || node.attr('body/fill') || 'var(--color-bg-tertiary)'
+  nodeColor.value = data.nodeColor || data.lineColor || node.attr('body/stroke') || 'var(--theme-primary)'
 }
 
 onMounted(() => {
@@ -78,7 +78,7 @@ const containerClass = computed(() => {
           <div class="node-label mt-2 text-[10px] text-center whitespace-nowrap" :style="{ color: nodeColor }">
             {{ item.label }}
           </div>
-          <div class="node-time mt-0.5 text-[8px] text-slate-400">
+          <div class="node-time mt-0.5 text-[8px]">
             {{ item.time }}
           </div>
         </div>
@@ -105,7 +105,7 @@ const containerClass = computed(() => {
           <div class="node-label mt-1 text-[10px] text-center whitespace-nowrap" :style="{ color: nodeColor }">
             {{ item.label }}
           </div>
-          <div class="node-time mt-0.5 text-[8px] text-slate-400">
+          <div class="node-time mt-0.5 text-[8px]">
             {{ item.time }}
           </div>
         </div>
@@ -133,5 +133,9 @@ const containerClass = computed(() => {
 
 .timeline-node:hover .node-circle {
   transform: scale(1.2);
+}
+
+.node-time {
+  color: var(--color-text-tertiary);
 }
 </style>

@@ -122,7 +122,7 @@ const changeEdgeShape = (newShape: string) => {
 <style scoped>
 .edge-properties-v2 {
   padding: 16px;
-  color: #e2e8f0;
+  color: var(--color-text-primary);
 }
 
 .panel-section {
@@ -134,7 +134,7 @@ const changeEdgeShape = (newShape: string) => {
 .section-title {
   font-size: 13px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   margin-bottom: 4px;
 }
 
@@ -148,11 +148,11 @@ const changeEdgeShape = (newShape: string) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(30, 41, 59, 0.4);
-  border: 1px solid rgba(51, 65, 85, 0.5);
+  background: var(--ui-panel-bg-soft);
+  border: 1px solid var(--ui-border);
   border-radius: 6px;
   padding: 8px 12px;
-  color: #cbd5e1;
+  color: var(--color-text-secondary);
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
@@ -160,50 +160,50 @@ const changeEdgeShape = (newShape: string) => {
 }
 
 .preset-btn:hover {
-  background: rgba(51, 65, 85, 0.6);
-  border-color: rgba(71, 85, 105, 0.8);
+  background: color-mix(in oklab, var(--color-bg-quaternary) 68%, transparent);
+  border-color: color-mix(in oklab, var(--color-border-secondary) 86%, transparent);
 }
 
 .preset-btn.active {
-  background: rgba(14, 165, 233, 0.15);
-  border-color: #0ea5e9;
-  color: #38bdf8;
+  background: color-mix(in oklab, var(--theme-primary) 16%, transparent);
+  border-color: color-mix(in oklab, var(--theme-primary) 60%, transparent);
+  color: var(--theme-primary);
 }
 
 .icon-indicator {
   width: 12px;
   height: 2px;
   border-radius: 2px;
-  background: #64748b;
+  background: var(--color-text-muted);
 }
 
 /* 简单的类型颜色指示器 */
 .water-flow {
-  background: #38bdf8;
+  background: var(--theme-primary);
 }
 
 .electric-flow {
-  background: #ffab00;
-  box-shadow: 0 0 4px #ffab00;
+  background: var(--ui-warning);
+  box-shadow: 0 0 4px var(--ui-warning);
 }
 
 .arrow-flow {
-  background: #00e676;
+  background: var(--ui-success);
 }
 
 .particle-flow {
-  background: #c084fc;
+  background: var(--color-accent-indigo);
   border-style: dotted;
 }
 
 .pulse-flow {
-  background: #ff4081;
+  background: var(--ui-danger);
 }
 
 .help-text {
   margin-top: 8px;
   font-size: 11px;
-  color: #64748b;
+  color: var(--ui-muted);
   line-height: 1.5;
 }
 
@@ -211,22 +211,26 @@ const changeEdgeShape = (newShape: string) => {
   margin-top: 6px;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid rgba(251, 113, 133, 0.4);
-  background: linear-gradient(135deg, rgba(70, 14, 28, 0.92), rgba(36, 10, 22, 0.92));
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--ui-danger-border);
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--ui-danger-bg) 78%, var(--color-bg-secondary)),
+    color-mix(in oklab, var(--ui-danger-bg) 62%, var(--color-bg-secondary))
+  );
+  box-shadow: var(--ui-shadow);
 }
 
 .error-title {
   font-size: 12px;
   font-weight: 700;
-  color: #fecdd3;
+  color: var(--ui-danger-text);
   margin-bottom: 4px;
 }
 
 .error-message {
   font-size: 11px;
   line-height: 1.45;
-  color: #fda4af;
+  color: color-mix(in oklab, var(--ui-danger) 80%, var(--color-text-secondary));
   word-break: break-word;
 }
 

@@ -8,7 +8,7 @@ import type {
   ReleaseEntityV2,
   WorkspaceSnapshotV2,
 } from '@/types/workspace'
-import { loadWorkspaceSnapshot, saveWorkspaceSnapshot } from '@/repositories/workspaceRepository'
+import { createWorkspaceApi } from '@/api/workspace'
 import { x6ToSchemaV2 } from '@vue-visual-screen/v2-shared'
 
 function nowIso(): string {
@@ -18,6 +18,8 @@ function nowIso(): string {
 function makeId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}`
 }
+
+const workspaceApi = createWorkspaceApi()
 
 function defaultCanvasConfig(name: string) {
   return {
@@ -76,6 +78,20 @@ function normalizePage(page: Partial<PageEntityV2>, order: number): PageEntityV2
   }
 }
 
+function normalizeRelease(release: Partial<ReleaseEntityV2>): ReleaseEntityV2 {
+  return {
+    id: String(release.id || makeId('rel')),
+    appId: String(release.appId || ''),
+    pageId: String(release.pageId || ''),
+    version: String(release.version || 'v1'),
+    note: String(release.note || '常规发布'),
+    createdAt: String(release.createdAt || nowIso()),
+    schema: release.schema ?? {},
+    canvasConfig: (release.canvasConfig || defaultCanvasConfig('页面')) as Record<string, unknown>,
+    graphData: (release.graphData || emptyGraphData()) as Record<string, unknown>,
+  }
+}
+
 export const useWorkspaceStoreV2 = defineStore('workspaceV2', () => {
   const initialized = ref(false)
   const loading = ref(false)
@@ -117,7 +133,7 @@ export const useWorkspaceStoreV2 = defineStore('workspaceV2', () => {
   }
 
   async function persist() {
-    await saveWorkspaceSnapshot(snapshot())
+    await workspaceApi.saveSnapshot(snapshot())
   }
 
   function normalizeWorkspace(data: WorkspaceSnapshotV2): WorkspaceSnapshotV2 {
@@ -144,7 +160,7 @@ export const useWorkspaceStoreV2 = defineStore('workspaceV2', () => {
     return {
       apps: normalizedApps,
       pages: normalizedPages,
-      releases: data.releases || [],
+      releases: (data.releases || []).map((item) => normalizeRelease(item)),
       activeAppId: data.activeAppId,
       activePageId: data.activePageId,
     }
@@ -194,7 +210,7 @@ export const useWorkspaceStoreV2 = defineStore('workspaceV2', () => {
 
     loading.value = true
     try {
-      const data = await loadWorkspaceSnapshot()
+      const data = await workspaceApi.loadSnapshot()
       if (!data || data.apps.length === 0 || data.pages.length === 0) {
         await bootstrapDefaultWorkspace()
       } else {
@@ -367,6 +383,42 @@ export const useWorkspaceStoreV2 = defineStore('workspaceV2', () => {
     return page
   }
 
+  async function duplicatePage(pageId: string): Promise<PageEntityV2> {
+    const source = pages.value.find((item) => item.id === pageId)
+    if (!source)
+      throw new Error('页面不存在')
+
+    const app = apps.value.find((item) => item.id === source.appId)
+    if (!app)
+      throw new Error('应用不存在')
+
+    const appPages = pages.value
+      .filter((item) => item.appId === source.appId)
+      .sort((a, b) => a.order - b.order)
+    const nextOrder = appPages.length
+
+    const copy: PageEntityV2 = {
+      id: makeId('page'),
+      appId: source.appId,
+      name: `${source.name} 副本`,
+      path: `${source.path}-copy-${Date.now().toString().slice(-4)}`,
+      status: 'draft',
+      order: nextOrder,
+      isHome: false,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+      canvasConfig: JSON.parse(JSON.stringify(source.canvasConfig)) as Record<string, unknown>,
+      graphData: JSON.parse(JSON.stringify(source.graphData)) as Record<string, unknown>,
+    }
+
+    pages.value.push(copy)
+    activeAppId.value = copy.appId
+    activePageId.value = copy.id
+    app.updatedAt = nowIso()
+    await persist()
+    return copy
+  }
+
   async function renamePage(pageId: string, name: string, path: string) {
     const page = pages.value.find((item) => item.id === pageId)
     if (!page)
@@ -391,6 +443,35 @@ export const useWorkspaceStoreV2 = defineStore('workspaceV2', () => {
       page.status = patch.status
 
     page.updatedAt = nowIso()
+    await persist()
+  }
+
+  async function movePage(pageId: string, direction: 'up' | 'down') {
+    const page = pages.value.find((item) => item.id === pageId)
+    if (!page)
+      return
+
+    const appPages = pages.value
+      .filter((item) => item.appId === page.appId)
+      .sort((a, b) => a.order - b.order)
+
+    const index = appPages.findIndex((item) => item.id === pageId)
+    if (index < 0)
+      return
+
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (swapIndex < 0 || swapIndex >= appPages.length)
+      return
+
+    const target = appPages[swapIndex]
+    if (!target)
+      return
+
+    const oldOrder = page.order
+    page.order = target.order
+    target.order = oldOrder
+    page.updatedAt = nowIso()
+    target.updatedAt = nowIso()
     await persist()
   }
 
@@ -477,6 +558,8 @@ export const useWorkspaceStoreV2 = defineStore('workspaceV2', () => {
       note: note.trim() || '常规发布',
       createdAt: nowIso(),
       schema,
+      canvasConfig: JSON.parse(JSON.stringify(page.canvasConfig)) as Record<string, unknown>,
+      graphData: JSON.parse(JSON.stringify(page.graphData)) as Record<string, unknown>,
     }
 
     page.status = 'published'
@@ -486,8 +569,46 @@ export const useWorkspaceStoreV2 = defineStore('workspaceV2', () => {
     return release
   }
 
+  async function rollbackRelease(releaseId: string) {
+    const release = releases.value.find((item) => item.id === releaseId)
+    if (!release)
+      throw new Error('发布记录不存在')
+
+    const page = pages.value.find((item) => item.id === release.pageId)
+    if (!page)
+      throw new Error('目标页面不存在')
+
+    page.canvasConfig = JSON.parse(JSON.stringify(release.canvasConfig)) as Record<string, unknown>
+    page.graphData = JSON.parse(JSON.stringify(release.graphData)) as Record<string, unknown>
+    page.status = 'published'
+    page.updatedAt = nowIso()
+
+    activeAppId.value = page.appId
+    activePageId.value = page.id
+    await persist()
+    return page
+  }
+
   function findPageByRoute(appId: string, pageId: string): PageEntityV2 | null {
     return pages.value.find((item) => item.id === pageId && item.appId === appId) || null
+  }
+
+  function findReleaseById(releaseId: string): ReleaseEntityV2 | null {
+    return releases.value.find((item) => item.id === releaseId) || null
+  }
+
+  function findPreviousRelease(releaseId: string): ReleaseEntityV2 | null {
+    const target = releases.value.find((item) => item.id === releaseId)
+    if (!target)
+      return null
+
+    const pageReleases = releases.value
+      .filter((item) => item.pageId === target.pageId)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    const index = pageReleases.findIndex((item) => item.id === target.id)
+    if (index <= 0)
+      return null
+    return pageReleases[index - 1] || null
   }
 
   return {
@@ -510,12 +631,17 @@ export const useWorkspaceStoreV2 = defineStore('workspaceV2', () => {
     setActiveApp,
     setHomePage,
     createPage,
+    duplicatePage,
     renamePage,
     updatePageMeta,
+    movePage,
     removePage,
     setActivePage,
     saveCurrentPageSnapshot,
     publishCurrentPage,
+    rollbackRelease,
     findPageByRoute,
+    findReleaseById,
+    findPreviousRelease,
   }
 })

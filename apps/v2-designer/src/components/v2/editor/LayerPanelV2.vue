@@ -64,7 +64,10 @@ const getColor = (cell: Cell): string => {
     const attrs = (cell as Node).getAttrs()
     if (attrs?.body?.stroke) return attrs.body.stroke as string
   }
-  return '#64748b'
+  if (typeof window !== 'undefined') {
+    return getComputedStyle(document.documentElement).getPropertyValue('--color-text-muted').trim() || 'var(--color-text-muted)'
+  }
+  return 'var(--color-text-muted)'
 }
 
 const buildLayers = (): LayerItem[] => {
@@ -203,7 +206,7 @@ const isEmpty = computed(() => layers.value.length === 0)
             <EyeOff v-else class="w-3.5 h-3.5 opacity-50" />
           </button>
           <button v-if="layer.isNode" @click="toggleLock(layer, $event)" :title="layer.locked ? '解锁' : '锁定'">
-            <Lock v-if="layer.locked" class="w-3.5 h-3.5 text-amber-500" />
+            <Lock v-if="layer.locked" class="w-3.5 h-3.5 lock-icon" />
             <Unlock v-else class="w-3.5 h-3.5" />
           </button>
         </div>
@@ -223,7 +226,7 @@ const isEmpty = computed(() => layers.value.length === 0)
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: rgba(2, 6, 23, 0.5);
+  background: color-mix(in oklab, var(--color-bg-primary) 50%, transparent);
 }
 
 .panel-header {
@@ -231,7 +234,7 @@ const isEmpty = computed(() => layers.value.length === 0)
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border-secondary) 62%, transparent);
   flex-shrink: 0;
 }
 
@@ -241,7 +244,7 @@ const isEmpty = computed(() => layers.value.length === 0)
   gap: 8px;
   font-size: 11px;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--color-text-secondary);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -249,14 +252,14 @@ const isEmpty = computed(() => layers.value.length === 0)
 .accent-bar {
   width: 3px;
   height: 12px;
-  background: #a855f7;
+  background: var(--theme-primary);
   border-radius: 2px;
 }
 
 .count-badge {
   font-size: 10px;
-  color: #64748b;
-  background: rgba(51, 65, 85, 0.5);
+  color: var(--color-text-muted);
+  background: color-mix(in oklab, var(--color-bg-tertiary) 60%, transparent);
   padding: 2px 7px;
   border-radius: 4px;
   font-family: monospace;
@@ -269,7 +272,7 @@ const isEmpty = computed(() => layers.value.length === 0)
 }
 
 .layer-list::-webkit-scrollbar { width: 4px; }
-.layer-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+.layer-list::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
 
 .empty-state {
   display: flex;
@@ -277,12 +280,12 @@ const isEmpty = computed(() => layers.value.length === 0)
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #475569;
+  color: var(--color-text-muted);
   gap: 6px;
 }
 .empty-icon { width: 40px; height: 40px; opacity: 0.3; }
 .empty-state p { font-size: 12px; }
-.empty-state span { font-size: 10px; color: #334155; }
+.empty-state span { font-size: 10px; color: var(--color-text-tertiary); }
 
 .layer-item {
   display: flex;
@@ -296,11 +299,11 @@ const isEmpty = computed(() => layers.value.length === 0)
   margin-bottom: 2px;
 }
 
-.layer-item:hover { background: rgba(51, 65, 85, 0.4); }
-.layer-item.selected { background: rgba(14, 165, 233, 0.12); border-color: rgba(14, 165, 233, 0.3); }
-.layer-item.drag-over { border-top: 2px solid #a855f7; }
+.layer-item:hover { background: color-mix(in oklab, var(--color-bg-tertiary) 60%, transparent); }
+.layer-item.selected { background: var(--ui-info-bg); border-color: var(--ui-info-border); }
+.layer-item.drag-over { border-top: 2px solid var(--theme-primary); }
 
-.grip-icon { width: 12px; height: 12px; color: #475569; flex-shrink: 0; cursor: grab; }
+.grip-icon { width: 12px; height: 12px; color: var(--color-text-muted); flex-shrink: 0; cursor: grab; }
 
 .item-icon {
   width: 24px;
@@ -313,8 +316,8 @@ const isEmpty = computed(() => layers.value.length === 0)
 }
 
 .item-info { flex: 1; min-width: 0; }
-.item-label { font-size: 12px; color: #e2e8f0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.item-shape { font-size: 10px; color: #475569; font-family: monospace; }
+.item-label { font-size: 12px; color: var(--color-text-secondary); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-shape { font-size: 10px; color: var(--color-text-muted); font-family: monospace; }
 
 .item-actions {
   display: flex;
@@ -330,18 +333,22 @@ const isEmpty = computed(() => layers.value.length === 0)
   width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center;
   border-radius: 4px; border: none; cursor: pointer;
-  color: #64748b; background: transparent; transition: all 0.15s;
+  color: var(--color-text-muted); background: transparent; transition: all 0.15s;
 }
-.item-actions button:hover { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
+.item-actions button:hover { background: color-mix(in oklab, var(--color-bg-tertiary) 70%, transparent); color: var(--color-text-tertiary); }
 
 .panel-footer {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  border-top: 1px solid rgba(51, 65, 85, 0.4);
+  border-top: 1px solid color-mix(in oklab, var(--color-border-secondary) 62%, transparent);
   font-size: 10px;
-  color: #475569;
+  color: var(--color-text-muted);
   flex-shrink: 0;
+}
+
+.lock-icon {
+  color: var(--ui-warning);
 }
 </style>

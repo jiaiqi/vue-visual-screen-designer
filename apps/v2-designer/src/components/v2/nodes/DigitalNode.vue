@@ -16,7 +16,7 @@ const useGrouping = ref(true)
 const animateRoll = ref(true)
 
 // 字体外观参数
-const textColor = ref('#3b82f6')
+const textColor = ref('var(--theme-primary)')
 const fontSize = ref(24)
 const fontWeight = ref('bold')
 
@@ -102,7 +102,7 @@ const updateData = () => {
   useGrouping.value = data.useGrouping !== false
   animateRoll.value = data.animateRoll !== false
 
-  textColor.value = data.textColor || node.attr('text/fill') || '#3b82f6'
+  textColor.value = data.textColor || node.attr('text/fill') || 'var(--theme-primary)'
   fontSize.value = typeof data.fontSize === 'number' ? data.fontSize : 24
   fontWeight.value = data.fontWeight || 'bold'
 }
