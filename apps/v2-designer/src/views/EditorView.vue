@@ -13,6 +13,7 @@ import ToolbarV2 from '@/components/v2/editor/ToolbarV2.vue'
 import CanvasEditorV2 from '@/components/v2/editor/CanvasEditorV2.vue'
 import PropertyPanelV2 from '@/components/v2/editor/PropertyPanelV2.vue'
 import HeaderV2 from '@/components/v2/editor/HeaderV2.vue'
+import GlobalToast from '@/components/v2/common/GlobalToast.vue'
 
 const editorStore = useEditorStoreV2()
 
@@ -77,6 +78,7 @@ function applyJson() {
       </div>
     </Teleport>
   </div>
+  <GlobalToast />
 </template>
 
 <style scoped>

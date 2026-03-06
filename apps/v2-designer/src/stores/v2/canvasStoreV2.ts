@@ -157,6 +157,14 @@ export const useCanvasStoreV2 = defineStore('canvasV2', () => {
   }
 
   /**
+   * 重置滚动偏移（兼容属性面板调用）
+   */
+  function resetScroll() {
+    viewport.value.panX = 0
+    viewport.value.panY = 0
+  }
+
+  /**
    * 重置视口
    */
   function resetViewport() {
@@ -194,6 +202,7 @@ export const useCanvasStoreV2 = defineStore('canvasV2', () => {
     applyPreset,
     setZoom,
     setPan,
+    resetScroll,
     resetViewport,
     exportConfig,
     importConfig,

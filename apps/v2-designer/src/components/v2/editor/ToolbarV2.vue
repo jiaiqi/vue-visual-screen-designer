@@ -9,6 +9,7 @@
 import { ref, computed, watch } from 'vue'
 import { Dnd } from '@antv/x6'
 import { useEditorStoreV2 } from '@/stores/v2/editorStoreV2'
+import { useNotifier } from '@/composables/useNotifier'
 import type { ChartConfig } from '@/data/chartConfigs'
 import { chartCategories } from '@/data/chartConfigs'
 import {
@@ -24,6 +25,7 @@ import {
 } from 'lucide-vue-next'
 
 const editorStore = useEditorStoreV2()
+const notifier = useNotifier()
 
 // DnD 实例在 Toolbar 内部创建，与 v1 保持一致
 const dndContainerRef = ref<HTMLElement>()
@@ -69,24 +71,8 @@ const isCollapsed = computed(() => editorStore.isToolbarCollapsed)
 const searchQuery = ref('')
 const activeCategory = ref('base')
 
-interface UiNotice {
-  id: number
-  title: string
-  message: string
-}
-
-const uiNotices = ref<UiNotice[]>([])
-let noticeSeed = 0
-
 function showErrorToast(title: string, message: string) {
-  const id = ++noticeSeed
-  uiNotices.value.push({ id, title, message })
-  if (uiNotices.value.length > 3) {
-    uiNotices.value.splice(0, uiNotices.value.length - 3)
-  }
-  window.setTimeout(() => {
-    uiNotices.value = uiNotices.value.filter(n => n.id !== id)
-  }, 4200)
+  notifier.error(title, message)
 }
 
 function formatDragError(error: unknown, fallbackMessage: string) {
@@ -114,7 +100,7 @@ const commonPorts = {
 
 const shapeTypes = [
   { type: 'rect', label: '矩形', icon: Square, w: 120, h: 80, stroke: '#3b82f6', rx: 0 },
-  { type: 'circle111', label: '圆形', icon: Circle, w: 100, h: 100, stroke: '#10b981', rx: 0 },
+  { type: 'circle', label: '圆形', icon: Circle, w: 100, h: 100, stroke: '#10b981', rx: 0 },
   { type: 'triangle', label: '三角形', icon: Triangle, w: 100, h: 100, stroke: '#f59e0b', rx: 0 },
   { type: 'trapezoid', label: '梯形', icon: MoveHorizontal, w: 120, h: 100, stroke: '#f43f5e', rx: 0 },
   { type: 'line', label: '线段', icon: Minus, w: 100, h: 2, stroke: '#94a3b8', rx: 0 },
@@ -535,15 +521,6 @@ void ColumnsIcon
       </div> <!-- end toolbar-body -->
     </template> <!-- end 展开模式 -->
   </div> <!-- end toolbar-v2 -->
-
-  <Teleport to="body">
-    <TransitionGroup name="toolbar-toast" tag="div" class="toolbar-toast-stack">
-      <div v-for="notice in uiNotices" :key="notice.id" class="toolbar-toast-item">
-        <div class="toolbar-toast-title">{{ notice.title }}</div>
-        <div class="toolbar-toast-message">{{ notice.message }}</div>
-      </div>
-    </TransitionGroup>
-  </Teleport>
 </template>
 
 <style scoped>
@@ -873,49 +850,4 @@ void ColumnsIcon
   color: #94a3b8;
 }
 
-.toolbar-toast-stack {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 2100;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  pointer-events: none;
-}
-
-.toolbar-toast-item {
-  width: 320px;
-  max-width: calc(100vw - 32px);
-  border-radius: 12px;
-  padding: 12px 14px;
-  border: 1px solid rgba(251, 113, 133, 0.4);
-  background: linear-gradient(135deg, rgba(60, 12, 24, 0.92), rgba(30, 10, 20, 0.92));
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(10px);
-}
-
-.toolbar-toast-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #fecdd3;
-  margin-bottom: 4px;
-}
-
-.toolbar-toast-message {
-  font-size: 12px;
-  line-height: 1.45;
-  color: #fda4af;
-}
-
-.toolbar-toast-enter-active,
-.toolbar-toast-leave-active {
-  transition: all 0.22s ease;
-}
-
-.toolbar-toast-enter-from,
-.toolbar-toast-leave-to {
-  opacity: 0;
-  transform: translateY(-8px) scale(0.98);
-}
 </style>

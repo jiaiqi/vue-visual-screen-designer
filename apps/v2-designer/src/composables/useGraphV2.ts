@@ -22,6 +22,8 @@ import {
   registerEdges,
   registerFlowNodes
 } from '@/plugins/x6-nodes'
+import { runGraphRegistryHealthCheck } from '@/registry/health'
+import { useNotifier } from '@/composables/useNotifier'
 
 void register
 
@@ -50,6 +52,7 @@ export function useGraphV2() {
   const containerRef = ref<HTMLElement | undefined>()
   const editorStore = useEditorStoreV2()
   const canvasStore = useCanvasStoreV2()
+  const notifier = useNotifier()
   let graph: Graph | null = null
 
   /**
@@ -113,6 +116,19 @@ export function useGraphV2() {
         },
       },
     })
+
+    const registryCheck = runGraphRegistryHealthCheck(graph)
+    if (registryCheck.missingNodeShapes.length > 0 || registryCheck.missingEdgeShapes.length > 0) {
+      const nodeMsg = registryCheck.missingNodeShapes.length > 0
+        ? `节点未注册: ${registryCheck.missingNodeShapes.join(', ')}`
+        : ''
+      const edgeMsg = registryCheck.missingEdgeShapes.length > 0
+        ? `连线未注册: ${registryCheck.missingEdgeShapes.join(', ')}`
+        : ''
+      const message = [nodeMsg, edgeMsg].filter(Boolean).join('；')
+      console.warn('[useGraphV2] 注册健康检查失败:', message)
+      notifier.warning('图元注册检查异常', message)
+    }
 
     // 挂载插件
     graph

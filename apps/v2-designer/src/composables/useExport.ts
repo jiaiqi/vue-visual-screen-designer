@@ -1,7 +1,11 @@
 import { useEditorStoreV2 } from '@/stores/v2/editorStoreV2'
+import { useCanvasStoreV2 } from '@/stores/v2/canvasStoreV2'
+import { useNotifier } from '@/composables/useNotifier'
 
 export function useExport() {
   const editorStore = useEditorStoreV2()
+  const canvasStore = useCanvasStoreV2()
+  const notifier = useNotifier()
 
   /**
    * 导出当前画布为带水印或透明通道的 PNG 格式
@@ -12,7 +16,7 @@ export function useExport() {
 
     try {
       // 读取当前画布背景色（避免硬编码）
-      const bgColor = editorStore.canvasConfig?.backgroundColor || '#0f172a'
+      const bgColor = canvasStore.config.backgroundColor || '#0f172a'
       graph.toPNG((dataUri: string) => {
         downloadFile(dataUri, filename)
       }, {
@@ -21,6 +25,7 @@ export function useExport() {
       })
     } catch (e) {
       console.error('[Export] PNG 导出失败，请确保 @antv/x6 Export 插件已挂载:', e)
+      notifier.error('PNG 导出失败', '请确认导出插件已挂载并重试。')
     }
   }
 
@@ -62,7 +67,7 @@ export function useExport() {
         copyStyles: false
       })
     } catch {
-      alert("由于未引入导出插件，目前暂不支持图像导出。")
+      notifier.error('SVG 导出失败', '由于导出插件不可用，当前无法导出 SVG。')
     }
   }
 
@@ -107,7 +112,7 @@ export function useExport() {
       graph.fromJSON(jsonObj)
     } catch (error) {
       console.error('导入工程失败:', error)
-      alert('无法解析此工程文件，请检查格式是否正确。')
+      notifier.error('导入工程失败', '无法解析该工程文件，请检查 JSON 格式。')
     }
   }
 

@@ -2,6 +2,8 @@
 import { ref, watch } from 'vue'
 import { Edge } from '@antv/x6'
 import { useEditorStoreV2 } from '@/stores/v2/editorStoreV2'
+import { useNotifier } from '@/composables/useNotifier'
+import { EDGE_PRESETS, isSupportedEdgeShape } from '@/registry/edges'
 
 const props = defineProps<{
   edge: Edge
@@ -12,18 +14,9 @@ const emit = defineEmits<{
 }>()
 
 const editorStore = useEditorStoreV2()
+const notifier = useNotifier()
 
-// 所有预设的工业化连线类型
-const edgePresets = [
-  { value: 'water-flow', label: '流体管道 (Water)' },
-  { value: 'electric-flow', label: '发光电流 (Electric)' },
-  { value: 'arrow-flow', label: '跑马箭头 (Arrow)' },
-  { value: 'particle-flow', label: '粒子流 (Particle)' },
-  { value: 'pulse-flow', label: '脉冲波 (Pulse)' },
-  { value: 'fluid-pipe', label: '基础 3D 管道' },
-  { value: 'electric-line', label: '基础发光线' },
-  { value: 'edge', label: '标准实线' }
-]
+const edgePresets = EDGE_PRESETS
 
 const currentShape = ref('fluid-pipe')
 const errorMessage = ref('')
@@ -43,6 +36,12 @@ watch(() => props.edge, loadEdgeConfig, { immediate: true })
  */
 const changeEdgeShape = (newShape: string) => {
   if (currentShape.value === newShape) return
+  if (!isSupportedEdgeShape(newShape)) {
+    const msg = `未识别的连线类型：${newShape}`
+    errorMessage.value = msg
+    notifier.error('切换连线类型失败', msg)
+    return
+  }
 
   const graph = editorStore.graph
   if (!graph || !props.edge) return
@@ -88,6 +87,7 @@ const changeEdgeShape = (newShape: string) => {
     console.error('[EdgePropertiesV2] changeEdgeShape failed:', error)
     const message = error instanceof Error ? error.message : String(error)
     errorMessage.value = `切换失败：${message}`
+    notifier.error('切换连线类型失败', errorMessage.value)
   }
 }
 </script>

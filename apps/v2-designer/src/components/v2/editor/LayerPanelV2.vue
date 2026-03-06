@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, shallowRef } from 'vue'
 import { Cell, Node } from '@antv/x6'
 import { useEditorStoreV2 } from '@/stores/v2/editorStoreV2'
 import {
@@ -21,7 +21,7 @@ interface LayerItem {
 }
 
 const editorStore = useEditorStoreV2()
-const layers = ref<LayerItem[]>([])
+const layers = shallowRef<LayerItem[]>([])
 const selectedCellId = ref<string | null>(null)
 const draggedIndex = ref<number | null>(null)
 const dragOverIndex = ref<number | null>(null)

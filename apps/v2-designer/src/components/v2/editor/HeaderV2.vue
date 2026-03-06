@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useEditorStoreV2 } from '@/stores/v2/editorStoreV2'
 import { useCanvasStoreV2 } from '@/stores/v2/canvasStoreV2'
-import { useExport } from '@/composables/useExport'
+import { useEditorCommands } from '@/composables/useEditorCommands'
 import {
   LayoutGrid, Eye, Undo2, Redo2, Download, Trash2,
   ZoomIn, ZoomOut, Maximize, Code,
@@ -18,18 +18,17 @@ const emit = defineEmits<{
 const router = useRouter()
 const editorStore = useEditorStoreV2()
 const canvasStore = useCanvasStoreV2()
-const { exportToPNG, exportToSVG, exportToJSON, importFromJSON } = useExport()
+const commands = useEditorCommands()
 
 const zoomRatio = computed(() => Math.round(canvasStore.viewport.zoom * 100))
 const isDark = ref(true)
 
 function handleZoom(delta: number) {
-  canvasStore.setZoom(canvasStore.viewport.zoom + delta)
+  commands.zoomBy(delta)
 }
 
 function handleZoomFit() {
-  // 外部缩放模式下的 ZoomFit 暂设为 100%
-  canvasStore.setZoom(1)
+  commands.resetZoom()
 }
 
 function handlePreview() {
@@ -40,14 +39,14 @@ function handlePreview() {
 
 function handleClearCanvas() {
   if (confirm('确定清空整个画布？此操作不可撤销！')) {
-    editorStore.clearCanvas()
+    commands.clearCanvas()
   }
 }
 
 const fileInput = ref<HTMLInputElement>()
 function handleImport(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
-  if (file) importFromJSON(file)
+  if (file) commands.importFromJSON(file)
 }
 
 onMounted(() => {
@@ -149,14 +148,14 @@ const projectName = computed(() => canvasStore.config.name)
           <ChevronDown class="w-3 h-3 opacity-50" />
         </button>
         <div class="hv2-dropdown-menu">
-          <button class="hv2-dropdown-item" @click="exportToPNG()">
+          <button class="hv2-dropdown-item" @click="commands.exportToPNG()">
             <FileImage class="w-3.5 h-3.5 text-emerald-400" style="flex-shrink:0" />
             <div>
               <div class="item-text">导出 PNG</div>
               <div class="item-sub">高质量位图</div>
             </div>
           </button>
-          <button class="hv2-dropdown-item" @click="exportToSVG()">
+          <button class="hv2-dropdown-item" @click="commands.exportToSVG()">
             <FileCode2 class="w-3.5 h-3.5 text-sky-400" style="flex-shrink:0" />
             <div>
               <div class="item-text">导出 SVG</div>
@@ -164,7 +163,7 @@ const projectName = computed(() => canvasStore.config.name)
             </div>
           </button>
           <div class="hv2-dropdown-divider" />
-          <button class="hv2-dropdown-item" @click="exportToJSON()">
+          <button class="hv2-dropdown-item" @click="commands.exportToJSON()">
             <Save class="w-3.5 h-3.5 text-indigo-400" style="flex-shrink:0" />
             <div>
               <div class="item-text">保存工程文件</div>

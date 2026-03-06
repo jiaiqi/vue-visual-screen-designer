@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch, reactive } from 'vue'
 import { useGraphV2 } from '@/composables/useGraphV2'
 import { useAutoSave } from '@/composables/useAutoSave'
 import { useCanvasStoreV2 } from '@/stores/v2/canvasStoreV2'
+import { canvasToClientPoint, clientToCanvasPoint, computeRulerStart } from '@/utils/viewport-adapter'
 import SketchRulerV2 from './SketchRulerV2.vue'
 
 const canvasStore = useCanvasStoreV2()
@@ -107,24 +108,9 @@ onMounted(async () => {
         clientY = Number(arg2) || 0
       }
 
-      // 获取画布容器的边界矩形
       const rect = canvasRef.value ? canvasRef.value.getBoundingClientRect() : { left: 0, top: 0 }
       const s = scale.value || canvasStore.viewport.zoom || 1
-
-      // 计算相对于画布容器左上角的位置
-      // rect.left/top 包含了 margin 和 transform 的影响
-      // 除以 scale 得到逻辑坐标
-      const localX = (clientX - rect.left) / s
-      const localY = (clientY - rect.top) / s
-
-      // console.log('[CanvasEditorV2] clientToLocal:', {
-      //   clientX, clientY,
-      //   rectLeft: rect.left, rectTop: rect.top,
-      //   scale: s,
-      //   localX, localY
-      // })
-
-      return { x: localX, y: localY }
+      return clientToCanvasPoint(clientX, clientY, { rect, scale: s })
     }
 
     // 同时重写 localToClient，确保双向转换正确
@@ -143,11 +129,7 @@ onMounted(async () => {
 
       const rect = canvasRef.value ? canvasRef.value.getBoundingClientRect() : { left: 0, top: 0 }
       const s = scale.value || canvasStore.viewport.zoom || 1
-
-      return {
-        x: localX * s + rect.left,
-        y: localY * s + rect.top,
-      }
+      return canvasToClientPoint(localX, localY, { rect, scale: s })
     }
   }
 
@@ -177,9 +159,8 @@ const updateRulerPos = () => {
   const scrollTop = scrollWrapperRef.value.scrollTop
   const padding = 200 // 减小后的 margin
 
-  // 正确公式：(屏幕位移 / 当前缩放) - 逻辑偏移
-  startX.value = (scrollLeft / scale.value) - padding
-  startY.value = (scrollTop / scale.value) - padding
+  startX.value = computeRulerStart(scrollLeft, scale.value, padding)
+  startY.value = computeRulerStart(scrollTop, scale.value, padding)
 }
 
 const handleScroll = () => {

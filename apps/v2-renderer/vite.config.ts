@@ -43,12 +43,14 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vue-vendor': ['vue', 'vue-router', 'pinia'],
-          'antv': ['@antv/x6', '@antv/x6-vue-shape'],
-          'naive-ui': ['naive-ui', 'vueuc'],
-          'charts': ['echarts'],
-          'fabric': ['fabric'],
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+          if (id.includes('/vue/') || id.includes('/vue-router/') || id.includes('/pinia/')) return 'vue-vendor'
+          if (id.includes('/@antv/x6/') || id.includes('/@antv/x6-vue-shape/')) return 'antv'
+          if (id.includes('/naive-ui/') || id.includes('/vueuc/')) return 'naive-ui'
+          if (id.includes('/echarts/')) return 'charts'
+          if (id.includes('/fabric/')) return 'fabric'
+          return undefined
         },
       },
     },
