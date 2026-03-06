@@ -6,6 +6,7 @@ import Components from 'unplugin-vue-components/vite'
 import { FileSystemIconLoader } from 'unplugin-icons/loaders'
 
 export default defineConfig({
+  base: '/preview/',
   plugins: [
     vue(),
     Components({
@@ -36,7 +37,6 @@ export default defineConfig({
   },
   server: {
     port: 3002,
-    base: '/preview',
   },
   build: {
     outDir: 'dist',
