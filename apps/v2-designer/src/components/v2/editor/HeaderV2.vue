@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
 import { useEditorStoreV2 } from '@/stores/v2/editorStoreV2'
 import { useCanvasStoreV2 } from '@/stores/v2/canvasStoreV2'
 import { useEditorCommands } from '@/composables/useEditorCommands'
+import { x6ToSchemaV2 } from '@vue-visual-screen/v2-shared'
 import {
   LayoutGrid, Eye, Undo2, Redo2, Download, Trash2,
   ZoomIn, ZoomOut, Maximize, Code,
@@ -15,7 +15,6 @@ const emit = defineEmits<{
   (e: 'open-json-editor'): void
 }>()
 
-const router = useRouter()
 const editorStore = useEditorStoreV2()
 const canvasStore = useCanvasStoreV2()
 const commands = useEditorCommands()
@@ -33,8 +32,19 @@ function handleZoomFit() {
 
 function handlePreview() {
   const g = editorStore.graph
-  if (g) localStorage.setItem('v2_preview_graph_data', JSON.stringify(g.toJSON()))
-  router.push('/v2/preview')
+  if (g) {
+    const graphJson = g.toJSON() as Record<string, unknown>
+    localStorage.setItem('v2_preview_graph_data', JSON.stringify(graphJson))
+
+    const schema = x6ToSchemaV2(graphJson, {
+      width: canvasStore.config.width,
+      height: canvasStore.config.height,
+      backgroundColor: canvasStore.config.backgroundColor,
+    })
+    localStorage.setItem('v2_preview_schema_data', JSON.stringify(schema))
+  }
+
+  window.open('/preview', '_blank')
 }
 
 function handleClearCanvas() {
@@ -48,14 +58,6 @@ function handleImport(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (file) commands.importFromJSON(file)
 }
-
-onMounted(() => {
-  // 逻辑已迁移到 computed
-})
-
-watch(() => editorStore.graph, () => {
-  // 逻辑已集成到全局 store
-})
 
 const canUndo = computed(() => editorStore.canUndo)
 const canRedo = computed(() => editorStore.canRedo)

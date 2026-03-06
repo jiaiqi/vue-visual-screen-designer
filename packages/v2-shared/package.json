@@ -16,6 +16,7 @@
   ],
   "scripts": {
     "build": "vite build",
+    "build:types": "tsc -p tsconfig.build.json",
     "dev": "vite build --watch",
     "type-check": "vue-tsc --build"
   },
