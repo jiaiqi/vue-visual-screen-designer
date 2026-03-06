@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vue Visual Screen Designer v2 · 仓库定制开发方案</title>
+<style>
+:root {
+  --bg:#07090f;--bg2:#0c0f1a;--bg3:#111726;--bg4:#172035;
+  --line:#1c2b47;--line2:#243652;
+  --cyan:#00d4ff;--amber:#ffab00;--emerald:#00e676;
+  --violet:#c084fc;--rose:#ff4081;--sky:#40c4ff;
+  --text:#b8cce0;--text2:#7fa2c7;--text3:#3f5f87;--head:#e2f0ff;
+  --mono:'JetBrains Mono',Consolas,monospace;--sans:'Noto Sans SC','Microsoft YaHei',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.8;font-size:14px}
+a{color:var(--cyan);text-decoration:none}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:280px;background:var(--bg2);border-right:1px solid var(--line);overflow:auto;z-index:20}
+.logo{padding:20px;border-bottom:1px solid var(--line)}
+.logo .eye{font:10px var(--mono);letter-spacing:2px;color:var(--cyan)}
+.logo .title{margin-top:8px;font-weight:700;color:var(--head);line-height:1.4}
+.logo .ver{margin-top:8px;display:inline-block;padding:2px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg3);font:10px var(--mono);color:var(--text3)}
+.nav-group{padding:10px 0}
+.nav-label{padding:0 18px 6px;font:10px var(--mono);letter-spacing:2px;color:var(--text3);text-transform:uppercase}
+.nav-a{display:flex;gap:8px;align-items:center;padding:6px 18px;color:var(--text2);border-left:2px solid transparent}
+.nav-a:hover{background:rgba(0,212,255,.06);color:var(--cyan);border-left-color:var(--cyan)}
+.nav-a .n{font:10px var(--mono);color:var(--text3);min-width:24px}
+.main{margin-left:280px}
+.hero{padding:50px 64px;border-bottom:1px solid var(--line);background:radial-gradient(ellipse 800px 300px at 80% 10%,rgba(0,212,255,.08),transparent 70%),var(--bg)}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border:1px solid rgba(0,212,255,.25);background:rgba(0,212,255,.08);border-radius:4px;font:10px var(--mono);color:var(--cyan);letter-spacing:1px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--cyan)}
+.hero h1{margin-top:18px;font-size:34px;line-height:1.3;color:var(--head)}
+.hero p{margin-top:14px;max-width:860px;color:var(--text2)}
+.meta{margin-top:16px;display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:12px;max-width:900px}
+.meta .k{padding:10px;border:1px solid var(--line);background:var(--bg2);border-radius:8px}
+.meta .k .v{font:700 20px var(--mono);color:var(--cyan)}
+.meta .k .t{font:10px var(--mono);color:var(--text3);margin-top:4px}
+.sec{padding:46px 64px;border-bottom:1px solid var(--line)}
+.sec-title{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.tag{font:10px var(--mono);padding:4px 10px;border-radius:4px;border:1px solid rgba(0,212,255,.3);background:rgba(0,212,255,.08);color:var(--cyan)}
+.sec-title h2{font-size:24px;color:var(--head)}
+.sec h3{font-size:16px;color:var(--head);margin:18px 0 8px}
+.sec p{color:var(--text2);margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:16px}
+.card h4{font-size:14px;color:var(--head);margin-bottom:8px}
+.card ul{padding-left:18px}
+.card li{color:var(--text2);margin:4px 0}
+ul.main-list{padding-left:20px}
+ul.main-list li{margin:6px 0;color:var(--text2)}
+code{font-family:var(--mono);background:var(--bg3);padding:1px 6px;border-radius:4px;color:var(--sky)}
+.flow{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
+.flow .row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.step{padding:7px 12px;border-radius:6px;border:1px solid var(--line2);background:var(--bg3);font:12px var(--mono);color:var(--text2)}
+.step.h{border-color:rgba(0,212,255,.35);color:var(--cyan);background:rgba(0,212,255,.08)}
+.arrow{color:var(--text3)}
+.tbl{width:100%;border-collapse:collapse;margin-top:8px}
+.tbl th{font:10px var(--mono);text-align:left;padding:9px;color:var(--text3);border-bottom:1px solid var(--line);background:var(--bg3)}
+.tbl td{padding:10px;color:var(--text2);border-bottom:1px solid rgba(28,43,71,.55);vertical-align:top}
+.tbl td:first-child{color:var(--head);font-family:var(--mono)}
+.code{margin:10px 0;background:var(--bg3);border:1px solid var(--line);border-radius:10px;overflow:auto}
+.code .bar{padding:8px 12px;border-bottom:1px solid var(--line);font:10px var(--mono);color:var(--text3);background:var(--bg4)}
+.code pre{padding:12px 14px;font:12px var(--mono);line-height:1.7;color:var(--text);white-space:pre-wrap}
+.foot{padding:24px 64px;color:var(--text3);font:12px var(--mono)}
+@media (max-width:1200px){.meta{grid-template-columns:repeat(2,minmax(140px,1fr))}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="logo">
+    <div class="eye">REPOSITORY CUSTOMIZED PLAN</div>
+    <div class="title">Vue Visual Screen Designer<br/>v2 开发方案（完整版）</div>
+    <div class="ver">v2.0 · 2026-03-06</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">目录导航</div>
+    <a class="nav-a" href="#s01"><span class="n">01</span>目标与约束</a>
+    <a class="nav-a" href="#s02"><span class="n">02</span>仓库现状审计</a>
+    <a class="nav-a" href="#s03"><span class="n">03</span>To-Be 架构</a>
+    <a class="nav-a" href="#s04"><span class="n">04</span>数据模型与 Schema</a>
+    <a class="nav-a" href="#s05"><span class="n">05</span>坐标系统与视口</a>
+    <a class="nav-a" href="#s06"><span class="n">06</span>图元/连线注册体系</a>
+    <a class="nav-a" href="#s07"><span class="n">07</span>编辑器模块方案</a>
+    <a class="nav-a" href="#s08"><span class="n">08</span>插件与扩展架构</a>
+    <a class="nav-a" href="#s09"><span class="n">09</span>存储与版本迁移</a>
+    <a class="nav-a" href="#s10"><span class="n">10</span>导入导出与发布</a>
+    <a class="nav-a" href="#s11"><span class="n">11</span>v2-renderer 落地</a>
+    <a class="nav-a" href="#s12"><span class="n">12</span>包层重构</a>
+    <a class="nav-a" href="#s13"><span class="n">13</span>错误边界与 UX</a>
+    <a class="nav-a" href="#s14"><span class="n">14</span>性能优化</a>
+    <a class="nav-a" href="#s15"><span class="n">15</span>测试与质量保障</a>
+    <a class="nav-a" href="#s16"><span class="n">16</span>工程规范</a>
+    <a class="nav-a" href="#s17"><span class="n">17</span>里程碑与排期</a>
+    <a class="nav-a" href="#s18"><span class="n">18</span>任务拆解</a>
+    <a class="nav-a" href="#s19"><span class="n">19</span>风险清单</a>
+    <a class="nav-a" href="#s20"><span class="n">20</span>验收标准</a>
+    <a class="nav-a" href="#s21"><span class="n">21</span>首批执行建议</a>
+    <a class="nav-a" href="#appendix"><span class="n">A</span>附录</a>
+  </div>
+</nav>
+
+<main class="main">
+  <section class="hero">
+    <div class="chip"><span class="dot"></span>V2 DEVELOPMENT BLUEPRINT · REPO-FIT · EXECUTABLE</div>
+    <h1>Vue Visual Screen Designer v2<br/>仓库定制开发方案（同风格完整版）</h1>
+    <p>本方案将你确认过的 Markdown 内容完整转换为可导航、可审阅、可评审的 HTML 文档。覆盖架构、模型、模块、任务、排期、风险、验收与附录索引，直接服务当前仓库落地。</p>
+    <div class="meta">
+      <div class="k"><div class="v">21</div><div class="t">MAIN SECTIONS</div></div>
+      <div class="k"><div class="v">8W</div><div class="t">ROADMAP WINDOW</div></div>
+      <div class="k"><div class="v">P0/P1/P2</div><div class="t">DELIVERY PHASES</div></div>
+      <div class="k"><div class="v">DoD</div><div class="t">ACCEPTANCE READY</div></div>
+    </div>
+  </section>
+
+  <section class="sec" id="s01"><div class="sec-title"><span class="tag">01</span><h2>目标与约束</h2></div>
+    <h3>1.1 项目目标</h3>
+    <ul class="main-list">
+      <li>把 <code>apps/v2-designer</code> 建成稳定可用的工业大屏设计器。</li>
+      <li>打通 <code>v2-designer -> v2-renderer</code> 发布链路。</li>
+      <li>将当前分散实现升级为可测试、可演进工程体系。</li>
+    </ul>
+    <h3>1.2 当前硬约束</h3>
+    <ul class="main-list">
+      <li>技术栈固定：Vue3 + Pinia + X6 + x6-vue-shape + Vite。</li>
+      <li>当前仓库不含后端服务实现。</li>
+      <li><code>docs/*</code> 被忽略，正式文档需放在应用目录。</li>
+    </ul>
+    <h3>1.3 本方案不覆盖</h3>
+    <ul class="main-list"><li>NestJS/DB/RBAC/多租户、协同服务端、云原生部署实现。</li></ul>
+  </section>
+
+  <section class="sec" id="s02"><div class="sec-title"><span class="tag">02</span><h2>仓库现状审计（As-Is）</h2></div>
+    <div class="grid2">
+      <div class="card"><h4>Monorepo 现状</h4><ul>
+        <li><code>apps/v1-designer</code>：相对完整，可复用能力多。</li>
+        <li><code>apps/v2-designer</code>：主建设目标，编辑器核心可用。</li>
+        <li><code>apps/v2-renderer</code>：当前仍为占位页。</li>
+      </ul></div>
+      <div class="card"><h4>包层现状</h4><ul>
+        <li><code>packages/core</code>：有 schema 类型，engine/canvas 仍 TODO。</li>
+        <li><code>packages/v2-shared</code>：有类型/常量/校验，与运行态仍有差距。</li>
+        <li><code>packages/ui</code>：可复用组件沉淀不足。</li>
+      </ul></div>
+    </div>
+    <h3>关键技术债</h3>
+    <ul class="main-list">
+      <li>坐标系统仍脆弱（外部缩放 + 重写转换函数）。</li>
+      <li>图元列表与注册表存在漂移风险。</li>
+      <li>导出逻辑与 store 字段存在不一致风险。</li>
+      <li>renderer 未接入真实 schema，发布链路未闭环。</li>
+      <li>v2 自动化测试缺失。</li>
+    </ul>
+  </section>
+
+  <section class="sec" id="s03"><div class="sec-title"><span class="tag">03</span><h2>To-Be 总体架构</h2></div>
+    <div class="flow"><div class="row">
+      <span class="step h">L1 App</span><span class="arrow">→</span>
+      <span class="step">v2-designer / v2-renderer</span><span class="arrow">→</span>
+      <span class="step h">L2 Domain</span><span class="arrow">→</span>
+      <span class="step">v2-shared (adapter/validator/registry)</span><span class="arrow">→</span>
+      <span class="step h">L3 Core</span><span class="arrow">→</span>
+      <span class="step">schema / engine / utils</span>
+    </div></div>
+    <h3>核心原则</h3>
+    <ul class="main-list">
+      <li>编辑态真相：X6 JSON；发布态真相：Schema v2.1。</li>
+      <li>显式双向转换，不在 UI 层拼装发布 schema。</li>
+      <li>先建后删，确保交互失败可恢复。</li>
+      <li>图元与连线统一注册清单，禁止多源定义。</li>
+    </ul>
+  </section>
+
+  <section class="sec" id="s04"><div class="sec-title"><span class="tag">04</span><h2>数据模型与 Schema 策略</h2></div>
+    <h3>决策</h3>
+    <ul class="main-list">
+      <li>D1：编辑态继续使用 <code>graph.toJSON()/fromJSON()</code>。</li>
+      <li>D2：新增 <code>toSchemaV2</code> / <code>fromSchemaV2</code> 转换器。</li>
+      <li>D3：发布导出仅接受 <code>CanvasSchema v2.1</code>。</li>
+    </ul>
+    <h3>覆盖路线</h3>
+    <table class="tbl"><thead><tr><th>阶段</th><th>覆盖范围</th><th>目标</th></tr></thead><tbody>
+      <tr><td>MVP</td><td>基础节点/连线/端口/画布</td><td>可导出可回导</td></tr>
+      <tr><td>Phase 2</td><td>动画、状态映射、变量事件</td><td>运行一致</td></tr>
+      <tr><td>Phase 3</td><td>数据源绑定、资源索引</td><td>发布可用</td></tr>
+    </tbody></table>
+  </section>
+
+  <section class="sec" id="s05"><div class="sec-title"><span class="tag">05</span><h2>坐标系统与视口模型</h2></div>
+    <h3>规范</h3>
+    <ul class="main-list">
+      <li>统一左上角原点 + 像素坐标。</li>
+      <li>缩放仅影响视觉，不改逻辑坐标。</li>
+    </ul>
+    <h3>改造点</h3>
+    <div class="code"><div class="bar">viewport-adapter.ts (planned)</div><pre>clientToCanvasPoint(rect, scroll, zoom, padding, clientPoint)
+canvasToClientPoint(rect, scroll, zoom, padding, canvasPoint)
+getVisibleCanvasRect(rect, scroll, zoom, padding)</pre></div>
+    <h3>验收</h3><ul class="main-list"><li>四角拖拽无异常，缩放 0.1~5 误差 <= 1px。</li></ul>
+  </section>
+
+  <section class="sec" id="s06"><div class="sec-title"><span class="tag">06</span><h2>图元/连线注册体系</h2></div>
+    <div class="grid2">
+      <div class="card"><h4>统一清单</h4><ul>
+        <li><code>src/registry/shapes.ts</code></li>
+        <li><code>src/registry/edges.ts</code></li>
+        <li>字段：id/kind/displayName/category/isEnabled/createConfig</li>
+      </ul></div>
+      <div class="card"><h4>启动自检</h4><ul>
+        <li><code>useGraphV2.initGraph</code> 阶段检查一致性。</li>
+        <li>未注册项自动禁用并统一告警。</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section class="sec" id="s07"><div class="sec-title"><span class="tag">07</span><h2>编辑器模块详细方案</h2></div>
+    <h3>HeaderV2</h3><ul class="main-list"><li>引入 <code>useEditorCommands()</code>，收敛 undo/redo/export/import/preview。</li><li>预览改为 schema 驱动。</li></ul>
+    <h3>ToolbarV2</h3><ul class="main-list"><li>图元改为 registry 驱动。</li><li>统一错误提示 <code>notifyError</code>。</li><li>收藏/最近使用接入 storage。</li></ul>
+    <h3>CanvasEditorV2</h3><ul class="main-list"><li>拆分 <code>useViewportSync</code>、<code>useRulerSync</code>、<code>useGraphCoordinateAdapter</code>。</li></ul>
+    <h3>PropertyPanelV2 / EdgePropertiesV2</h3><ul class="main-list"><li>属性更新改 command layer。</li><li>保留“先建后删”防丢失策略。</li></ul>
+    <h3>LayerPanelV2</h3><ul class="main-list"><li>图层排序、显隐、锁定全映射到 graph cell。</li></ul>
+  </section>
+
+  <section class="sec" id="s08"><div class="sec-title"><span class="tag">08</span><h2>插件与扩展架构</h2></div>
+    <h3>生命周期接口</h3>
+    <div class="code"><div class="bar">plugin lifecycle</div><pre>register()
+init(graph, ctx)
+dispose()
+health() => { status: 'ok' | 'warn' | 'error', message }</pre></div>
+    <p>目标：以 <code>src/plugins/index.ts</code> 统一加载与诊断。</p>
+  </section>
+
+  <section class="sec" id="s09"><div class="sec-title"><span class="tag">09</span><h2>存储、自动保存与版本迁移</h2></div>
+    <h3>自动保存结构升级</h3>
+    <ul class="main-list"><li><code>formatVersion</code>、<code>appVersion</code>、<code>savedAt</code>、<code>payloadType</code>、<code>payload</code>。</li></ul>
+    <h3>迁移机制</h3>
+    <ul class="main-list"><li>按 <code>formatVersion</code> 逐级迁移；失败不覆盖当前画布，给出可恢复提示。</li></ul>
+  </section>
+
+  <section class="sec" id="s10"><div class="sec-title"><span class="tag">10</span><h2>导入导出与发布快照</h2></div>
+    <table class="tbl"><thead><tr><th>文件</th><th>用途</th><th>内容</th></tr></thead><tbody>
+      <tr><td>.vvsd.json</td><td>设计工程文件</td><td>X6 JSON + 画布配置 + 元数据</td></tr>
+      <tr><td>.vvsd-schema.json</td><td>发布快照</td><td>Schema v2.1 + 资源引用清单</td></tr>
+    </tbody></table>
+    <p>策略：设计导出保留编辑态信息；发布导出剥离临时字段。</p>
+  </section>
+
+  <section class="sec" id="s11"><div class="sec-title"><span class="tag">11</span><h2>v2-renderer 落地方案</h2></div>
+    <div class="flow"><div class="row">
+      <span class="step h">R1</span><span class="step">加载 schema + 基础节点边渲染</span><span class="arrow">→</span>
+      <span class="step h">R2</span><span class="step">动画 + 数据刷新</span><span class="arrow">→</span>
+      <span class="step h">R3</span><span class="step">主题/懒加载/降级</span>
+    </div></div>
+    <p>输入契约：<code>schema</code> / <code>theme</code> / <code>runtimeEnv</code>；输出渲染完成与异常事件。</p>
+  </section>
+
+  <section class="sec" id="s12"><div class="sec-title"><span class="tag">12</span><h2>包层重构方案</h2></div>
+    <ul class="main-list">
+      <li><code>packages/core</code>：保留 schema 权威定义，补齐 engine 抽象。</li>
+      <li><code>packages/v2-shared</code>：沉淀 adapter/registry/validator/migration。</li>
+      <li><code>packages/ui</code>：抽离通用 Toast、弹窗、表单段。</li>
+    </ul>
+  </section>
+
+  <section class="sec" id="s13"><div class="sec-title"><span class="tag">13</span><h2>错误边界与 UX 规范</h2></div>
+    <h3>错误分级</h3><ul class="main-list"><li>P0 阻断核心流程，P1 可降级，P2 体验问题。</li></ul>
+    <h3>规范</h3><ul class="main-list"><li>统一 ErrorCode 与消息映射；关键失败必须保留原状态。</li></ul>
+    <h3>组件化</h3><ul class="main-list"><li>新增 <code>GlobalToast + useNotifier()</code>，替代各组件分散实现。</li></ul>
+  </section>
+
+  <section class="sec" id="s14"><div class="sec-title"><span class="tag">14</span><h2>性能优化方案</h2></div>
+    <table class="tbl"><thead><tr><th>指标</th><th>目标</th></tr></thead><tbody>
+      <tr><td>300 节点/500 边操作 FPS</td><td>>= 45</td></tr>
+      <tr><td>属性变更反馈</td><td><= 100ms</td></tr>
+      <tr><td>编辑器首屏 TTI</td><td><= 3.0s</td></tr>
+    </tbody></table>
+    <ul class="main-list"><li>批量更新、按需渲染、搜索缓存、图片懒加载。</li></ul>
+  </section>
+
+  <section class="sec" id="s15"><div class="sec-title"><span class="tag">15</span><h2>测试与质量保障</h2></div>
+    <h3>测试分层</h3>
+    <ul class="main-list">
+      <li>Vitest：转换器、校验器、坐标适配器、迁移函数。</li>
+      <li>Vue Test Utils：拖拽入口、连线切换、属性更新。</li>
+      <li>Playwright（新增）：拖拽、连线、导入导出、预览渲染。</li>
+    </ul>
+    <h3>CI 门禁</h3><ul class="main-list"><li><code>pnpm type-check</code> / <code>pnpm lint</code> / <code>pnpm test:unit</code> / E2E 冒烟。</li></ul>
+  </section>
+
+  <section class="sec" id="s16"><div class="sec-title"><span class="tag">16</span><h2>工程规范与分支策略</h2></div>
+    <ul class="main-list">
+      <li>分支：<code>feature/v2-*</code>、<code>fix/v2-*</code>。</li>
+      <li>提交：<code>feat/fix/refactor/test(scope): ...</code>。</li>
+      <li>Vue 统一 <code>&lt;script setup lang="ts"&gt;</code>，状态统一 Pinia。</li>
+    </ul>
+  </section>
+
+  <section class="sec" id="s17"><div class="sec-title"><span class="tag">17</span><h2>里程碑与排期（8 周）</h2></div>
+    <table class="tbl"><thead><tr><th>里程碑</th><th>时间</th><th>交付</th></tr></thead><tbody>
+      <tr><td>M1 稳定性</td><td>第 1-2 周</td><td>坐标适配、注册自检、统一错误提示、核心回归自动化</td></tr>
+      <tr><td>M2 模型</td><td>第 3-4 周</td><td>X6JSON↔Schema、导出协议升级、自动保存迁移</td></tr>
+      <tr><td>M3 发布链路</td><td>第 5-6 周</td><td>renderer 接入 schema、预览链路切换、快照可加载</td></tr>
+      <tr><td>M4 工程化</td><td>第 7-8 周</td><td>插件生命周期、CI+E2E 门禁、性能收口</td></tr>
+    </tbody></table>
+  </section>
+
+  <section class="sec" id="s18"><div class="sec-title"><span class="tag">18</span><h2>详细任务拆解（按文件）</h2></div>
+    <h3>P0</h3>
+    <ul class="main-list">
+      <li><code>CanvasEditorV2.vue</code>：拆分坐标与视口同步逻辑。</li>
+      <li><code>ToolbarV2.vue</code>：接入 registry + notifier。</li>
+      <li><code>EdgePropertiesV2.vue</code>：失败兜底与错误码化。</li>
+      <li><code>x6-nodes.ts</code>：暴露注册结果查询。</li>
+      <li><code>editorStoreV2.ts</code>：增加 command facade。</li>
+    </ul>
+    <h3>P1</h3>
+    <ul class="main-list"><li><code>packages/v2-shared/src/adapters/*</code>、<code>migrations/*</code>、<code>useExport.ts</code> 协议升级。</li></ul>
+    <h3>P2</h3>
+    <ul class="main-list"><li><code>PreviewView.vue</code> schema 渲染、<code>packages/core/src/engine/*</code> 抽象、插件生命周期管理。</li></ul>
+  </section>
+
+  <section class="sec" id="s19"><div class="sec-title"><span class="tag">19</span><h2>风险清单与应对</h2></div>
+    <table class="tbl"><thead><tr><th>风险</th><th>描述</th><th>应对</th></tr></thead><tbody>
+      <tr><td>R-01</td><td>坐标回归</td><td>适配器单测 + 四角 E2E</td></tr>
+      <tr><td>R-02</td><td>注册漂移</td><td>启动自检 + CI 校验</td></tr>
+      <tr><td>R-03</td><td>模型转换不完整</td><td>黄金样本导入导出对比</td></tr>
+      <tr><td>R-04</td><td>renderer 进度拖慢</td><td>并行推进最小可用渲染链路</td></tr>
+    </tbody></table>
+  </section>
+
+  <section class="sec" id="s20"><div class="sec-title"><span class="tag">20</span><h2>验收标准（DoD）</h2></div>
+    <ul class="main-list">
+      <li>功能：拖拽/连线/属性/保存/导入导出稳定，注册项可创建可切换。</li>
+      <li>质量：type-check、lint、unit、核心 E2E 全绿，无 P0/P1 遗留。</li>
+      <li>文档：协议与改造范围清晰可执行。</li>
+    </ul>
+  </section>
+
+  <section class="sec" id="s21"><div class="sec-title"><span class="tag">21</span><h2>首批执行建议</h2></div>
+    <div class="flow"><div class="row">
+      <span class="step h">1</span><span class="step">先做坐标适配 + 拖拽回归</span><span class="arrow">→</span>
+      <span class="step h">2</span><span class="step">统一 registry + 自检</span><span class="arrow">→</span>
+      <span class="step h">3</span><span class="step">完成 schema adapter</span><span class="arrow">→</span>
+      <span class="step h">4</span><span class="step">接通 renderer 最小闭环</span>
+    </div></div>
+  </section>
+
+  <section class="sec" id="appendix"><div class="sec-title"><span class="tag">A</span><h2>附录：关键文件索引</h2></div>
+    <ul class="main-list">
+      <li><code>apps/v2-designer/src/components/v2/editor/CanvasEditorV2.vue</code></li>
+      <li><code>apps/v2-designer/src/components/v2/editor/ToolbarV2.vue</code></li>
+      <li><code>apps/v2-designer/src/components/v2/editor/properties/NodePropertiesV2.vue</code></li>
+      <li><code>apps/v2-designer/src/components/v2/editor/properties/EdgePropertiesV2.vue</code></li>
+      <li><code>apps/v2-designer/src/plugins/x6-nodes.ts</code></li>
+      <li><code>apps/v2-designer/src/composables/useGraphV2.ts</code></li>
+      <li><code>apps/v2-designer/src/composables/useAutoSave.ts</code></li>
+      <li><code>apps/v2-designer/src/composables/useExport.ts</code></li>
+      <li><code>apps/v2-designer/src/stores/v2/editorStoreV2.ts</code></li>
+      <li><code>apps/v2-designer/src/stores/v2/canvasStoreV2.ts</code></li>
+      <li><code>apps/v2-renderer/src/views/PreviewView.vue</code></li>
+      <li><code>packages/core/src/types/schema.ts</code></li>
+      <li><code>packages/v2-shared/src/types/index.ts</code></li>
+      <li><code>packages/v2-shared/src/validators/index.ts</code></li>
+    </ul>
+  </section>
+
+  <div class="foot">Generated from v2-development-plan-detailed.md · style-matched HTML edition</div>
+</main>
+</body>
+</html>
